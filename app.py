@@ -365,7 +365,7 @@ with fin1:
 with fin2:
     st.markdown("**Výnosy**")
     nazev_modelu = {'spolecne': 'Jen společné prostory', 'jom': 'Sjednocení odběrných míst', 'edc': 'EDC komunitní sdílení'}[model_sdileni]
-st.write(f"• Model sdílení: **{nazev_modelu}**")
+    st.write(f"• Model sdílení: **{nazev_modelu}**")
     st.write(f"• Vlastní spotřeba z FVE: **{vlastni_spotreba / 1000:,.1f} MWh/rok** ({vlastni_spotreba_podil*100:.0f} %)")
     st.write(f"• Úspora na faktuře: **{vlastni_spotreba * cena_elektriny:,.0f} Kč/rok**")
     st.write(f"• Přetoky do sítě: **{pretoky / 1000:,.1f} MWh/rok**")
