@@ -100,6 +100,16 @@ with col1:
         format="%.1f"
     )
 
+    cena_pretoky = st.number_input(
+        "Výkupní cena přetoků (Kč/kWh)",
+        min_value=0.30,
+        max_value=2.50,
+        value=0.95,
+        step=0.05,
+        format="%.2f",
+        help="Typické rozmezí 2025: E.ON 0,70 Kč, TEDOM 0,75 Kč, spotový trh průměr ~1,50 Kč"
+    )
+
 with col2:
     st.subheader("⚡ Parametry FVE")
 
@@ -122,13 +132,83 @@ with col2:
         help="Orientační cena: 30 000–40 000 Kč/kWp pro bytové domy"
     )
 
-    dotace_procento = st.slider(
-        "Dotace NZÚ (%)",
-        min_value=0,
-        max_value=70,
-        value=50,
-        help="Aktuální dotační programy NZÚ pro SVJ pokrývají typicky 40–50 % nákladů"
+st.divider()
+
+# === FINANCOVÁNÍ ===
+
+st.subheader("💰 Model financování")
+
+fin_col1, fin_col2 = st.columns(2)
+
+with fin_col1:
+    scenar = st.radio(
+        "Scénář financování",
+        options=["uvěr", "vlastni", "kombinace"],
+        format_func=lambda x: {
+            "uvěr": "🏦 Bezúročný úvěr NZÚ (od září 2026)",
+            "vlastni": "💵 Vlastní zdroje (fond oprav)",
+            "kombinace": "🔀 Kombinace vlastní + úvěr"
+        }[x],
+        help="Od roku 2026 NZÚ poskytuje bezúročné úvěry místo přímých dotací"
     )
+
+with fin_col2:
+    if scenar == "uvěr":
+        splatnost = st.slider(
+            "Doba splácení úvěru (let)",
+            min_value=5,
+            max_value=25,
+            value=15,
+            help="NZÚ bezúročný úvěr — max. 25 let, 0 % úrok"
+        )
+        vlastni_podil_pct = 0
+        st.info("✅ Úroky hradí stát (SFŽP). SVJ splácí pouze jistinu.")
+
+    elif scenar == "vlastni":
+        splatnost = 0
+        vlastni_podil_pct = 100
+        st.info("💡 SVJ hradí vše z fondu oprav nebo jednorázovým příspěvkem.")
+
+    else:
+        vlastni_podil_pct = st.slider(
+            "Vlastní zdroje (%)",
+            min_value=10,
+            max_value=90,
+            value=30,
+            step=10,
+            help="Zbytek pokryje bezúročný úvěr NZÚ"
+        )
+        splatnost = st.slider(
+            "Doba splácení úvěru (let)",
+            min_value=5,
+            max_value=25,
+            value=15,
+            help="NZÚ bezúročný úvěr — max. 25 let, 0 % úrok"
+        )
+
+# Nízkopříjmové domácnosti — bonus
+st.markdown("**Nízkopříjmové domácnosti (superdávka)**")
+nizko_col1, nizko_col2 = st.columns(2)
+with nizko_col1:
+    pocet_nizko = st.number_input(
+        "Počet bytů s nárokem na superdávku",
+        min_value=0,
+        max_value=int(pocet_bytu),
+        value=0,
+        step=1,
+        help="Tyto domácnosti mají nárok na přímý bonus od státu (až 150 000 Kč/byt při komplexní renovaci)"
+    )
+with nizko_col2:
+    bonus_na_byt = st.number_input(
+        "Bonus na nízkopříjmový byt (Kč)",
+        min_value=0,
+        max_value=150000,
+        value=50000,
+        step=5000,
+        help="Přímý státní bonus pro nízkopříjmové domácnosti v SVJ"
+    )
+
+bonus_celkem = pocet_nizko * bonus_na_byt
 
 st.divider()
 
@@ -153,18 +233,10 @@ with lok2:
         horizontal=True
     )
 
-# Konfigurace podle typu střechy
 if typ_strechy == "sikma":
-    st.markdown("**Orientace šikmé střechy**")
     s1, s2 = st.columns(2)
     with s1:
-        sklon = st.slider(
-            "Sklon střechy (°)",
-            min_value=15,
-            max_value=60,
-            value=35,
-            help="Typická šikmá střecha: 30–45°"
-        )
+        sklon = st.slider("Sklon střechy (°)", min_value=15, max_value=60, value=35)
     with s2:
         azimut_volba = st.select_slider(
             "Orientace",
@@ -179,102 +251,103 @@ if typ_strechy == "sikma":
             }[x]
         )
     azimut = azimut_volba
-    # Pro šikmou střechu počítáme jednu plochu
     koeficient_vyroba = 1.0
+    vlastni_spotreba_podil = 0.60
 
 else:
-    st.markdown("**Konfigurace ploché střechy**")
     p1, p2 = st.columns(2)
     with p1:
-        sklon = st.slider(
-            "Sklon panelů (°)",
-            min_value=5,
-            max_value=20,
-            value=10,
-            help="Na ploché střeše se panely montují typicky pod úhlem 10–15°"
-        )
+        sklon = st.slider("Sklon panelů (°)", min_value=5, max_value=20, value=10)
     with p2:
         system_plocha = st.radio(
             "Systém rozmístění",
             options=["jih", "jz_jv", "vychod_zapad"],
             format_func=lambda x: {
-                "jih": "⬆️ Jih — maximum výkonu",
-                "jz_jv": "↗️ JZ + JV — rovnoměrnější výroba",
-                "vychod_zapad": "↔️ Východ + Západ — nejrovnoměrnější"
-            }[x],
-            help="Systém V+Z umožňuje více panelů na stejné ploše bez stínění"
+                "jih": "⬆️ Jih",
+                "jz_jv": "↗️ JZ + JV",
+                "vychod_zapad": "↔️ Východ + Západ"
+            }[x]
         )
-
     if system_plocha == "jih":
         azimut = 0
         koeficient_vyroba = 1.0
+        vlastni_spotreba_podil = 0.60
         st.info("☀️ Maximální výkon, výroba soustředěná kolem poledne.")
     elif system_plocha == "jz_jv":
         azimut = 0
         koeficient_vyroba = 0.97
-        st.info("☀️ Mírně nižší špičkový výkon, ale výroba rozložená na delší část dne.")
+        vlastni_spotreba_podil = 0.65
+        st.info("☀️ Mírně nižší špičkový výkon, výroba rozložená na delší část dne.")
     else:
         azimut = 90
         koeficient_vyroba = 0.88
-        st.info("☀️ Nižší celkový výkon, ale velmi rovnoměrná výroba ráno i odpoledne. Ideální pro vlastní spotřebu SVJ.")
+        vlastni_spotreba_podil = 0.70
+        st.info("☀️ Nejrovnoměrnější výroba, ideální pro vlastní spotřebu SVJ.")
 
-# === NAČTENÍ PVGIS ===
+# === PVGIS ===
 
 if lokace_input:
     with st.spinner(f"Hledám lokalitu: {lokace_input}..."):
         lat, lon, nazev_mesta, geo_err = geocode_lokace(lokace_input)
 
     if geo_err:
-        st.warning(f"⚠️ Nepodařilo se najít lokalitu. Používám průměr ČR.")
+        st.warning("⚠️ Nepodařilo se najít lokalitu. Používám průměr ČR.")
         vyroba_rocni = vykon_fve * 1000
         pvgis_ok = False
-        nazev_mesta = lokace_input
     else:
         with st.spinner(f"Načítám solární data pro {nazev_mesta} z PVGIS..."):
             vyroba_pvgis, pvgis_err = get_pvgis_data(lat, lon, vykon_fve, sklon, azimut)
 
         if pvgis_err:
-            st.warning(f"⚠️ PVGIS nedostupné. Používám průměr ČR.")
+            st.warning("⚠️ PVGIS nedostupné. Používám průměr ČR.")
             vyroba_rocni = vykon_fve * 1000
             pvgis_ok = False
         else:
             vyroba_rocni = vyroba_pvgis * koeficient_vyroba
             pvgis_ok = True
-            st.success(f"✅ {nazev_mesta} ({lat:.2f}°N, {lon:.2f}°E) — odhadovaná výroba {vyroba_rocni:,.0f} kWh/rok")
+            st.success(f"✅ {nazev_mesta} ({lat:.2f}°N, {lon:.2f}°E) — výroba {vyroba_rocni:,.0f} kWh/rok")
 else:
     vyroba_rocni = vykon_fve * 1000
     pvgis_ok = False
-    nazev_mesta = ""
 
 st.divider()
 
 # === VÝPOČTY ===
 
-# Podíl vlastní spotřeby závisí na systému
-if typ_strechy == "plocha" and system_plocha == "vychod_zapad":
-    vlastni_spotreba_podil = 0.70  # V+Z systém má rovnoměrnější výrobu = vyšší vlastní spotřeba
-elif typ_strechy == "plocha" and system_plocha == "jz_jv":
-    vlastni_spotreba_podil = 0.65
-else:
-    vlastni_spotreba_podil = 0.60
-
 vlastni_spotreba = min(vyroba_rocni * vlastni_spotreba_podil, spotreba)
 pretoky = vyroba_rocni - vlastni_spotreba
-cena_pretoky = st.number_input(
-    "Výkupní cena přetoků (Kč/kWh)",
-    min_value=0.30,
-    max_value=2.50,
-    value=0.95,
-    step=0.05,
-    format="%.2f",
-    help="Typické rozmezí 2025: E.ON 0,70 Kč, TEDOM 0,75 Kč, spotový trh průměr ~1,50 Kč. Závisí na smlouvě s dodavatelem."
-)
-
 uspora_rocni = (vlastni_spotreba * cena_elektriny) + (pretoky * cena_pretoky)
-dotace_castka = cena_instalace * (dotace_procento / 100)
-vlastni_naklady = cena_instalace - dotace_castka
-navratnost = vlastni_naklady / uspora_rocni if uspora_rocni > 0 else 999
+
+# Financování
+vlastni_castka = cena_instalace * (vlastni_podil_pct / 100)
+uver_castka = cena_instalace - vlastni_castka - bonus_celkem
+uver_castka = max(0, uver_castka)
+
+if scenar == "vlastni":
+    rocni_splatka = 0
+    celkove_naklady_svj = cena_instalace - bonus_celkem
+elif splatnost > 0:
+    rocni_splatka = uver_castka / splatnost
+    celkove_naklady_svj = vlastni_castka + uver_castka - bonus_celkem
+else:
+    rocni_splatka = 0
+    celkove_naklady_svj = cena_instalace - bonus_celkem
+
+celkove_naklady_svj = max(0, celkove_naklady_svj)
+
+# Čistý roční přínos (úspora mínus splátka)
+rocni_prinos_cisty = uspora_rocni - rocni_splatka
+
+# Návratnost vlastní části
+if rocni_prinos_cisty > 0 and vlastni_castka > 0:
+    navratnost = vlastni_castka / rocni_prinos_cisty
+elif scenar == "uvěr" and rocni_prinos_cisty > 0:
+    navratnost = 0
+else:
+    navratnost = celkove_naklady_svj / uspora_rocni if uspora_rocni > 0 else 999
+
 uspora_na_byt = uspora_rocni / pocet_bytu
+splatka_na_byt = rocni_splatka / pocet_bytu / 12
 
 # === VÝSLEDKY ===
 
@@ -286,45 +359,48 @@ with res1:
     st.metric(
         label="Roční výroba FVE",
         value=f"{vyroba_rocni / 1000:,.1f} MWh",
-        help="Dle reálných dat PVGIS pro vaši lokalitu" if pvgis_ok else "Odhad dle průměru ČR"
+        help="Dle PVGIS pro vaši lokalitu" if pvgis_ok else "Odhad průměr ČR"
     )
 
 with res2:
     st.metric(
         label="Roční úspora",
         value=f"{uspora_rocni:,.0f} Kč",
-        help="Součet úspory na faktuře + příjem z přetoků"
+        help="Úspora na faktuře + příjem z přetoků"
     )
 
 with res3:
     st.metric(
-        label="Návratnost investice",
-        value=f"{navratnost:.1f} let",
-        delta=f"Po dotaci {dotace_procento} %",
-        delta_color="normal"
+        label="Čistý roční přínos",
+        value=f"{rocni_prinos_cisty:,.0f} Kč",
+        help="Roční úspora mínus splátka úvěru"
     )
 
 with res4:
     st.metric(
-        label="Úspora na byt/rok",
-        value=f"{uspora_na_byt:,.0f} Kč",
-        help="Průměrná roční úspora na jeden byt"
+        label="Splátka na byt/měsíc",
+        value=f"{splatka_na_byt:,.0f} Kč" if rocni_splatka > 0 else "0 Kč",
+        help="Měsíční splátka úvěru na jeden byt"
     )
 
 st.divider()
 
 # === DETAIL FINANCOVÁNÍ ===
 
-st.subheader("💰 Financování")
+st.subheader("💰 Přehled financování")
 
 fin1, fin2 = st.columns(2)
 
 with fin1:
     st.markdown("**Náklady**")
-    st.write(f"• Celková cena instalace: **{cena_instalace:,.0f} Kč**")
-    st.write(f"• Dotace NZÚ ({dotace_procento} %): **− {dotace_castka:,.0f} Kč**")
-    st.write(f"• Vlastní náklady SVJ: **{vlastni_naklady:,.0f} Kč**")
-    st.write(f"• Náklady na byt: **{vlastni_naklady / pocet_bytu:,.0f} Kč**")
+    st.write(f"• Cena instalace: **{cena_instalace:,.0f} Kč**")
+    if bonus_celkem > 0:
+        st.write(f"• Bonus nízkopříjmové domácnosti: **− {bonus_celkem:,.0f} Kč**")
+    if scenar != "vlastni":
+        st.write(f"• Vlastní zdroje SVJ: **{vlastni_castka:,.0f} Kč**")
+        st.write(f"• Bezúročný úvěr NZÚ: **{uver_castka:,.0f} Kč**")
+        st.write(f"• Splátka úvěru: **{rocni_splatka:,.0f} Kč/rok** ({splatnost} let)")
+    st.write(f"• Náklady na byt (vlastní): **{vlastni_castka / pocet_bytu:,.0f} Kč**")
 
 with fin2:
     st.markdown("**Výnosy**")
@@ -332,6 +408,55 @@ with fin2:
     st.write(f"• Úspora na faktuře: **{vlastni_spotreba * cena_elektriny:,.0f} Kč/rok**")
     st.write(f"• Přetoky do sítě: **{pretoky / 1000:,.1f} MWh/rok**")
     st.write(f"• Příjem z přetoků: **{pretoky * cena_pretoky:,.0f} Kč/rok**")
+    st.write(f"• Úspora na byt/rok: **{uspora_na_byt:,.0f} Kč**")
 
 st.divider()
-st.caption("⚠️ Kalkulačka poskytuje orientační výpočty. Solární data: PVGIS © Evropská komise, JRC. Výkupní cena přetoků závisí na smlouvě s dodavatelem elektřiny (typicky 0,70–1,50 Kč/kWh v roce 2025).")
+
+# === GRAF NÁVRATNOSTI ===
+
+st.subheader("📈 Graf návratnosti investice (25 let)")
+
+roky = list(range(0, 26))
+kumulativni_uspora = []
+kumulativni_splatky = []
+cashflow = []
+
+for rok in roky:
+    uspora_k = uspora_rocni * rok
+    splatky_k = rocni_splatka * min(rok, splatnost)
+    cf = uspora_k - splatky_k - vlastni_castka
+    kumulativni_uspora.append(uspora_k)
+    kumulativni_splatky.append(splatky_k)
+    cashflow.append(cf)
+
+# Najdi bod návratnosti
+navratnost_rok = None
+for i, cf in enumerate(cashflow):
+    if cf >= 0:
+        navratnost_rok = i
+        break
+
+# Streamlit nativní graf
+import pandas as pd
+
+df_graf = pd.DataFrame({
+    "Rok": roky,
+    "Kumulativní úspora (Kč)": kumulativni_uspora,
+    "Kumulativní splátky (Kč)": kumulativni_splatky,
+    "Čistý cashflow (Kč)": cashflow
+})
+
+st.line_chart(
+    df_graf.set_index("Rok")[["Kumulativní úspora (Kč)", "Čistý cashflow (Kč)"]],
+    color=["#f5a623", "#2ecc71"]
+)
+
+if navratnost_rok:
+    st.success(f"✅ Investice se vrátí přibližně v roce **{navratnost_rok}** od spuštění FVE.")
+    uspora_25 = cashflow[25]
+    st.info(f"💡 Za 25 let bude čistý přínos pro SVJ **{uspora_25:,.0f} Kč** (tj. {uspora_25/pocet_bytu:,.0f} Kč na byt).")
+else:
+    st.warning("⚠️ Při zadaných parametrech se investice do 25 let nevrátí. Zkuste upravit výkon FVE nebo model financování.")
+
+st.divider()
+st.caption("⚠️ Kalkulačka poskytuje orientační výpočty. Solární data: PVGIS © Evropská komise, JRC. Bezúročný úvěr NZÚ — žádosti od září 2026 přes zapojené banky a stavební spořitelny. Výkupní cena přetoků závisí na smlouvě s dodavatelem (typicky 0,70–1,50 Kč/kWh v roce 2025).")
