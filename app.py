@@ -260,7 +260,15 @@ else:
 
 vlastni_spotreba = min(vyroba_rocni * vlastni_spotreba_podil, spotreba)
 pretoky = vyroba_rocni - vlastni_spotreba
-cena_pretoky = 1.8
+cena_pretoky = st.number_input(
+    "Výkupní cena přetoků (Kč/kWh)",
+    min_value=0.30,
+    max_value=2.50,
+    value=0.95,
+    step=0.05,
+    format="%.2f",
+    help="Typické rozmezí 2025: E.ON 0,70 Kč, TEDOM 0,75 Kč, spotový trh průměr ~1,50 Kč. Závisí na smlouvě s dodavatelem."
+)
 
 uspora_rocni = (vlastni_spotreba * cena_elektriny) + (pretoky * cena_pretoky)
 dotace_castka = cena_instalace * (dotace_procento / 100)
