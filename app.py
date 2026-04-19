@@ -242,6 +242,11 @@ else:
                   f"{(spotreba * cena_prumerna_kwh + stay_plat_upraveny * 12):,.0f} Kč")
     # Přepočet ročního nákladu s upravenými hodnotami
     rocni_naklad_elektrina = spotreba * cena_prumerna_kwh + stay_plat_upraveny * 12
+    # VT cena pro výpočet úspory z FVE
+if sazba in SAZBY_S_NT:
+    cena_vt_kwh = cena_prumerna_kwh * 1.10
+else:
+    cena_vt_kwh = cena_prumerna_kwh
 
 st.divider()
 
