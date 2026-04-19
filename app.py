@@ -334,4 +334,4 @@ with fin2:
     st.write(f"• Příjem z přetoků: **{pretoky * cena_pretoky:,.0f} Kč/rok**")
 
 st.divider()
-st.caption("⚠️ Kalkulačka poskytuje orientační výpočty. Solární data: PVGIS © Evropská komise, JRC. Výkupní cena přetoků: 1,80 Kč/kWh.")
+st.caption("⚠️ Kalkulačka poskytuje orientační výpočty. Solární data: PVGIS © Evropská komise, JRC. Výkupní cena přetoků závisí na smlouvě s dodavatelem elektřiny (typicky 0,70–1,50 Kč/kWh v roce 2025).")
