@@ -424,7 +424,9 @@ cashflow = []
 for rok in roky:
     uspora_k = uspora_rocni * rok
     splatky_k = rocni_splatka * min(rok, splatnost)
-    cf = uspora_k - splatky_k - vlastni_castka
+    # Počáteční investice = vlastní část + celý úvěr (jistina)
+    pocatecni_investice = vlastni_castka + uver_castka
+    cf = uspora_k - splatky_k - pocatecni_investice
     kumulativni_uspora.append(uspora_k)
     kumulativni_splatky.append(splatky_k)
     cashflow.append(cf)
