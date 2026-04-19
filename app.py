@@ -10,8 +10,6 @@ st.set_page_config(
 
 # === DATOVÉ TABULKY CEN 2026 ===
 
-# Celková cena VT s DPH v Kč/MWh (komodita + distribuce + systémové služby + daň)
-# Zdroj: ceníky ČEZ, E.ON, PRE platné od 1.1.2026, POZE = 0 od 2026
 CENY_VT = {
     "ČEZ Distribuce": {
         "D01d": 7493, "D02d": 7493,
@@ -33,7 +31,6 @@ CENY_VT = {
     },
 }
 
-# Celková cena NT s DPH v Kč/MWh
 CENY_NT = {
     "ČEZ Distribuce": {
         "D25d": 4190, "D26d": 4190, "D27d": 4140,
@@ -52,35 +49,36 @@ CENY_NT = {
     },
 }
 
-# Měsíční stálý plat dodavatele s DPH
 STAY_PLAT = {
     "ČEZ Distribuce": 163, "EG.D (E.ON)": 144, "PREdistribuce": 150,
 }
 
-# Měsíční plat za jistič 3×25A s DPH (distribuce)
 JISTIC_PLAT_3x25 = {
-    "ČEZ Distribuce": {"D01d": 132, "D02d": 298, "D25d": 287, "D26d": 422,
-                       "D27d": 272, "D35d": 517, "D45d": 567, "D56d": 567,
-                       "D57d": 567, "D61d": 238},
-    "EG.D (E.ON)":    {"D01d": 145, "D02d": 575, "D25d": 296, "D26d": 422,
-                       "D27d": 282, "D35d": 575, "D45d": 575, "D56d": 575,
-                       "D57d": 575, "D61d": 271},
-    "PREdistribuce":  {"D01d": 100, "D02d": 280, "D25d": 250, "D26d": 350,
-                       "D27d": 230, "D35d": 420, "D45d": 480, "D56d": 480,
-                       "D57d": 480, "D61d": 200},
+    "ČEZ Distribuce": {
+        "D01d": 132, "D02d": 298, "D25d": 287, "D26d": 422,
+        "D27d": 272, "D35d": 517, "D45d": 567, "D56d": 567,
+        "D57d": 567, "D61d": 238
+    },
+    "EG.D (E.ON)": {
+        "D01d": 145, "D02d": 575, "D25d": 296, "D26d": 422,
+        "D27d": 282, "D35d": 575, "D45d": 575, "D56d": 575,
+        "D57d": 575, "D61d": 271
+    },
+    "PREdistribuce": {
+        "D01d": 100, "D02d": 280, "D25d": 250, "D26d": 350,
+        "D27d": 230, "D35d": 420, "D45d": 480, "D56d": 480,
+        "D57d": 480, "D61d": 200
+    },
 }
 
-# Sazby s NT tarifem
 SAZBY_S_NT = ["D25d", "D26d", "D27d", "D35d", "D45d", "D56d", "D57d", "D61d"]
 
-# Podíl NT spotřeby dle sazby (kolik % spotřeby je v NT)
 PODIL_NT = {
     "D25d": 0.35, "D26d": 0.35, "D27d": 0.35,
     "D35d": 0.60, "D45d": 0.70, "D56d": 0.75, "D57d": 0.75,
     "D61d": 0.40,
 }
 
-# Popis sazeb
 POPIS_SAZEB = {
     "D01d": "Malý byt — jen svícení, minimum spotřebičů",
     "D02d": "Standardní domácnost — běžné spotřebiče",
@@ -94,7 +92,6 @@ POPIS_SAZEB = {
     "D61d": "Víkendový objekt — rekreace",
 }
 
-# Profily spotřeby — vliv na koeficient vlastní spotřeby
 PROFILY = {
     "mix": {"nazev": "👨‍👩‍👧 Smíšený dům", "koef": 0.0,
             "popis": "Mix pracujících a seniorů — průměrná denní spotřeba"},
@@ -108,7 +105,7 @@ PROFILY = {
                    "popis": "Kadeřnictví, ordinace v přízemí — vysoká spotřeba přes den"},
 }
 
-# === POMOCNÉ FUNKCE ===
+# === FUNKCE ===
 
 @st.cache_data(ttl=3600)
 def get_pvgis_data(lat, lon, vykon_kwp, sklon, azimut):
@@ -143,17 +140,6 @@ def geocode_lokace(dotaz):
     except Exception as e:
         return None, None, None, str(e)
 
-def vypocet_ceny_kwh(distributor, sazba, spotreba_mwh):
-    """Vypočte průměrnou cenu elektřiny v Kč/kWh včetně stálých platů."""
-    cena_vt = CENY_VT[distributor][sazba] / 1000
-    if sazba in SAZBY_S_NT:
-        podil_nt = PODIL_NT.get(sazba, 0.5)
-        cena_nt = CENY_NT[distributor].get(sazba, cena_vt * 0.7) / 1000
-        cena_kwh = cena_vt * (1 - podil_nt) + cena_nt * podil_nt
-    else:
-        cena_kwh = cena_vt
-    return cena_vt, cena_kwh
-
 # === HLAVNÍ UI ===
 
 st.title("☀️ FVE Kalkulačka pro SVJ")
@@ -179,8 +165,7 @@ with col2:
     distributor = st.selectbox(
         "Distributor elektřiny",
         options=list(CENY_VT.keys()),
-        help="Závisí na lokalitě: ČEZ = většina ČR, EG.D = Morava/jih Čech, PRE = Praha")
-
+        help="ČEZ = většina ČR, EG.D = Morava/jih Čech, PRE = Praha")
     sazba = st.selectbox(
         "Distribuční sazba",
         options=list(CENY_VT[distributor].keys()),
@@ -191,62 +176,62 @@ with col3:
     jistic = st.selectbox(
         "Hlavní jistič",
         options=["1×25A", "3×16A", "3×20A", "3×25A", "3×32A", "3×40A", "3×50A", "3×63A"],
-        index=3,
-        help="Velikost hlavního jističe před elektroměrem")
-
+        index=3)
     profil_key = st.selectbox(
         "Profil obyvatel domu",
         options=list(PROFILY.keys()),
         format_func=lambda x: PROFILY[x]["nazev"])
     st.caption(PROFILY[profil_key]["popis"])
 
-# Výpočet ceny elektřiny
-cena_vt_kwh, cena_prumerna_kwh = vypocet_ceny_kwh(distributor, sazba, spotreba_mwh)
+# Výpočet cen z ceníku
+cena_vt_kwh = CENY_VT[distributor][sazba] / 1000
+
+if sazba in SAZBY_S_NT:
+    podil_nt = PODIL_NT.get(sazba, 0.5)
+    cena_nt_kwh = CENY_NT[distributor].get(sazba, cena_vt_kwh * 0.7) / 1000
+    cena_prumerna_kwh = cena_vt_kwh * (1 - podil_nt) + cena_nt_kwh * podil_nt
+else:
+    cena_prumerna_kwh = cena_vt_kwh
+
 stay_plat = STAY_PLAT[distributor]
 jistic_plat = JISTIC_PLAT_3x25[distributor][sazba]
-
-# Roční náklad na elektřinu
 rocni_naklad_elektrina = (spotreba * cena_prumerna_kwh) + (stay_plat + jistic_plat) * 12
 
+# Zobrazení cen s možností úpravy
 st.info(
-    f"💡 Ceny dle ceníku **{distributor}**, sazba **{sazba}**, platné od 1.1.2026 (s DPH 21 %, POZE = 0 Kč)\n\n"
+    f"💡 Ceny dle ceníku **{distributor}**, sazba **{sazba}** (s DPH 21 %, POZE = 0 Kč od 2026)\n\n"
     f"• Cena VT: **{cena_vt_kwh:.2f} Kč/kWh** | "
-    f"Průměrná cena (vč. NT): **{cena_prumerna_kwh:.2f} Kč/kWh** | "
+    f"Průměrná cena: **{cena_prumerna_kwh:.2f} Kč/kWh** | "
     f"Stálé platy: **{stay_plat + jistic_plat:.0f} Kč/měsíc**\n\n"
     f"• Odhadovaný roční náklad na elektřinu: **{rocni_naklad_elektrina:,.0f} Kč/rok**"
 )
 
-with st.expander("✏️ Upravit ceny ručně (pokud máte vlastní smlouvu nebo fixaci)"):# Pokud uživatel upravil průměrnou cenu ručně, odhadneme VT jako 110% průměru
-# (FVE vyrábí přes den = VT je vyšší než průměr)
-if sazba in SAZBY_S_NT:
-    cena_vt_kwh = cena_prumerna_kwh * 1.10
-else:
-    cena_vt_kwh = cena_prumerna_kwh
+with st.expander("✏️ Upravit ceny ručně (vlastní smlouva nebo fixace)"):
     up1, up2, up3 = st.columns(3)
     with up1:
+        cena_vt_kwh = st.number_input(
+            "Cena VT (Kč/kWh) — použita pro výpočet úspory z FVE",
+            min_value=1.0, max_value=15.0,
+            value=round(cena_vt_kwh, 2),
+            step=0.01, format="%.2f",
+            help="FVE vyrábí přes den = vysoký tarif. Tato cena se použije pro výpočet úspory.")
+    with up2:
         cena_prumerna_kwh = st.number_input(
-            "Průměrná cena elektřiny (Kč/kWh)",
+            "Průměrná cena (Kč/kWh) — pro výpočet celkového nákladu",
             min_value=1.0, max_value=15.0,
             value=round(cena_prumerna_kwh, 2),
             step=0.01, format="%.2f",
-            help="Celková průměrná cena včetně distribuce a daní s DPH")
-    with up2:
-        stay_plat_upraveny = st.number_input(
-            "Stálý plat celkem (Kč/měsíc)",
+            help="Průměr VT a NT dle podílu spotřeby")
+    with up3:
+        stay_plat_celkem = st.number_input(
+            "Stálé platy celkem (Kč/měsíc)",
             min_value=0, max_value=5000,
             value=int(stay_plat + jistic_plat),
             step=10,
-            help="Součet stálého platu dodavatele + měsíční plat za jistič")
-    with up3:
-        st.metric("Roční náklad (upravený)",
-                  f"{(spotreba * cena_prumerna_kwh + stay_plat_upraveny * 12):,.0f} Kč")
-    # Přepočet ročního nákladu s upravenými hodnotami
-    rocni_naklad_elektrina = spotreba * cena_prumerna_kwh + stay_plat_upraveny * 12
-    # VT cena pro výpočet úspory z FVE
-if sazba in SAZBY_S_NT:
-    cena_vt_kwh = cena_prumerna_kwh * 1.10
-else:
-    cena_vt_kwh = cena_prumerna_kwh
+            help="Stálý plat dodavatele + měsíční plat za jistič")
+    rocni_naklad_elektrina = spotreba * cena_prumerna_kwh + stay_plat_celkem * 12
+    st.metric("Roční náklad s upravenými cenami",
+              f"{rocni_naklad_elektrina:,.0f} Kč")
 
 st.divider()
 
@@ -260,7 +245,6 @@ with col1:
         "Výkon FVE (kWp)", min_value=1.0, max_value=200.0,
         value=20.0, step=0.5, format="%.1f",
         help="Orientační pravidlo: 1 kWp na 1 MWh roční spotřeby")
-
     cena_kwp = st.slider(
         "Cena FVE (Kč/kWp)", min_value=25000, max_value=50000,
         value=37000, step=1000,
@@ -272,8 +256,7 @@ with col1:
 with col2:
     baterie_kapacita = st.number_input(
         "Kapacita baterie (kWh)", min_value=0, max_value=200, value=0, step=5,
-        help="0 = bez baterie. Baterie výrazně zvyšuje vlastní spotřebu.")
-
+        help="0 = bez baterie. Baterie zvyšuje vlastní spotřebu.")
     if baterie_kapacita > 0:
         cena_kwh_bat = st.slider(
             "Cena baterie (Kč/kWh)", min_value=10000, max_value=20000,
@@ -294,16 +277,14 @@ model_sdileni = st.radio(
     "Zvolte model sdílení",
     options=["spolecne", "jom", "edc"],
     format_func=lambda x: {
-        "spolecne": "🏢 Jen společné prostory — FVE napájí výtah, světla, čerpadla",
-        "jom": "⚡ Sjednocení odběrných míst — jeden hlavní měřič + podružné měřiče na byty",
-        "edc": "🔗 EDC komunitní sdílení — každý byt si zachovává svého dodavatele"
+        "spolecne": "🏢 Jen společné prostory",
+        "jom": "⚡ Sjednocení odběrných míst",
+        "edc": "🔗 EDC komunitní sdílení"
     }[x],
     horizontal=True)
 
-# Koeficient vlastní spotřeby
 koef_base = {"spolecne": 0.20, "jom": 0.60, "edc": 0.65}[model_sdileni]
 
-# Bonus za baterii
 if baterie_kapacita <= 0:
     koef_bat = 0.0
 elif baterie_kapacita <= 10:
@@ -315,31 +296,22 @@ elif baterie_kapacita <= 30:
 else:
     koef_bat = 0.20
 
-# Bonus za profil
 koef_profil = PROFILY[profil_key]["koef"]
-
 vlastni_spotreba_podil = min(koef_base + koef_bat + koef_profil, 0.85)
+
+cena_mericu = pocet_bytu * 10000 if model_sdileni == "jom" else 0
 
 if model_sdileni == "spolecne":
     st.info("🏢 Nejjednodušší. FVE pokrývá jen společnou spotřebu. Nevyžaduje souhlas nájemníků.")
 elif model_sdileni == "jom":
-    cena_mericu = pocet_bytu * 10000
     st.info(f"⚡ Jeden hlavní elektroměr, interní rozpočítávání přes podružné měřiče. "
             f"Náklady na měřiče: {pocet_bytu} × 10 000 Kč = **{cena_mericu:,} Kč**. "
-            f"Úspora na distribuci: platíte jen jeden jistič místo {pocet_bytu}.")
+            f"Úspora: platíte jeden jistič místo {pocet_bytu}.")
 else:
     st.info("🔗 Každý byt si zachovává dodavatele. Chytré měřiče instaluje distributor zdarma. "
-            "Registrace u EDC. Sdílení přes alokační klíč.")
+            "Sdílení přes alokační klíč v EDC.")
 
-cena_mericu = pocet_bytu * 10000 if model_sdileni == "jom" else 0
-
-# Úspora na distribuci u JOM
-if model_sdileni == "jom":
-    # Místo N jističů platí SVJ pouze jeden velký
-    uspora_jistic_mesic = jistic_plat * (pocet_bytu - 1)
-    uspora_jistic_rocni = uspora_jistic_mesic * 12
-else:
-    uspora_jistic_rocni = 0
+uspora_jistic_rocni = jistic_plat * (pocet_bytu - 1) * 12 if model_sdileni == "jom" else 0
 
 st.divider()
 
@@ -349,8 +321,7 @@ st.subheader("🌍 Lokalita a střecha")
 col1, col2 = st.columns([1, 2])
 
 with col1:
-    lokace_input = st.text_input("Město nebo PSČ", value="Praha",
-                                 help="Zadejte název města nebo PSČ")
+    lokace_input = st.text_input("Město nebo PSČ", value="Praha")
 
 with col2:
     typ_strechy = st.radio("Typ střechy",
@@ -363,21 +334,21 @@ if typ_strechy == "sikma":
     with s1:
         sklon = st.slider("Sklon střechy (°)", 15, 60, 35)
     with s2:
-        azimut = st.select_slider("Orientace", options=[-90, -45, 0, 45, 90], value=0,
-                                  format_func=lambda x: {
-                                      -90: "⬅️ Východ", -45: "↙️ Jihovýchod",
-                                      0: "⬆️ Jih", 45: "↗️ Jihozápad", 90: "➡️ Západ"}[x])
+        azimut = st.select_slider(
+            "Orientace", options=[-90, -45, 0, 45, 90], value=0,
+            format_func=lambda x: {
+                -90: "⬅️ Východ", -45: "↙️ Jihovýchod",
+                0: "⬆️ Jih", 45: "↗️ Jihozápad", 90: "➡️ Západ"}[x])
     koef_vyroba = 1.0
 else:
     p1, p2 = st.columns(2)
     with p1:
         sklon = st.slider("Sklon panelů (°)", 5, 20, 10)
     with p2:
-        system_plocha = st.radio("Systém",
-                                 options=["jih", "jz_jv", "vz"],
-                                 format_func=lambda x: {"jih": "⬆️ Jih",
-                                                        "jz_jv": "↗️ JZ+JV",
-                                                        "vz": "↔️ V+Z"}[x])
+        system_plocha = st.radio(
+            "Systém", options=["jih", "jz_jv", "vz"],
+            format_func=lambda x: {
+                "jih": "⬆️ Jih", "jz_jv": "↗️ JZ+JV", "vz": "↔️ V+Z"}[x])
     if system_plocha == "jih":
         azimut, koef_vyroba = 0, 1.0
         st.info("☀️ Maximum výkonu, výroba kolem poledne.")
@@ -388,7 +359,6 @@ else:
         azimut, koef_vyroba = 90, 0.88
         st.info("☀️ Nejrovnoměrnější výroba, ideální pro vlastní spotřebu.")
 
-# PVGIS
 if lokace_input:
     with st.spinner(f"Hledám {lokace_input}..."):
         lat, lon, nazev_mesta, geo_err = geocode_lokace(lokace_input)
@@ -433,7 +403,7 @@ with fin2:
     if scenar == "uver":
         splatnost = st.slider("Doba splácení (let)", 5, 25, 15)
         vlastni_podil_pct = 0
-        st.info("✅ Úroky hradí stát. SVJ splácí pouze jistinu.")
+        st.info("✅ Úroky hradí stát (SFŽP). SVJ splácí pouze jistinu.")
     elif scenar == "vlastni":
         splatnost = 0
         vlastni_podil_pct = 100
@@ -442,25 +412,15 @@ with fin2:
         vlastni_podil_pct = st.slider("Vlastní zdroje (%)", 10, 90, 30, step=10)
         splatnost = st.slider("Doba splácení úvěru (let)", 5, 25, 15)
 
-# Nízkopříjmové domácnosti
 st.markdown("**Nízkopříjmové domácnosti (superdávka)**")
 n1, n2 = st.columns(2)
 with n1:
-    pocet_nizko = st.number_input("Bytů s nárokem na bonus", 0, int(pocet_bytu), 0, step=1)
+    pocet_nizko = st.number_input(
+        "Bytů s nárokem na bonus", 0, int(pocet_bytu), 0, step=1)
 with n2:
-    bonus_na_byt = st.number_input("Bonus na byt (Kč)", 0, 150000, 50000, step=5000)
+    bonus_na_byt = st.number_input(
+        "Bonus na byt (Kč)", 0, 150000, 50000, step=5000)
 bonus_celkem = pocet_nizko * bonus_na_byt
-
-st.divider()
-
-# === VÝPOČTY ===
-
-# Celková investice
-cena_instalace = cena_instalace_fve + cena_baterie + cena_mericu
-
-# Výroba a spotřeba
-vlastni_spotreba = min(vyroba_rocni * vlastni_spotreba_podil, spotreba)
-pretoky = vyroba_rocni - vlastni_spotreba
 
 # Výkupní cena přetoků
 cena_pretoky = st.sidebar.number_input(
@@ -468,14 +428,20 @@ cena_pretoky = st.sidebar.number_input(
     min_value=0.30, max_value=2.50, value=0.95, step=0.05, format="%.2f",
     help="E.ON 0,70 Kč, TEDOM 0,75 Kč, spot průměr ~1,50 Kč")
 
-# Roční úspora
-# FVE vyrábí přes den = vysoký tarif, proto počítáme úsporu za cenu VT
+st.divider()
+
+# === VÝPOČTY ===
+
+cena_instalace = cena_instalace_fve + cena_baterie + cena_mericu
+
+vlastni_spotreba = min(vyroba_rocni * vlastni_spotreba_podil, spotreba)
+pretoky = vyroba_rocni - vlastni_spotreba
+
+# Úspora z FVE počítána za cenu VT (FVE vyrábí přes den = VT)
 uspora_elektrina = vlastni_spotreba * cena_vt_kwh
 uspora_pretoky = pretoky * cena_pretoky
-uspora_jistic = uspora_jistic_rocni
-uspora_rocni = uspora_elektrina + uspora_pretoky + uspora_jistic
+uspora_rocni = uspora_elektrina + uspora_pretoky + uspora_jistic_rocni
 
-# Financování
 vlastni_castka = cena_instalace * (vlastni_podil_pct / 100)
 uver_castka = max(0, cena_instalace - vlastni_castka - bonus_celkem)
 
@@ -490,17 +456,15 @@ rocni_prinos_cisty = uspora_rocni - rocni_splatka
 uspora_na_byt_rok = uspora_rocni / pocet_bytu
 splatka_na_byt_mesic = rocni_splatka / pocet_bytu / 12
 
-# Horizont: délka úvěru + 5 let, max 20
 horizont = min(max(splatnost + 5, 10), 20) if splatnost > 0 else 15
 
-# Cashflow
 cashflow_data = []
 for rok in range(0, horizont + 1):
     uspora_k = uspora_rocni * rok
     splatky_k = rocni_splatka * min(rok, splatnost)
     investice = vlastni_castka + uver_castka
     cf = uspora_k - splatky_k - investice
-    cashflow_data.append({"Rok": rok, "Kumulativní úspora": uspora_k, "Cashflow": cf})
+    cashflow_data.append({"Rok": rok, "Cashflow": cf})
 
 navratnost_rok = next((d["Rok"] for d in cashflow_data if d["Cashflow"] >= 0), None)
 
@@ -513,11 +477,11 @@ r1, r2, r3, r4, r5 = st.columns(5)
 with r1:
     st.metric("Roční výroba FVE",
               f"{vyroba_rocni / 1000:,.1f} MWh",
-              help="PVGIS data" if pvgis_ok else "Průměr ČR")
+              help="PVGIS data pro vaši lokalitu" if pvgis_ok else "Průměr ČR")
 with r2:
-    st.metric("Roční úspora celkem",
+    st.metric("Roční úspora",
               f"{uspora_rocni:,.0f} Kč",
-              help="Elektřina + přetoky + distribuce")
+              help="Elektřina (VT) + přetoky + distribuce")
 with r3:
     st.metric("Čistý roční přínos",
               f"{rocni_prinos_cisty:,.0f} Kč",
@@ -533,30 +497,37 @@ with r5:
 
 # Milníky
 st.markdown("**📍 Klíčové milníky**")
-
 m1, m2, m3 = st.columns(3)
+
 with m1:
-    st.info(f"**Rok 1**\nRoční úspora: **{uspora_rocni:,.0f} Kč**\n"
+    st.info(f"**Rok 1**\n\n"
+            f"Roční úspora: **{uspora_rocni:,.0f} Kč**\n\n"
             f"Na byt: **{uspora_na_byt_rok:,.0f} Kč/rok**")
+
 with m2:
     if splatnost > 0:
-        st.info(f"**Rok {splatnost}**\nÚvěr splacen ✅\n"
-                f"Poté čistý přínos: **{uspora_rocni:,.0f} Kč/rok**")
+        st.info(f"**Rok {splatnost} — úvěr splacen ✅**\n\n"
+                f"Poté čistý přínos: **{uspora_rocni:,.0f} Kč/rok**\n\n"
+                f"Na byt: **{uspora_na_byt_rok:,.0f} Kč/rok**")
     else:
-        st.info(f"**Vlastní financování**\nŽádné splátky\n"
+        st.info(f"**Vlastní financování**\n\n"
+                f"Žádné splátky\n\n"
                 f"Plný přínos hned: **{uspora_rocni:,.0f} Kč/rok**")
+
 with m3:
     cf_konec = cashflow_data[-1]["Cashflow"]
     if navratnost_rok:
-        st.success(f"**Rok {navratnost_rok}**\nInvestice se vrátí ✅\n"
-                   f"Za {horizont} let: **{cf_konec:,.0f} Kč** čistý zisk")
+        st.success(f"**Rok {navratnost_rok} — investice se vrátí ✅**\n\n"
+                   f"Za {horizont} let celkový zisk:\n\n"
+                   f"**{cf_konec:,.0f} Kč** ({cf_konec/pocet_bytu:,.0f} Kč/byt)")
     else:
-        st.warning(f"**Za {horizont} let**\nInvestice se nevrátí\n"
+        st.warning(f"**Za {horizont} let**\n\n"
+                   f"Investice se nevrátí\n\n"
                    f"Cashflow: **{cf_konec:,.0f} Kč**")
 
 st.divider()
 
-# Detail nákladů a výnosů
+# Detail
 st.subheader("💰 Detail nákladů a výnosů")
 
 d1, d2 = st.columns(2)
@@ -574,22 +545,25 @@ with d1:
     if scenar != "vlastni":
         st.write(f"• Vlastní zdroje: **{vlastni_castka:,.0f} Kč**")
         st.write(f"• Bezúročný úvěr NZÚ: **{uver_castka:,.0f} Kč**")
-        st.write(f"• Roční splátka: **{rocni_splatka:,.0f} Kč** ({splatnost} let)")
+        st.write(f"• Roční splátka: **{rocni_splatka:,.0f} Kč/rok** ({splatnost} let)")
     st.write(f"• Náklady na byt: **{vlastni_castka / pocet_bytu:,.0f} Kč**")
 
 with d2:
     st.markdown("**Výnosy**")
-    nazev_modelu = {"spolecne": "Jen společné prostory",
-                    "jom": "Sjednocení odběrných míst",
-                    "edc": "EDC komunitní sdílení"}[model_sdileni]
+    nazev_modelu = {
+        "spolecne": "Jen společné prostory",
+        "jom": "Sjednocení odběrných míst",
+        "edc": "EDC komunitní sdílení"
+    }[model_sdileni]
     st.write(f"• Model: **{nazev_modelu}**")
     st.write(f"• Vlastní spotřeba: **{vlastni_spotreba/1000:,.1f} MWh/rok** "
              f"({vlastni_spotreba_podil*100:.0f} %)")
-    st.write(f"• Úspora na elektřině: **{uspora_elektrina:,.0f} Kč/rok**")
+    st.write(f"• Cena VT (základ výpočtu): **{cena_vt_kwh:.2f} Kč/kWh**")
+    st.write(f"• Úspora na elektřině (VT): **{uspora_elektrina:,.0f} Kč/rok**")
     st.write(f"• Přetoky: **{pretoky/1000:,.1f} MWh/rok** → "
              f"**{uspora_pretoky:,.0f} Kč/rok**")
-    if uspora_jistic > 0:
-        st.write(f"• Úspora na distribuci (JOM): **{uspora_jistic:,.0f} Kč/rok**")
+    if uspora_jistic_rocni > 0:
+        st.write(f"• Úspora distribuce (JOM): **{uspora_jistic_rocni:,.0f} Kč/rok**")
     st.write(f"• **Celková roční úspora: {uspora_rocni:,.0f} Kč**")
     st.write(f"• Úspora na byt/rok: **{uspora_na_byt_rok:,.0f} Kč**")
     st.write(f"• Úspora na byt/měsíc: **{uspora_na_byt_rok/12:,.0f} Kč**")
@@ -597,9 +571,9 @@ with d2:
 st.divider()
 st.caption(
     "⚠️ Orientační výpočty. Solární data: PVGIS © Evropská komise, JRC. "
-    "Ceny elektřiny dle ceníků ČEZ, E.ON, PRE platných od 1.1.2026. "
+    "Ceny elektřiny dle ceníků ČEZ, E.ON, PRE platných od 1.1.2026 (s DPH 21 %). "
     "POZE = 0 Kč od roku 2026. "
     "Bezúročný úvěr NZÚ — žádosti od září 2026. "
-    "EDC komunitní sdílení — registrace na edc.cz. "
+    "EDC sdílení — registrace na edc.cz. "
     "Výkupní cena přetoků závisí na smlouvě s dodavatelem."
 )
