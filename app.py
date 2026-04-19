@@ -216,7 +216,12 @@ st.info(
     f"• Odhadovaný roční náklad na elektřinu: **{rocni_naklad_elektrina:,.0f} Kč/rok**"
 )
 
-with st.expander("✏️ Upravit ceny ručně (pokud máte vlastní smlouvu nebo fixaci)"):
+with st.expander("✏️ Upravit ceny ručně (pokud máte vlastní smlouvu nebo fixaci)"):# Pokud uživatel upravil průměrnou cenu ručně, odhadneme VT jako 110% průměru
+# (FVE vyrábí přes den = VT je vyšší než průměr)
+if sazba in SAZBY_S_NT:
+    cena_vt_kwh = cena_prumerna_kwh * 1.10
+else:
+    cena_vt_kwh = cena_prumerna_kwh
     up1, up2, up3 = st.columns(3)
     with up1:
         cena_prumerna_kwh = st.number_input(
@@ -459,7 +464,8 @@ cena_pretoky = st.sidebar.number_input(
     help="E.ON 0,70 Kč, TEDOM 0,75 Kč, spot průměr ~1,50 Kč")
 
 # Roční úspora
-uspora_elektrina = vlastni_spotreba * cena_prumerna_kwh
+# FVE vyrábí přes den = vysoký tarif, proto počítáme úsporu za cenu VT
+uspora_elektrina = vlastni_spotreba * cena_vt_kwh
 uspora_pretoky = pretoky * cena_pretoky
 uspora_jistic = uspora_jistic_rocni
 uspora_rocni = uspora_elektrina + uspora_pretoky + uspora_jistic
