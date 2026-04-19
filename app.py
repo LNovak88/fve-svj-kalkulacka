@@ -37,12 +37,13 @@ def get_pvgis_data(lat, lon, vykon_kwp, sklon, azimut):
         return None, str(e)
 
 @st.cache_data(ttl=3600)
-def geocode_mesto(mesto):
+def geocode_lokace(dotaz):
     url = "https://nominatim.openstreetmap.org/search"
     params = {
-        "q": f"{mesto}, Česká republika",
+        "q": f"{dotaz}, Česká republika",
         "format": "json",
-        "limit": 1
+        "limit": 1,
+        "addressdetails": 1
     }
     headers = {"User-Agent": "FVE-SVJ-Kalkulacka/1.0"}
     try:
@@ -50,10 +51,19 @@ def geocode_mesto(mesto):
         r.raise_for_status()
         results = r.json()
         if results:
-            return float(results[0]["lat"]), float(results[0]["lon"]), None
-        return None, None, "Město nenalezeno"
+            res = results[0]
+            addr = res.get("address", {})
+            mesto = (
+                addr.get("city") or
+                addr.get("town") or
+                addr.get("village") or
+                addr.get("municipality") or
+                dotaz
+            )
+            return float(res["lat"]), float(res["lon"]), mesto, None
+        return None, None, None, "Lokalita nenalezena"
     except Exception as e:
-        return None, None, str(e)
+        return None, None, None, str(e)
 
 # === VSTUPY ===
 
@@ -122,84 +132,140 @@ with col2:
 
 st.divider()
 
-# === LOKALITA A PVGIS ===
+# === LOKALITA A STŘECHA ===
 
-st.subheader("🌍 Lokalita a oslunění")
+st.subheader("🌍 Lokalita a střecha")
 
-lok1, lok2, lok3 = st.columns(3)
+lok1, lok2 = st.columns([1, 2])
 
 with lok1:
-    mesto = st.text_input(
-        "Město nebo obec",
+    lokace_input = st.text_input(
+        "Město nebo PSČ",
         value="Praha",
-        help="Zadejte název města pro načtení reálných dat oslunění"
+        help="Zadejte název města nebo PSČ (např. 739 61 nebo Třinec)"
     )
 
 with lok2:
-    sklon = st.slider(
-        "Sklon střechy (°)",
-        min_value=0,
-        max_value=60,
-        value=35,
-        help="Typická šikmá střecha: 30–45°. Plochá střecha: 10–15°"
+    typ_strechy = st.radio(
+        "Typ střechy",
+        options=["sikma", "plocha"],
+        format_func=lambda x: "🏠 Šikmá střecha" if x == "sikma" else "🏢 Plochá střecha",
+        horizontal=True
     )
 
-with lok3:
-    azimut = st.select_slider(
-        "Orientace střechy",
-        options=[-90, -45, 0, 45, 90],
-        value=0,
-        format_func=lambda x: {
-            -90: "⬅️ Východ",
-            -45: "↖️ Severovýchod",
-            0: "⬆️ Jih (ideální)",
-            45: "↗️ Jihozápad",
-            90: "➡️ Západ"
-        }[x]
-    )
+# Konfigurace podle typu střechy
+if typ_strechy == "sikma":
+    st.markdown("**Orientace šikmé střechy**")
+    s1, s2 = st.columns(2)
+    with s1:
+        sklon = st.slider(
+            "Sklon střechy (°)",
+            min_value=15,
+            max_value=60,
+            value=35,
+            help="Typická šikmá střecha: 30–45°"
+        )
+    with s2:
+        azimut_volba = st.select_slider(
+            "Orientace",
+            options=[-90, -45, 0, 45, 90],
+            value=0,
+            format_func=lambda x: {
+                -90: "⬅️ Východ",
+                -45: "↙️ Jihovýchod",
+                0: "⬆️ Jih (ideální)",
+                45: "↗️ Jihozápad",
+                90: "➡️ Západ"
+            }[x]
+        )
+    azimut = azimut_volba
+    # Pro šikmou střechu počítáme jednu plochu
+    koeficient_vyroba = 1.0
 
-# Načtení PVGIS dat
-if mesto:
-    with st.spinner(f"Načítám data pro {mesto}..."):
-        lat, lon, geo_err = geocode_mesto(mesto)
+else:
+    st.markdown("**Konfigurace ploché střechy**")
+    p1, p2 = st.columns(2)
+    with p1:
+        sklon = st.slider(
+            "Sklon panelů (°)",
+            min_value=5,
+            max_value=20,
+            value=10,
+            help="Na ploché střeše se panely montují typicky pod úhlem 10–15°"
+        )
+    with p2:
+        system_plocha = st.radio(
+            "Systém rozmístění",
+            options=["jih", "jz_jv", "vychod_zapad"],
+            format_func=lambda x: {
+                "jih": "⬆️ Jih — maximum výkonu",
+                "jz_jv": "↗️ JZ + JV — rovnoměrnější výroba",
+                "vychod_zapad": "↔️ Východ + Západ — nejrovnoměrnější"
+            }[x],
+            help="Systém V+Z umožňuje více panelů na stejné ploše bez stínění"
+        )
+
+    if system_plocha == "jih":
+        azimut = 0
+        koeficient_vyroba = 1.0
+        st.info("☀️ Maximální výkon, výroba soustředěná kolem poledne.")
+    elif system_plocha == "jz_jv":
+        azimut = 0
+        koeficient_vyroba = 0.97
+        st.info("☀️ Mírně nižší špičkový výkon, ale výroba rozložená na delší část dne.")
+    else:
+        azimut = 90
+        koeficient_vyroba = 0.88
+        st.info("☀️ Nižší celkový výkon, ale velmi rovnoměrná výroba ráno i odpoledne. Ideální pro vlastní spotřebu SVJ.")
+
+# === NAČTENÍ PVGIS ===
+
+if lokace_input:
+    with st.spinner(f"Hledám lokalitu: {lokace_input}..."):
+        lat, lon, nazev_mesta, geo_err = geocode_lokace(lokace_input)
 
     if geo_err:
-        st.warning(f"⚠️ Nepodařilo se najít město: {geo_err}. Používám průměr ČR (1 000 kWh/kWp).")
+        st.warning(f"⚠️ Nepodařilo se najít lokalitu. Používám průměr ČR.")
         vyroba_rocni = vykon_fve * 1000
         pvgis_ok = False
+        nazev_mesta = lokace_input
     else:
-        with st.spinner("Načítám solární data z PVGIS (EU databáze)..."):
+        with st.spinner(f"Načítám solární data pro {nazev_mesta} z PVGIS..."):
             vyroba_pvgis, pvgis_err = get_pvgis_data(lat, lon, vykon_fve, sklon, azimut)
 
         if pvgis_err:
-            st.warning(f"⚠️ PVGIS nedostupné: {pvgis_err}. Používám průměr ČR.")
+            st.warning(f"⚠️ PVGIS nedostupné. Používám průměr ČR.")
             vyroba_rocni = vykon_fve * 1000
             pvgis_ok = False
         else:
-            vyroba_rocni = vyroba_pvgis
+            vyroba_rocni = vyroba_pvgis * koeficient_vyroba
             pvgis_ok = True
-            st.success(f"✅ Data načtena pro {mesto} ({lat:.2f}°N, {lon:.2f}°E) — výroba {vyroba_rocni:,.0f} kWh/rok")
+            st.success(f"✅ {nazev_mesta} ({lat:.2f}°N, {lon:.2f}°E) — odhadovaná výroba {vyroba_rocni:,.0f} kWh/rok")
 else:
     vyroba_rocni = vykon_fve * 1000
     pvgis_ok = False
+    nazev_mesta = ""
 
 st.divider()
 
 # === VÝPOČTY ===
 
-vlastni_spotreba_podil = 0.60
-vlastni_spotreba = min(vyroba_rocni * vlastni_spotreba_podil, spotreba)
+# Podíl vlastní spotřeby závisí na systému
+if typ_strechy == "plocha" and system_plocha == "vychod_zapad":
+    vlastni_spotreba_podil = 0.70  # V+Z systém má rovnoměrnější výrobu = vyšší vlastní spotřeba
+elif typ_strechy == "plocha" and system_plocha == "jz_jv":
+    vlastni_spotreba_podil = 0.65
+else:
+    vlastni_spotreba_podil = 0.60
 
+vlastni_spotreba = min(vyroba_rocni * vlastni_spotreba_podil, spotreba)
 pretoky = vyroba_rocni - vlastni_spotreba
 cena_pretoky = 1.8
 
 uspora_rocni = (vlastni_spotreba * cena_elektriny) + (pretoky * cena_pretoky)
-
 dotace_castka = cena_instalace * (dotace_procento / 100)
 vlastni_naklady = cena_instalace - dotace_castka
-
 navratnost = vlastni_naklady / uspora_rocni if uspora_rocni > 0 else 999
-
 uspora_na_byt = uspora_rocni / pocet_bytu
 
 # === VÝSLEDKY ===
