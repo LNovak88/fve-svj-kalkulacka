@@ -1,5 +1,4 @@
 import streamlit as st
-import math
 
 st.set_page_config(
     page_title="FVE Kalkulačka pro SVJ",
@@ -16,18 +15,18 @@ col1, col2 = st.columns(2)
 
 with col1:
     st.subheader("🏠 Základní údaje")
-    
-   spotreba_mwh = st.number_input(
-    "Roční spotřeba elektřiny (MWh/rok)",
-    min_value=1.0,
-    max_value=500.0,
-    value=25.0,
-    step=1.0,
-    format="%.1f",
-    help="Celková spotřeba SVJ za rok – najdete ji na faktuře nebo ve smlouvě s dodavatelem"
-)
-spotreba = spotreba_mwh * 1000  # převod na kWh pro výpočty
-    
+
+    spotreba_mwh = st.number_input(
+        "Roční spotřeba elektřiny (MWh/rok)",
+        min_value=1.0,
+        max_value=500.0,
+        value=25.0,
+        step=1.0,
+        format="%.1f",
+        help="Celková spotřeba SVJ za rok – najdete ji na faktuře nebo ve smlouvě s dodavatelem"
+    )
+    spotreba = spotreba_mwh * 1000
+
     pocet_bytu = st.number_input(
         "Počet bytů v domě",
         min_value=2,
@@ -35,7 +34,7 @@ spotreba = spotreba_mwh * 1000  # převod na kWh pro výpočty
         value=12,
         step=1
     )
-    
+
     cena_elektriny = st.number_input(
         "Aktuální cena elektřiny (Kč/kWh)",
         min_value=1.0,
@@ -47,17 +46,17 @@ spotreba = spotreba_mwh * 1000  # převod na kWh pro výpočty
 
 with col2:
     st.subheader("⚡ Parametry FVE")
-    
-    vvykon_fve = st.number_input(
-    "Výkon FVE (kWp)",
-    min_value=1.0,
-    max_value=200.0,
-    value=20.0,
-    step=0.5,
-    format="%.1f",
-    help="Orientační pravidlo: 1 kWp na 1 MWh roční spotřeby"
-)
-    
+
+    vykon_fve = st.number_input(
+        "Výkon FVE (kWp)",
+        min_value=1.0,
+        max_value=200.0,
+        value=20.0,
+        step=0.5,
+        format="%.1f",
+        help="Orientační pravidlo: 1 kWp na 1 MWh roční spotřeby"
+    )
+
     cena_instalace = st.number_input(
         "Cena instalace (Kč bez DPH)",
         min_value=100000,
@@ -66,7 +65,7 @@ with col2:
         step=50000,
         help="Orientační cena: 30 000–40 000 Kč/kWp pro bytové domy"
     )
-    
+
     dotace_procento = st.slider(
         "Dotace NZÚ (%)",
         min_value=0,
@@ -79,28 +78,21 @@ st.divider()
 
 # === VÝPOČTY ===
 
-# Výroba FVE (průměr ČR ~1000 kWh/kWp/rok)
 vyroba_rocni = vykon_fve * 1000
 
-# Vlastní spotřeba (předpoklad 60 % z výroby)
 vlastni_spotreba_podil = 0.60
 vlastni_spotreba = min(vyroba_rocni * vlastni_spotreba_podil, spotreba)
 
-# Přetoky do sítě
 pretoky = vyroba_rocni - vlastni_spotreba
-cena_pretoky = 1.8  # Kč/kWh výkupní cena
+cena_pretoky = 1.8
 
-# Roční úspora
 uspora_rocni = (vlastni_spotreba * cena_elektriny) + (pretoky * cena_pretoky)
 
-# Financování
 dotace_castka = cena_instalace * (dotace_procento / 100)
 vlastni_naklady = cena_instalace - dotace_castka
 
-# Návratnost
 navratnost = vlastni_naklady / uspora_rocni if uspora_rocni > 0 else 999
 
-# Úspora na byt
 uspora_na_byt = uspora_rocni / pocet_bytu
 
 # === VÝSLEDKY ===
@@ -111,9 +103,10 @@ res1, res2, res3, res4 = st.columns(4)
 
 with res1:
     st.metric(
-    label="Roční výroba FVE",
-    value=f"{vyroba_rocni/1000:,.1f} MWh",
-)
+        label="Roční výroba FVE",
+        value=f"{vyroba_rocni / 1000:,.1f} MWh",
+        help="Odhadovaná roční výroba energie"
+    )
 
 with res2:
     st.metric(
@@ -150,13 +143,13 @@ with fin1:
     st.write(f"• Celková cena instalace: **{cena_instalace:,.0f} Kč**")
     st.write(f"• Dotace NZÚ ({dotace_procento} %): **− {dotace_castka:,.0f} Kč**")
     st.write(f"• Vlastní náklady SVJ: **{vlastni_naklady:,.0f} Kč**")
-    st.write(f"• Náklady na byt: **{vlastni_naklady/pocet_bytu:,.0f} Kč**")
+    st.write(f"• Náklady na byt: **{vlastni_naklady / pocet_bytu:,.0f} Kč**")
 
 with fin2:
     st.markdown("**Výnosy**")
-    st.write(f"• Vlastní spotřeba z FVE: **{vlastni_spotreba:,.0f} kWh/rok**")
+    st.write(f"• Vlastní spotřeba z FVE: **{vlastni_spotreba / 1000:,.1f} MWh/rok**")
     st.write(f"• Úspora na faktuře: **{vlastni_spotreba * cena_elektriny:,.0f} Kč/rok**")
-    st.write(f"• Přetoky do sítě: **{pretoky:,.0f} kWh/rok**")
+    st.write(f"• Přetoky do sítě: **{pretoky / 1000:,.1f} MWh/rok**")
     st.write(f"• Příjem z přetoků: **{pretoky * cena_pretoky:,.0f} Kč/rok**")
 
 st.divider()
