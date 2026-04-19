@@ -79,11 +79,14 @@ with col2:
         value=20.0, step=0.5, format="%.1f",
         help="Orientační pravidlo: 1 kWp na 1 MWh roční spotřeby"
     )
-    cena_instalace_fve = st.number_input(
-        "Cena instalace FVE (Kč bez DPH)", min_value=100000, max_value=10000000,
-        value=700000, step=50000,
-        help="Orientační cena: 30 000–40 000 Kč/kWp pro bytové domy"
+
+    cena_kwp = st.slider(
+        "Cena FVE (Kč/kWp)",
+        min_value=25000, max_value=50000, value=37000, step=1000,
+        help="Včetně montážního systému a kabeláže. Typické rozmezí: 30 000–45 000 Kč/kWp"
     )
+    cena_instalace_fve = int(vykon_fve * cena_kwp)
+    st.info(f"💡 Odhadovaná cena FVE: **{cena_instalace_fve:,.0f} Kč** ({vykon_fve} kWp × {cena_kwp:,} Kč/kWp)")
 
 st.divider()
 
@@ -112,13 +115,13 @@ with mod2:
         help="Baterie zvyšuje podíl vlastní spotřeby. 0 = bez baterie."
     )
     if baterie_kapacita > 0:
-        cena_baterie = st.number_input(
-            "Cena baterie (Kč bez DPH)",
-            min_value=50000, max_value=2000000,
-            value=int(baterie_kapacita * 8000),
-            step=10000,
-            help="Orientační cena: 7 000–10 000 Kč/kWh kapacity"
+        cena_kwh_baterie = st.slider(
+            "Cena baterie (Kč/kWh)",
+            min_value=10000, max_value=20000, value=15000, step=500,
+            help="Včetně střídače a managementu. Typické rozmezí: 12 000–18 000 Kč/kWh"
         )
+        cena_baterie = int(baterie_kapacita * cena_kwh_baterie)
+        st.info(f"💡 Odhadovaná cena baterie: **{cena_baterie:,.0f} Kč** ({baterie_kapacita} kWh × {cena_kwh_baterie:,} Kč/kWh)")
     else:
         cena_baterie = 0
 
