@@ -208,9 +208,35 @@ jistic_plat = JISTIC_PLAT_3x25[distributor][sazba]
 # Roční náklad na elektřinu
 rocni_naklad_elektrina = (spotreba * cena_prumerna_kwh) + (stay_plat + jistic_plat) * 12
 
-st.info(f"💡 Odhadovaný roční náklad na elektřinu: **{rocni_naklad_elektrina:,.0f} Kč** "
-        f"(průměr {cena_prumerna_kwh:.2f} Kč/kWh + stálé platy {(stay_plat + jistic_plat):.0f} Kč/měsíc). "
-        f"Ceny dle ceníku {distributor} platného od 1.1.2026, POZE = 0 Kč.")
+st.info(
+    f"💡 Ceny dle ceníku **{distributor}**, sazba **{sazba}**, platné od 1.1.2026 (s DPH 21 %, POZE = 0 Kč)\n\n"
+    f"• Cena VT: **{cena_vt_kwh:.2f} Kč/kWh** | "
+    f"Průměrná cena (vč. NT): **{cena_prumerna_kwh:.2f} Kč/kWh** | "
+    f"Stálé platy: **{stay_plat + jistic_plat:.0f} Kč/měsíc**\n\n"
+    f"• Odhadovaný roční náklad na elektřinu: **{rocni_naklad_elektrina:,.0f} Kč/rok**"
+)
+
+with st.expander("✏️ Upravit ceny ručně (pokud máte vlastní smlouvu nebo fixaci)"):
+    up1, up2, up3 = st.columns(3)
+    with up1:
+        cena_prumerna_kwh = st.number_input(
+            "Průměrná cena elektřiny (Kč/kWh)",
+            min_value=1.0, max_value=15.0,
+            value=round(cena_prumerna_kwh, 2),
+            step=0.01, format="%.2f",
+            help="Celková průměrná cena včetně distribuce a daní s DPH")
+    with up2:
+        stay_plat_upraveny = st.number_input(
+            "Stálý plat celkem (Kč/měsíc)",
+            min_value=0, max_value=5000,
+            value=int(stay_plat + jistic_plat),
+            step=10,
+            help="Součet stálého platu dodavatele + měsíční plat za jistič")
+    with up3:
+        st.metric("Roční náklad (upravený)",
+                  f"{(spotreba * cena_prumerna_kwh + stay_plat_upraveny * 12):,.0f} Kč")
+    # Přepočet ročního nákladu s upravenými hodnotami
+    rocni_naklad_elektrina = spotreba * cena_prumerna_kwh + stay_plat_upraveny * 12
 
 st.divider()
 
