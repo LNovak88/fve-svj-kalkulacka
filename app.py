@@ -17,14 +17,16 @@ col1, col2 = st.columns(2)
 with col1:
     st.subheader("🏠 Základní údaje")
     
-    spotreba = st.number_input(
-        "Roční spotřeba elektřiny (kWh/rok)",
-        min_value=1000,
-        max_value=500000,
-        value=25000,
-        step=1000,
-        help="Celková spotřeba SVJ za rok – najdete ji na faktuře nebo ve smlouvě s dodavatelem"
-    )
+   spotreba_mwh = st.number_input(
+    "Roční spotřeba elektřiny (MWh/rok)",
+    min_value=1.0,
+    max_value=500.0,
+    value=25.0,
+    step=1.0,
+    format="%.1f",
+    help="Celková spotřeba SVJ za rok – najdete ji na faktuře nebo ve smlouvě s dodavatelem"
+)
+spotreba = spotreba_mwh * 1000  # převod na kWh pro výpočty
     
     pocet_bytu = st.number_input(
         "Počet bytů v domě",
@@ -46,14 +48,15 @@ with col1:
 with col2:
     st.subheader("⚡ Parametry FVE")
     
-    vykon_fve = st.number_input(
-        "Výkon FVE (kWp)",
-        min_value=1.0,
-        max_value=200.0,
-        value=20.0,
-        step=1.0,
-        help="Instalovaný výkon fotovoltaické elektrárny v kilowattech-peak"
-    )
+    vvykon_fve = st.number_input(
+    "Výkon FVE (kWp)",
+    min_value=1.0,
+    max_value=200.0,
+    value=20.0,
+    step=0.5,
+    format="%.1f",
+    help="Orientační pravidlo: 1 kWp na 1 MWh roční spotřeby"
+)
     
     cena_instalace = st.number_input(
         "Cena instalace (Kč bez DPH)",
@@ -108,10 +111,9 @@ res1, res2, res3, res4 = st.columns(4)
 
 with res1:
     st.metric(
-        label="Roční výroba FVE",
-        value=f"{vyroba_rocni:,.0f} kWh",
-        help="Odhadovaná roční výroba energie"
-    )
+    label="Roční výroba FVE",
+    value=f"{vyroba_rocni/1000:,.1f} MWh",
+)
 
 with res2:
     st.metric(
