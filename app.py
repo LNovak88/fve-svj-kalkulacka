@@ -230,7 +230,17 @@ def _cashflow(vl, pr, cvt, cpr, vlast, uver, spl, splat,
     return res
 
 
-@st.cache_data(ttl=3600)
+_MESTA_FALLBACK = {
+    "praha": (50.08, 14.44), "brno": (49.19, 16.61),
+    "ostrava": (49.83, 18.29), "plzeň": (49.74, 13.37),
+    "třinec": (49.68, 18.67), "liberec": (50.77, 15.06),
+    "olomouc": (49.59, 17.25), "zlín": (49.22, 17.66),
+    "hradec králové": (50.21, 15.83), "pardubice": (50.04, 15.78),
+    "české budějovice": (48.97, 14.47), "ústí nad labem": (50.66, 14.03),
+    "havířov": (49.78, 18.43), "karviná": (49.85, 18.54),
+    "opava": (49.94, 17.90), "frýdek-místek": (49.68, 18.35),
+}
+
 @st.cache_data(ttl=3600)
 def _geocode(dotaz):
     try:
@@ -240,24 +250,20 @@ def _geocode(dotaz):
                     "limit": 1, "addressdetails": 1},
             headers={"User-Agent": "FVE-SVJ-Kalkulacka/1.0"},
             timeout=10)
-        
         if r.status_code != 200:
             return None, None, None, f"HTTP {r.status_code}"
-        
         text = r.text.strip()
-        if not text or text == "":
-            return None, None, None, "Prázdná odpověď serveru"
-        
+        if not text:
+            return None, None, None, "Prázdná odpověď"
         res = r.json()
         if not res:
-            return None, None, None, f"Lokalita '{dotaz}' nenalezena"
-        
+            return None, None, None, f"'{dotaz}' nenalezeno"
         addr = res[0].get("address", {})
         m = (addr.get("city") or addr.get("town") or
              addr.get("village") or addr.get("municipality") or dotaz)
         return float(res[0]["lat"]), float(res[0]["lon"]), m, None
     except requests.exceptions.Timeout:
-        return None, None, None, "Timeout — zkuste znovu"
+        return None, None, None, "Timeout"
     except requests.exceptions.ConnectionError:
         return None, None, None, "Chyba připojení"
     except Exception as e:
@@ -283,29 +289,6 @@ def _pvgis(lat,lon,kwp,sklon,azimut):
         return arr[:8760],None
     except Exception as e:
         return None,str(e)
-
-with st.spinner(f"Hledám lokalitu {lokace}..."):
-    lat, lon, mesto, geo_err = _geocode(lokace)
-
-if geo_err:
-    # Zkus fallback
-    klic = lokace.lower().strip()
-    if klic in _MESTA_FALLBACK:
-        lat, lon = _MESTA_FALLBACK[klic]
-        mesto = lokace
-        st.warning(f"⚠️ Geocoding selhal — používám přednastavené souřadnice pro {lokace}.")
-    else:
-        st.error(f"Lokalita nenalezena: {geo_err}. Zkuste zadat jiný název nebo PSČ.")
-        st.stop()
-        
-# Fallback souřadnice pro hlavní česká města
-_MESTA_FALLBACK = {
-    "praha": (50.08, 14.44), "brno": (49.19, 16.61),
-    "ostrava": (49.83, 18.29), "plzeň": (49.74, 13.37),
-    "třinec": (49.68, 18.67), "liberec": (50.77, 15.06),
-    "olomouc": (49.59, 17.25), "zlín": (49.22, 17.66),
-    "hradec králové": (50.21, 15.83), "pardubice": (50.04, 15.78),
-}
 
 
 # ================================================================
@@ -567,9 +550,17 @@ with bc2: st.caption(
 
 if spustit:
     with st.spinner(f"Hledám lokalitu {lokace}..."):
-        lat,lon,mesto,geo_err = _geocode(lokace)
+        lat, lon, mesto, geo_err = _geocode(lokace)
+
     if geo_err:
-        st.error(f"Lokalita nenalezena: {geo_err}"); st.stop()
+        klic = lokace.lower().strip()
+        if klic in _MESTA_FALLBACK:
+            lat, lon = _MESTA_FALLBACK[klic]
+            mesto = lokace
+            st.warning(f"⚠️ Geocoding selhal — používám přednastavenou polohu pro {lokace}.")
+        else:
+            st.error(f"Lokalita nenalezena: {geo_err}. Zkuste jiný název nebo PSČ.")
+            st.stop()
 
     kwp_eff = float(vykon)*float(koef_str)
     with st.spinner(f"Stahuji solární data pro {mesto} z PVGIS..."):
