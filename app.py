@@ -586,7 +586,7 @@ if spustit:
             vlast=vlastni_cast, uver=uver_cast,
             spl=rocni_spl, splat=int(splatnost),
             rust=float(rust_cen), deg=float(deg_pan),
-            leta=15, jist=float(uspora_jist), bonus=float(bonus),
+            leta=25, jist=float(uspora_jist), bonus=float(bonus),
         )
 
     st.session_state["res"] = {
@@ -625,7 +625,7 @@ with r3: st.metric("Míra soběstačnosti",
 with r4: st.metric("Roční úspora (rok 1)",
                    f"{rok1['uspora_celkem']:,.0f} Kč")
 with r5: st.metric("Návratnost",
-                   f"{nav} let" if nav else ">15 let")
+                   f"{nav} let" if nav else ">25 let")
 
 # Doporučení
 if sim["mira_vs"]<0.40 and bat==0 and model!="spolecne":
@@ -675,20 +675,20 @@ with m2:
         )
 
 with m3:
-    kum15 = cf[-1]["kumulativni"]
+    kum25 = cf[-1]["kumulativni"]
     if nav:
         st.success(
             f"**Rok {nav} — investice se vrátí ✅**\n\n"
-            f"Za 15 let celková úspora:\n\n"
-            f"**{kum15:,.0f} Kč**\n\n"
-            f"Na byt: **{kum15/float(pocet_bytu):,.0f} Kč**\n\n"
+            f"Za 25 let celková úspora:\n\n"
+            f"**{kum25:,.0f} Kč**\n\n"
+            f"Na byt: **{kum25/float(pocet_bytu):,.0f} Kč**\n\n"
             f"Životnost FVE 25–30 let\n\n"
-            f"→ dalších {25-nav} let čistý zisk!"
+            f"→ dalších {max(0, 25-nav)} let čistý zisk!"
         )
     else:
         st.warning(
-            f"**Za 15 let investice se nevrátí**\n\n"
-            f"Cashflow: **{kum15:,.0f} Kč**\n\n"
+            f"**Za 25 let investice se nevrátí**\n\n"
+            f"Cashflow: **{kum25:,.0f} Kč**\n\n"
             "Zvyšte výkon FVE, přidejte baterii\n\n"
             "nebo zvolte model EDC/JOM."
         )
