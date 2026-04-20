@@ -169,9 +169,15 @@ def generuj_profil_spotreby_rocni(
 
     hodnoty = np.array(hodnoty)
 
+    # Ořež nebo doplň na přesně 35040 (365 dní × 96 intervalů)
+    cilova_delka = 365 * 96
+    if len(hodnoty) > cilova_delka:
+        hodnoty = hodnoty[:cilova_delka]
+    elif len(hodnoty) < cilova_delka:
+        hodnoty = np.pad(hodnoty, (0, cilova_delka - len(hodnoty)), mode='edge')
+
     # Škáluj na roční spotřebu
-    # Průměrná hodnota × 35040 intervalů = roční spotřeba v kWh
-    scale = rocni_spotreba_kwh / (hodnoty.sum())
+    scale = rocni_spotreba_kwh / hodnoty.sum()
     return hodnoty * scale
 
 
