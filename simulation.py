@@ -240,11 +240,10 @@ def simuluj_fve(
     baterie_max_soc: float = 0.90,
     baterie_ucinnost: float = 0.92,
 ) -> dict:
-    """
-    Simuluje provoz FVE na 15min úrovni.
-    Vrátí slovník s výsledky.
-    """
-    n = len(vyroba_15min)
+    # Zajistíme stejnou délku obou polí
+    n = min(len(vyroba_15min), len(spotreba_15min))
+    vyroba_15min = vyroba_15min[:n]
+    spotreba_15min = spotreba_15min[:n]
     baterie_kwh = baterie_kapacita_kwh * 0.5  # Počáteční SOC 50%
 
     vlastni_spotreba = np.zeros(n)
