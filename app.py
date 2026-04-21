@@ -248,7 +248,7 @@ def _simuluj(vyroba_15, sp_vt15, sp_nt15, bat=0.0, model="edc", edc_ztrata=0.0):
         "vyroba_kwh":      tv,
         "spotreba_kwh":    tsp,
         "mira_vs":         tvl/tv  if tv>0  else 0.0,
-        "mira_sob":        tvl/tsp if tsp>0 else 0.0,
+        "mira_sob":        tvl/tsp if tsp>0 else 0.0,  # přepočítáno v UI pro "spolecne"
         "edc_efektivita":  edc_efektivita,
         "mesice_vyroba":   mv,
         "mesice_spotreba": ms,
@@ -762,12 +762,15 @@ elif util_pct >= 50:
 else:
     util_delta = "zvažte baterii"
 
+# Soběstačnost — vždy vůči celkové spotřebě domu (i pro model "spolecne")
+mira_sob_real = sim["vlastni_kwh"] / float(sp_cel) if sp_cel > 0 else 0.0
+
 r1,r2,r3,r4,r5,r6=st.columns(6)
 with r1: st.metric("Roční výroba FVE",f"{sim['vyroba_kwh']/1000:.1f} MWh")
 with r2: st.metric("Využití výroby v domě",f"{util_pct:.1f} %",
                    delta=util_delta,
                    help="Klíčová metrika: kolik % výroby FVE se spotřebuje přímo v domě nebo přes baterii. Zbytek jde za nízkou výkupní cenu.")
-with r3: st.metric("Soběstačnost",f"{sim['mira_sob']*100:.1f} %",help="% celkové spotřeby domu pokryté FVE")
+with r3: st.metric("Soběstačnost",f"{mira_sob_real*100:.1f} %",help="% celkové spotřeby domu (vč. bytů) pokryté FVE")
 with r4: st.metric("Roční úspora (rok 1)",f"{rok1['uspora_celkem']:,.0f} Kč")
 with r5: st.metric("Orientační návratnost",f"{stat_nav:.1f} let",
                    help="Investice ÷ roční úspora — pouze orientačně, bez vlivu růstu cen")
@@ -823,7 +826,10 @@ for col,mk in zip([sc1,sc2,sc3],["spolecne","jom","edc"]):
             st.caption(f"Investice: {sv['invest']:,.0f} Kč")
         st.metric("Roční úspora",f"{sv['rok1']['uspora_celkem']:,.0f} Kč")
         st.metric("Vlastní spotřeba",f"{sv['sim']['mira_vs']*100:.1f} %")
-        st.metric("Soběstačnost",f"{sv['sim']['mira_sob']*100:.1f} %")
+        # Pro "spolecne" počítáme soběstačnost vůči celé spotřebě domu
+        _sob = sv["sim"]["vlastni_kwh"] / float(sp_cel) if sp_cel>0 else 0.0
+        st.metric("Soběstačnost",f"{_sob*100:.1f} %",
+                  help="% celkové spotřeby domu pokryté FVE" if mk!="spolecne" else "% celkové spotřeby domu — FVE kryje jen společné prostory")
         st.metric("Statická návratnost",f"{sv['stat']:.1f} let")
         st.metric("Cashflow návratnost",f"{sv['nav']} let" if sv['nav'] else ">25 let")
         st.metric("Splátka/byt",f"{splatka_byt_mk:.0f} Kč/měs")
@@ -856,7 +862,9 @@ with ba2:
         cisty_super=uspora_byt_mesic-cista_splatka_super
         st.metric("Úspora z FVE",f"{uspora_byt_mesic:.0f} Kč/měs")
         st.metric("Splátka úvěru",f"{splatka_vsichni:.0f} Kč/měs")
-        st.metric("Solidární refundace",f"−{solidarni_refund:.0f} Kč/měs")
+        st.metric("Solidární refundace",f"+{solidarni_refund:.0f} Kč/měs",
+                  delta="odečteno od splátky",
+                  help=f"Bonus {bonus_byt:,} Kč ÷ {splatnost*12} měsíců — snižuje efektivní splátku tohoto bytu")
         st.metric("Čistá splátka",f"{cista_splatka_super:.0f} Kč/měs")
         st.metric("Čistý měsíční přínos",f"+{cisty_super:.0f} Kč/měs",
                   delta=f"+{cisty_super-cisty_std:.0f} Kč vs std. byt")
@@ -964,7 +972,8 @@ with tab1:
                                   yaxis="y2",line=dict(color="#4CAF50",width=1,dash="dash")))
 
     lay=dict(_LAY); lay.update(dict(
-        xaxis=dict(title="Hodina",tickmode="linear",tick0=0,dtick=2,fixedrange=True),
+        xaxis=dict(title="Hodina",tickmode="linear",tick0=0,dtick=2,
+                   range=[0,24],fixedrange=True),
         yaxis=dict(title="kW",fixedrange=True),height=350))
     if bat>0: lay["yaxis2"]=dict(title="SOC %",overlaying="y",side="right",range=[0,100],fixedrange=True)
     fig.update_layout(**lay)
@@ -1012,21 +1021,21 @@ st.subheader("🎯 Verdikt a scénáře")
 # Verdikt
 kum25=cf[-1]["kumulativni"]
 if nav and nav <= 12:
-    verdikt_text = "✅ PROJEKT SE VYPLATÍ"
+    verdikt_text = "✅ PROJEKT SE JEDNOZNAČNĚ VYPLATÍ"
     verdikt_color = "success"
-    verdikt_popis = f"Cashflow návratnost {nav} let je výborná. Investice je bezpečná i při konzervativním scénáři."
-elif nav and nav <= 18:
+    verdikt_popis = f"Cashflow návratnost {nav} let je výborná. Investice je bezpečná i při konzervativním scénáři (+1%/rok)."
+elif nav and nav <= 20:
     verdikt_text = "⚠️ PROJEKT JE HRANIČNÍ"
     verdikt_color = "warning"
-    verdikt_popis = f"Cashflow návratnost {nav} let závisí na růstu cen elektřiny. Při realistickém scénáři (+3%/rok) se vyplatí."
+    verdikt_popis = f"Cashflow návratnost {nav} let závisí na vývoji cen elektřiny. Při realistickém scénáři (+{rust_cen:.0f}%/rok) se vyplatí. Bezúročný úvěr NZÚ výrazně snižuje riziko."
 elif nav:
     verdikt_text = "⚠️ PROJEKT JE RIZIKOVÝ"
     verdikt_color = "warning"
-    verdikt_popis = f"Cashflow návratnost {nav} let je dlouhá. Zvažte vyšší výkon FVE, baterii nebo model JOM/EDC."
+    verdikt_popis = f"Cashflow návratnost {nav} let je dlouhá. Zvažte vyšší výkon FVE, baterii nebo model JOM/EDC pro lepší využití výroby."
 else:
     verdikt_text = "❌ PROJEKT SE NEVRÁTÍ ZA 25 LET"
     verdikt_color = "error"
-    verdikt_popis = "Při současných parametrech se investice nevrátí za životnost panelů. Zásadně přehodnoťte parametry."
+    verdikt_popis = "Při současných parametrech se investice nevrátí za životnost panelů. Zásadně přehodnoťte výkon FVE a model sdílení."
 
 if verdikt_color == "success":
     st.success(f"**{verdikt_text}**  \n{verdikt_popis}")
