@@ -142,7 +142,7 @@ def _interpoluj(hod):
     return res[:_CD]
 
 
-def _simuluj(vyroba_15, sp_vt15, sp_nt15, bat=0.0, model="edc"):
+def _simuluj(vyroba_15, sp_vt15, sp_nt15, bat=0.0, model="edc", edc_ztrata=0.0):
     """
     Přesná 15min simulace FVE s oddělenou VT a NT spotřebou.
     Baterie: nabíjí se z přetoků FVE (VT), vybíjí do NT spotřeby.
@@ -207,9 +207,16 @@ def _simuluj(vyroba_15, sp_vt15, sp_nt15, bat=0.0, model="edc"):
     tpr  = float(pr.sum())
     tsp  = float(svt.sum()) + float(snt.sum())
 
-    # EDC korekce
+    # EDC — dynamická efektivita sdílení
+    edc_efektivita = 1.0
     if model == "edc":
-        tvl *= 0.98; tpr = tv - tvl
+        ideal = float(np.minimum(v[:n], (svt+snt)[:n]).sum())
+        edc_efektivita = tvl / ideal if ideal > 0 else 1.0
+        # Aplikuj uživatelsky nastavitelnou ztrátu sdílení
+        if edc_ztrata > 0:
+            korekce = 1.0 - float(edc_ztrata) / 100.0
+            tvl *= korekce
+            tpr = tv - tvl
 
     mv,ms,mvl,mpr = [],[],[],[]
     for m in range(12):
@@ -230,6 +237,7 @@ def _simuluj(vyroba_15, sp_vt15, sp_nt15, bat=0.0, model="edc"):
         "spotreba_kwh":    tsp,
         "mira_vs":         tvl/tv  if tv>0  else 0.0,
         "mira_sob":        tvl/tsp if tsp>0 else 0.0,
+        "edc_efektivita":  edc_efektivita,
         "mesice_vyroba":   mv,
         "mesice_spotreba": ms,
         "mesice_vlastni":  mvl,
@@ -239,13 +247,15 @@ def _simuluj(vyroba_15, sp_vt15, sp_nt15, bat=0.0, model="edc"):
 
 def _cashflow(vl_vt, vl_nt, pr, cvt, cnt, cpr,
               vlast, uver, spl, splat,
-              rust=3.0, deg=0.5, leta=25, jist=0.0, bonus=0.0):
+              rust=3.0, deg=0.5, leta=25, jist=0.0, bonus=0.0, deg_bat=2.0):
     res=[]; kum=-(float(vlast)+float(uver)-float(bonus))
     for rok in range(1,int(leta)+1):
         d=(1.0-float(deg)/100.0)**(rok-1)
+        d_bat=(1.0-float(deg_bat)/100.0)**(rok-1)  # degradace baterie
         c=(1.0+float(rust)/100.0)**(rok-1)
+        # NT úspora z baterie degraduje rychleji než panely
         u = (float(vl_vt)*d*float(cvt)*c +
-             float(vl_nt)*d*float(cnt)*c +
+             float(vl_nt)*d_bat*float(cnt)*c +
              float(pr)*d*float(cpr)*c +
              float(jist)*c)
         s = float(spl) if rok<=int(splat) else 0.0
@@ -596,7 +606,24 @@ with sc1: cena_pretoky=st.number_input("Výkupní cena přetoků (Kč/kWh)",0.30
 with sc2: rust_cen=st.slider("Růst cen elektřiny (%/rok)",0.0,8.0,3.0,0.5)
 with sc3: deg_pan=st.slider("Degradace panelů (%/rok)",0.2,1.0,0.5,0.1)
 
+with st.expander("⚙️ Pokročilé parametry"):
+    ap1,ap2=st.columns(2)
+    with ap1:
+        deg_bat_val=st.slider("Degradace baterie (%/rok)",0.5,5.0,2.0,0.5,
+                              help="Baterie ztrácí kapacitu ~2% ročně (výchozí)")
+    with ap2:
+        # EDC ztráta sdílení — výchozí z počtu bytů
+        _edc_default=min(5.0,round(10.0/pocet_bytu**0.5,1))
+        edc_ztrata_val=st.slider("Ztráta sdílení EDC (%)",0.0,10.0,_edc_default,0.5,
+                                  help=f"Ztráta alokace pro {pocet_bytu} bytů. "
+                                       f"Výchozí {_edc_default}% (menší dům = vyšší ztráta). "
+                                       f"S chytrým řízením může být nižší.")
+
 st.divider()
+
+# Výchozí hodnoty pokročilých parametrů (pokud expander nebyl otevřen)
+if 'deg_bat_val' not in dir(): deg_bat_val=2.0
+if 'edc_ztrata_val' not in dir(): edc_ztrata_val=min(5.0,round(10.0/pocet_bytu**0.5,1))
 
 # VÝPOČET INVESTICE
 cena_invest=cena_fve+cena_bat+cena_mericu
@@ -640,14 +667,15 @@ if spustit:
             sp_vt15 = sp_sp15 + sp_by_vt15
             sp_nt15 = sp_by_nt15
 
-        sim=_simuluj(vyroba_15, sp_vt15, sp_nt15, float(bat), model)
+        _edc_ztrata = float(edc_ztrata_val) if model=="edc" else 0.0
+        sim=_simuluj(vyroba_15, sp_vt15, sp_nt15, float(bat), model, _edc_ztrata)
         cf=_cashflow(
             vl_vt=sim["vlastni_vt_kwh"], vl_nt=sim["vlastni_nt_kwh"],
             pr=sim["pretoky_kwh"],
             cvt=float(cena_vt), cnt=float(cena_nt), cpr=float(cena_pretoky),
             vlast=vlastni_cast, uver=uver_cast, spl=rocni_spl, splat=int(splatnost),
             rust=float(rust_cen), deg=float(deg_pan), leta=25,
-            jist=float(uspora_jist), bonus=float(bonus))
+            jist=float(uspora_jist), bonus=float(bonus), deg_bat=float(deg_bat_val))
 
         # Porovnání modelů — FIXNI vstupy, kazdy model ma sve vlastni naklady
         sp_vt_celkem = sp_sp15 + sp_by_vt15  # celý dům VT
@@ -666,13 +694,14 @@ if spustit:
                 svt=sp_sp15; snt=np.zeros(_CD,dtype=float)
             else:
                 svt=sp_vt_celkem; snt=sp_nt_celkem
-            sm=_simuluj(vyroba_15,svt,snt,float(bat),mk)
+            _ez_mk = float(edc_ztrata_val) if mk=="edc" else 0.0
+            sm=_simuluj(vyroba_15,svt,snt,float(bat),mk,_ez_mk)
             cfm=_cashflow(vl_vt=sm["vlastni_vt_kwh"],vl_nt=sm["vlastni_nt_kwh"],
                           pr=sm["pretoky_kwh"],cvt=float(cena_vt),cnt=float(cena_nt),
                           cpr=float(cena_pretoky),vlast=_vlast_mk,uver=_uver_mk,
                           spl=_spl_mk,splat=int(splatnost),rust=float(rust_cen),
                           deg=float(deg_pan),leta=25,
-                          jist=_jist_mk,bonus=float(bonus))
+                          jist=_jist_mk,bonus=float(bonus),deg_bat=float(deg_bat_val))
             nav_m=next((r["rok"] for r in cfm if r["kumulativni"]>=0),None)
             stat_m=float(_invest_mk)/cfm[0]["uspora_celkem"] if cfm[0]["uspora_celkem"]>0 else 999
             splatka_mk=_spl_mk/float(pocet_bytu)/12.0
@@ -717,8 +746,18 @@ with r1: st.metric("Roční výroba FVE",f"{sim['vyroba_kwh']/1000:.1f} MWh")
 with r2: st.metric("Vlastní spotřeba",f"{sim['mira_vs']*100:.1f} %",help="% výroby FVE spotřebované v domě (VT přímá + NT z baterie)")
 with r3: st.metric("Soběstačnost",f"{sim['mira_sob']*100:.1f} %",help="% celkové spotřeby pokryté FVE")
 with r4: st.metric("Roční úspora (rok 1)",f"{rok1['uspora_celkem']:,.0f} Kč")
-with r5: st.metric("Statická návratnost",f"{stat_nav:.1f} let",help="Investice ÷ roční úspora")
-with r6: st.metric("Cashflow návratnost",f"{nav} let" if nav else ">25 let",help="Kdy kumulativní cashflow přejde do kladných čísel")
+with r5: st.metric("Orientační návratnost",f"{stat_nav:.1f} let",
+                   help="Investice ÷ roční úspora (bez růstu cen a degradace) — pouze orientačně")
+with r6: st.metric("Cashflow návratnost",f"{nav} let" if nav else ">25 let",
+                   help="Kdy kumulativní cashflow přejde do kladných čísel (realistický výpočet)")
+
+# EDC efektivita
+if model=="edc":
+    edc_ef=sim.get("edc_efektivita",1.0)
+    st.info(f"🔗 **Efektivita sdílení EDC: {edc_ef*100:.1f} %** "
+            f"(ztráta alokace: {(1-edc_ef)*100:.1f} %) — "
+            f"závisí na profilech bytů a výrobě FVE. "
+            f"Senioři/provozovny = vyšší efektivita, pracující = nižší.")
 
 # VT/NT rozpad úspory
 if ma_nt and sim["vlastni_nt_kwh"]>0:
@@ -936,6 +975,71 @@ with tab3:
         height=380,barmode="overlay"))
     fig3.update_layout(**lay3)
     st.plotly_chart(fig3,use_container_width=True,config=_CFG)
+
+st.divider()
+
+# ── VERDIKT ───────────────────────────────────────────────────────
+st.subheader("🎯 Verdikt a scénáře")
+
+# Verdikt
+kum25=cf[-1]["kumulativni"]
+if nav and nav <= 12:
+    verdikt_text = "✅ PROJEKT SE VYPLATÍ"
+    verdikt_color = "success"
+    verdikt_popis = f"Cashflow návratnost {nav} let je výborná. Investice je bezpečná i při konzervativním scénáři."
+elif nav and nav <= 18:
+    verdikt_text = "⚠️ PROJEKT JE HRANIČNÍ"
+    verdikt_color = "warning"
+    verdikt_popis = f"Cashflow návratnost {nav} let závisí na růstu cen elektřiny. Při realistickém scénáři (+3%/rok) se vyplatí."
+elif nav:
+    verdikt_text = "⚠️ PROJEKT JE RIZIKOVÝ"
+    verdikt_color = "warning"
+    verdikt_popis = f"Cashflow návratnost {nav} let je dlouhá. Zvažte vyšší výkon FVE, baterii nebo model JOM/EDC."
+else:
+    verdikt_text = "❌ PROJEKT SE NEVRÁTÍ ZA 25 LET"
+    verdikt_color = "error"
+    verdikt_popis = "Při současných parametrech se investice nevrátí za životnost panelů. Zásadně přehodnoťte parametry."
+
+if verdikt_color == "success":
+    st.success(f"**{verdikt_text}**  \n{verdikt_popis}")
+elif verdikt_color == "warning":
+    st.warning(f"**{verdikt_text}**  \n{verdikt_popis}")
+else:
+    st.error(f"**{verdikt_text}**  \n{verdikt_popis}")
+
+# Bez FVE vs s FVE
+st.markdown("**💡 Bez FVE vs s FVE — celkové náklady za 25 let**")
+bv1,bv2,bv3=st.columns(3)
+
+for col,rust_sc,nazev in zip(
+    [bv1,bv2,bv3],
+    [1.0, float(rust_cen), 6.0],
+    ["😐 Pesimistický (+1%/rok)","📊 Realistický (+{}%/rok)".format(rust_cen),"🔥 Krizový (+6%/rok)"]
+):
+    # Náklady bez FVE
+    naklad_bez=sum(sp_cel*cena_vt*(1+rust_sc/100)**(r-1) for r in range(1,26))
+    # Úspory s FVE (degradace + růst cen)
+    uspora_sc=sum(
+        rok1["uspora_celkem"]*(1+rust_sc/100)**(r-1)*(1-float(deg_pan)/100)**(r-1)
+        for r in range(1,26))
+    naklad_s=naklad_bez-uspora_sc
+    # Cashflow návratnost pro tento scénář
+    kum_sc=-(vlastni_cast+uver_cast-float(bonus))
+    nav_sc=None
+    for r in range(1,26):
+        u_sc=rok1["uspora_celkem"]*(1+rust_sc/100)**(r-1)*(1-float(deg_pan)/100)**(r-1)
+        s_sc=rocni_spl if r<=int(splatnost) else 0.0
+        kum_sc+=u_sc-s_sc
+        if kum_sc>=0 and nav_sc is None: nav_sc=r
+    with col:
+        st.markdown(f"**{nazev}**")
+        st.metric("Bez FVE (25 let)",f"{naklad_bez/1e6:.2f} mil. Kč")
+        st.metric("S FVE (25 let)",f"{naklad_s/1e6:.2f} mil. Kč",
+                  delta=f"−{uspora_sc/1e6:.2f} mil. Kč úspora",delta_color="normal")
+        st.metric("Cashflow návratnost",f"{nav_sc} let" if nav_sc else ">25 let")
+
+st.caption(f"💡 Bez FVE zaplatíte za 25 let více na elektřině — i při pesimistickém scénáři. "
+           f"Bezúročný úvěr znamená že úspory FVE začínají okamžitě pokrývat splátky.")
 
 st.divider()
 
