@@ -741,23 +741,34 @@ uspora_byt_mesic=rok1["uspora_celkem"]/float(pocet_bytu)/12.0
 st.divider()
 st.subheader("📊 Výsledky simulace")
 
+# Killer metrika nahoře — kolik % výroby se využije
+util_pct = sim["mira_vs"]*100
+if util_pct >= 70:
+    util_delta = "výborné využití ✅"
+elif util_pct >= 50:
+    util_delta = "dobré využití"
+else:
+    util_delta = "zvažte baterii"
+
 r1,r2,r3,r4,r5,r6=st.columns(6)
 with r1: st.metric("Roční výroba FVE",f"{sim['vyroba_kwh']/1000:.1f} MWh")
-with r2: st.metric("Vlastní spotřeba",f"{sim['mira_vs']*100:.1f} %",help="% výroby FVE spotřebované v domě (VT přímá + NT z baterie)")
-with r3: st.metric("Soběstačnost",f"{sim['mira_sob']*100:.1f} %",help="% celkové spotřeby pokryté FVE")
+with r2: st.metric("Využití výroby v domě",f"{util_pct:.1f} %",
+                   delta=util_delta,
+                   help="Klíčová metrika: kolik % výroby FVE se spotřebuje přímo v domě nebo přes baterii. Zbytek jde za nízkou výkupní cenu.")
+with r3: st.metric("Soběstačnost",f"{sim['mira_sob']*100:.1f} %",help="% celkové spotřeby domu pokryté FVE")
 with r4: st.metric("Roční úspora (rok 1)",f"{rok1['uspora_celkem']:,.0f} Kč")
 with r5: st.metric("Orientační návratnost",f"{stat_nav:.1f} let",
-                   help="Investice ÷ roční úspora (bez růstu cen a degradace) — pouze orientačně")
+                   help="Investice ÷ roční úspora — pouze orientačně, bez vlivu růstu cen")
 with r6: st.metric("Cashflow návratnost",f"{nav} let" if nav else ">25 let",
-                   help="Kdy kumulativní cashflow přejde do kladných čísel (realistický výpočet)")
+                   help="Realistická návratnost: kdy kumulativní cashflow přejde do kladných čísel")
 
 # EDC efektivita
 if model=="edc":
     edc_ef=sim.get("edc_efektivita",1.0)
-    st.info(f"🔗 **Efektivita sdílení EDC: {edc_ef*100:.1f} %** "
-            f"(ztráta alokace: {(1-edc_ef)*100:.1f} %) — "
-            f"závisí na profilech bytů a výrobě FVE. "
-            f"Senioři/provozovny = vyšší efektivita, pracující = nižší.")
+    st.info(f"🔗 **Míra časového sladění výroby a spotřeby: {edc_ef*100:.1f} %** — "
+            f"kolik výroby FVE nastane ve stejný čas jako spotřeba domu. "
+            f"Závisí na profilu obyvatel: senioři/provozovny = vyšší sladění, "
+            f"pracující = nižší. Baterie toto sladění zlepšuje.")
 
 # VT/NT rozpad úspory
 if ma_nt and sim["vlastni_nt_kwh"]>0:
@@ -1095,6 +1106,44 @@ with di2:
     if uspora_jist>0: st.write(f"• Úspora distribuce (JOM): **{uspora_jist:,.0f} Kč**")
     st.write(f"• **Celkem: {rok1['uspora_celkem']:,.0f} Kč/rok**")
     st.write(f"• Na byt: **{uspora_byt_mesic*12:,.0f} Kč/rok** · **{uspora_byt_mesic:.0f} Kč/měs**")
+
+st.divider()
+
+# ── JEDNOVĚTÝ ZÁVĚR ───────────────────────────────────────────────
+kum25_final = cf[-1]["kumulativni"]
+uspora_25_total = sum(r["uspora_celkem"] for r in cf)
+rust_real = float(rust_cen)
+
+# Závěr dle scénáře
+if nav and nav <= 12:
+    zaver = (f"✅ **Projekt se jednoznačně vyplatí** — i při konzervativním scénáři "
+             f"se investice vrátí za {nav} let a za 25 let ušetříte "
+             f"**{kum25_final/1000:.0f} tis. Kč** ({kum25_final/float(pocet_bytu)/1000:.0f} tis. Kč/byt).")
+elif nav and nav <= 18:
+    uspora_pess = sum(
+        rok1["uspora_celkem"]*(1+1.0/100)**(r-1)*(1-float(deg_pan)/100)**(r-1)
+        for r in range(1,26))
+    zaver = (f"⚠️ **Projekt se vyplatí při realistickém vývoji cen** (+{rust_real}%/rok) — "
+             f"návratnost {nav} let. Při pesimistickém scénáři (+1%/rok) "
+             f"{'se také vrátí' if uspora_pess > float(cena_invest) else 'se nemusí vrátit'}. "
+             f"Bezúročný úvěr NZÚ výrazně snižuje riziko.")
+elif nav:
+    zaver = (f"⚠️ **Projekt je ekonomicky hraniční** — návratnost {nav} let je dlouhá. "
+             f"Doporučujeme zvýšit výkon FVE, přidat baterii nebo zvolit model JOM/EDC "
+             f"pro lepší využití výroby.")
+else:
+    zaver = (f"❌ **Projekt se za 25 let nevrátí** při současných parametrech. "
+             f"Zásadně přehodnoťte výkon FVE a model sdílení.")
+
+st.info(zaver)
+
+# Klíčový insight o baterii
+if bat > 0 and ma_nt:
+    st.caption(
+        f"💡 **Baterie nepřidává výrobu — jen posouvá hodnotu z dne do noci.** "
+        f"Přes den zachytí přebytky FVE, v noci pokryje NT spotřebu (bojler, TČ) "
+        f"za cenu VT místo NT ze sítě."
+    )
 
 st.divider()
 
