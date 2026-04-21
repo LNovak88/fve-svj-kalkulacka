@@ -173,16 +173,25 @@ def _gen_vyroba_den(kwp, sezona, pocasi):
 
 def _gen_spotreba_den(kwh_rok, sezona, profil, vikend=False):
     """Průměrná denní spotřeba kWh/15min pro danou sezónu."""
+    # Explicitní výběr klíče — žádné f-stringy
     tp = "vikend" if vikend else "prac"
-    p = _TDD4[f"{sezona}_{tp}"].copy() * _UPRAVY.get(profil, np.ones(24))
-    p = p/p.mean()
-    vals = np.zeros(96,dtype=float)
+    if sezona == "zima" and tp == "prac":      klic = "zima_prac"
+    elif sezona == "zima" and tp == "vikend":   klic = "zima_vikend"
+    elif sezona == "leto" and tp == "prac":     klic = "leto_prac"
+    elif sezona == "leto" and tp == "vikend":   klic = "leto_vikend"
+    elif sezona == "prechodne" and tp == "prac":  klic = "prechodne_prac"
+    elif sezona == "prechodne" and tp == "vikend": klic = "prechodne_vikend"
+    else:                                          klic = "prechodne_prac"
+    uprava = _UPRAVY.get(str(profil), np.ones(24,dtype=float))
+    p = _TDD4[klic].copy() * uprava
+    p = p / p.mean()
+    vals = np.zeros(96, dtype=float)
     for h in range(24):
         for j in range(4):
-            vals[h*4+j] = float(p[h])/4.0
-    # Denní spotřeba = roční / 365
-    kwh_den = float(kwh_rok)/365.0
-    if vals.sum()>0: vals = vals*(kwh_den/vals.sum())
+            vals[h*4+j] = float(p[h]) / 4.0
+    kwh_den = float(kwh_rok) / 365.0
+    if vals.sum() > 0:
+        vals = vals * (kwh_den / vals.sum())
     return vals
 
 
