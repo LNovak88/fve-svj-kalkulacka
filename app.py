@@ -216,10 +216,14 @@ def _simuluj(vyroba_15, sp_vt15, sp_nt15, bat=0.0, model="edc", edc_ztrata=0.0):
     tsp  = float(svt.sum()) + float(snt.sum())
 
     # EDC — dynamická efektivita sdílení
-    edc_efektivita = 1.0
+    # Míra časového překryvu výroby a spotřeby (bez baterie)
+    # = kolik % výroby FVE nastane ve stejný čas jako poptávka domu
+    # Nezávislé na baterii, max 100 %
+    casovy_prekryv = float(np.minimum(v[:n], (svt+snt)[:n]).sum()) / float(v[:n].sum()) if float(v[:n].sum()) > 0 else 1.0
+    casovy_prekryv = min(1.0, casovy_prekryv)  # cap na 100%
+    edc_efektivita = casovy_prekryv  # přejmenováno pro zpětnou kompatibilitu
+
     if model == "edc":
-        ideal = float(np.minimum(v[:n], (svt+snt)[:n]).sum())
-        edc_efektivita = tvl / ideal if ideal > 0 else 1.0
         # Aplikuj uživatelsky nastavitelnou ztrátu sdílení
         if edc_ztrata > 0:
             korekce = 1.0 - float(edc_ztrata) / 100.0
@@ -771,12 +775,17 @@ with r6: st.metric("Cashflow návratnost",f"{nav} let" if nav else ">25 let",
                    help="Realistická návratnost: kdy kumulativní cashflow přejde do kladných čísel")
 
 # EDC efektivita
-if model=="edc":
-    edc_ef=sim.get("edc_efektivita",1.0)
-    st.info(f"🔗 **Míra časového sladění výroby a spotřeby: {edc_ef*100:.1f} %** — "
-            f"kolik výroby FVE nastane ve stejný čas jako spotřeba domu. "
-            f"Závisí na profilu obyvatel: senioři/provozovny = vyšší sladění, "
-            f"pracující = nižší. Baterie toto sladění zlepšuje.")
+# Míra časového překryvu — zobrazit vždy (pro všechny modely)
+prekryv = sim.get("edc_efektivita", 1.0) * 100
+if prekryv >= 70:
+    prekryv_hod = "výborné — výroba a spotřeba jsou dobře sladěny"
+elif prekryv >= 50:
+    prekryv_hod = "dobré — baterie může pomoci s nesouladem"
+else:
+    prekryv_hod = "nízké — velká část výroby jde mimo dobu spotřeby, baterie velmi doporučena"
+st.info(f"⏱️ **Míra časového sladění výroby a spotřeby: {prekryv:.1f} %** — "
+        f"{prekryv_hod}. "
+        f"Závisí na profilu: senioři = vyšší, pracující = nižší.")
 
 # VT/NT rozpad úspory
 if ma_nt and sim["vlastni_nt_kwh"]>0:
