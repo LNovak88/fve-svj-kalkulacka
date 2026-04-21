@@ -649,11 +649,19 @@ if spustit:
             rust=float(rust_cen), deg=float(deg_pan), leta=25,
             jist=float(uspora_jist), bonus=float(bonus))
 
-        # Porovnání modelů — FIXNI vstupy, nezavisle na vybranem modelu
-        sp_vt_celkem = sp_sp15 + sp_by_vt15  # vzdy cely dum VT
-        sp_nt_celkem = sp_by_nt15              # vzdy cely dum NT
+        # Porovnání modelů — FIXNI vstupy, kazdy model ma sve vlastni naklady
+        sp_vt_celkem = sp_sp15 + sp_by_vt15  # celý dům VT
+        sp_nt_celkem = sp_by_nt15              # celý dům NT
         srovnani={}
         for mk in ["spolecne","jom","edc"]:
+            # Každý model má své náklady na investici
+            _mericu_mk = int(pocet_bytu)*10000 if mk=="jom" else 0
+            _jist_mk   = jistic*(int(pocet_bytu)-1)*12.0 if mk=="jom" else 0.0
+            _invest_mk = cena_fve + cena_bat + _mericu_mk
+            _vlast_mk  = float(_invest_mk)*float(vlastni_pct)/100.0
+            _uver_mk   = max(0.0, float(_invest_mk) - _vlast_mk - float(bonus))
+            _spl_mk    = _uver_mk/float(splatnost) if (scenar!="vlastni" and splatnost>0) else 0.0
+
             if mk=="spolecne":
                 svt=sp_sp15; snt=np.zeros(_CD,dtype=float)
             else:
@@ -661,13 +669,17 @@ if spustit:
             sm=_simuluj(vyroba_15,svt,snt,float(bat),mk)
             cfm=_cashflow(vl_vt=sm["vlastni_vt_kwh"],vl_nt=sm["vlastni_nt_kwh"],
                           pr=sm["pretoky_kwh"],cvt=float(cena_vt),cnt=float(cena_nt),
-                          cpr=float(cena_pretoky),vlast=vlastni_cast,uver=uver_cast,
-                          spl=rocni_spl,splat=int(splatnost),rust=float(rust_cen),
+                          cpr=float(cena_pretoky),vlast=_vlast_mk,uver=_uver_mk,
+                          spl=_spl_mk,splat=int(splatnost),rust=float(rust_cen),
                           deg=float(deg_pan),leta=25,
-                          jist=float(uspora_jist) if mk=="jom" else 0.0,bonus=float(bonus))
+                          jist=_jist_mk,bonus=float(bonus))
             nav_m=next((r["rok"] for r in cfm if r["kumulativni"]>=0),None)
-            stat_m=float(cena_invest)/cfm[0]["uspora_celkem"] if cfm[0]["uspora_celkem"]>0 else 999
-            srovnani[mk]={"sim":sm,"cf":cfm,"nav":nav_m,"stat":stat_m,"rok1":cfm[0]}
+            stat_m=float(_invest_mk)/cfm[0]["uspora_celkem"] if cfm[0]["uspora_celkem"]>0 else 999
+            splatka_mk=_spl_mk/float(pocet_bytu)/12.0
+            cisty_byt_mk=cfm[0]["uspora_celkem"]/float(pocet_bytu)/12.0-splatka_mk
+            srovnani[mk]={"sim":sm,"cf":cfm,"nav":nav_m,"stat":stat_m,"rok1":cfm[0],
+                          "invest":_invest_mk,"splatka_byt":splatka_mk,
+                          "cisty_byt":cisty_byt_mk}
 
     st.session_state["res"]={
         "sim":sim,"cf":cf,"vyroba_15":vyroba_15,
@@ -729,27 +741,31 @@ best_mk = min(["spolecne","jom","edc"],
 sc1,sc2,sc3=st.columns(3)
 for col,mk in zip([sc1,sc2,sc3],["spolecne","jom","edc"]):
     sv=srovnani[mk]
-    cisty_byt=sv["rok1"]["uspora_celkem"]/float(pocet_bytu)/12.0-splatka_vsichni
+    cisty_byt=sv["cisty_byt"]        # počítáno s vlastní investicí modelu
+    splatka_byt_mk=sv["splatka_byt"] # splátka pro tento konkrétní model
     je_vybran = mk == model
     je_nejlepsi = mk == best_mk
     with col:
-        # Záhlaví s označením
         hlavicka = nazvy[mk]
-        if je_nejlepsi: hlavicka += " ⭐ nejlepší"
-        if je_vybran:   hlavicka += " ← váš výběr"
+        if je_nejlepsi: hlavicka += " ⭐"
+        if je_vybran:   hlavicka += " ✓"
         st.markdown(f"**{hlavicka}**")
+        if mk=="jom":
+            st.caption(f"Investice: {sv['invest']:,.0f} Kč (vč. měřičů)")
+        else:
+            st.caption(f"Investice: {sv['invest']:,.0f} Kč")
         st.metric("Roční úspora",f"{sv['rok1']['uspora_celkem']:,.0f} Kč")
         st.metric("Vlastní spotřeba",f"{sv['sim']['mira_vs']*100:.1f} %")
         st.metric("Soběstačnost",f"{sv['sim']['mira_sob']*100:.1f} %")
         st.metric("Statická návratnost",f"{sv['stat']:.1f} let")
         st.metric("Cashflow návratnost",f"{sv['nav']} let" if sv['nav'] else ">25 let")
+        st.metric("Splátka/byt",f"{splatka_byt_mk:.0f} Kč/měs")
         if cisty_byt>=0:
             st.metric("Čistý přínos/byt",f"+{cisty_byt:.0f} Kč/měs",delta="kladný")
         else:
             st.metric("Čistý náklad/byt",f"{cisty_byt:.0f} Kč/měs",delta_color="inverse")
-        # Zvýraznění vybraného modelu
         if je_vybran:
-            st.info("← Aktuálně simulovaný model")
+            st.info("✓ Váš výběr")
 
 st.divider()
 
