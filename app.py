@@ -584,7 +584,7 @@ with fc1:
 with fc2:
     if scenar=="uver":
         splatnost=st.slider("Doba splácení (let)",5,25,15); vlastni_pct=0
-        st.info("✅ Úroky hradí stát. SVJ splácí jen jistinu.")
+        st.info("✅ Úroky hradí stát. SVJ splácí jen jistinu. Standardně 15 let — přesné podmínky NZÚ v září 2026.")
     elif scenar=="vlastni":
         splatnost=0; vlastni_pct=100; st.info("💡 SVJ hradí vše z fondu oprav.")
     else:
@@ -1152,7 +1152,7 @@ st.subheader("🏛️ Státní podpora NZÚ 2026")
 ni1,ni2=st.columns(2)
 with ni1:
     st.markdown("**Co existuje pro SVJ (dle sfzp.gov.cz):**")
-    st.write("✅ **Bezúročný úvěr NZÚ** — od září 2026, splácení až 25 let")
+    st.write("✅ **Bezúročný úvěr NZÚ** — od září 2026, splácení standardně 15 let (max. 25 let)")
     st.write("✅ **Bonus za zranitelné domácnosti** — za byty se superdávkou")
     st.write("✅ **NZÚ Light** — přímá dotace jen pro nízkopříjmové")
 with ni2:
