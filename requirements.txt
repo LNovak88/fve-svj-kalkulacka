@@ -1,4 +1,5 @@
 streamlit
-anthropic
+numpy
+pandas
 requests
-reportlab
+plotly
