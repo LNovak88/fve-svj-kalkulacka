@@ -632,7 +632,7 @@ if spustit:
         sp_by_vt15 = _gen_profil_vt(sp_by_vt, _TDD4, uprava)
         sp_by_nt15 = _gen_profil_nt(sp_by_nt, sazba)
 
-        # Celková VT a NT spotřeba
+        # Spotřeba pro vybraný model (hlavní simulace)
         if model == "spolecne":
             sp_vt15 = sp_sp15
             sp_nt15 = np.zeros(_CD, dtype=float)
@@ -649,13 +649,15 @@ if spustit:
             rust=float(rust_cen), deg=float(deg_pan), leta=25,
             jist=float(uspora_jist), bonus=float(bonus))
 
-        # Porovnání modelů
+        # Porovnání modelů — FIXNI vstupy, nezavisle na vybranem modelu
+        sp_vt_celkem = sp_sp15 + sp_by_vt15  # vzdy cely dum VT
+        sp_nt_celkem = sp_by_nt15              # vzdy cely dum NT
         srovnani={}
         for mk in ["spolecne","jom","edc"]:
             if mk=="spolecne":
                 svt=sp_sp15; snt=np.zeros(_CD,dtype=float)
             else:
-                svt=sp_vt15; snt=sp_nt15
+                svt=sp_vt_celkem; snt=sp_nt_celkem
             sm=_simuluj(vyroba_15,svt,snt,float(bat),mk)
             cfm=_cashflow(vl_vt=sm["vlastni_vt_kwh"],vl_nt=sm["vlastni_nt_kwh"],
                           pr=sm["pretoky_kwh"],cvt=float(cena_vt),cnt=float(cena_nt),
@@ -719,13 +721,23 @@ st.divider()
 
 # ── POROVNÁNÍ MODELŮ ──────────────────────────────────────────────
 st.subheader("📊 Porovnání modelů sdílení")
+st.caption("Stejná FVE a investice pro všechny modely — mění se jen co FVE pokrývá.")
 nazvy={"spolecne":"🏢 Jen společné","jom":"⚡ JOM","edc":"🔗 EDC"}
+# Najdi nejlepší model dle cashflow návratnosti
+best_mk = min(["spolecne","jom","edc"],
+              key=lambda x: srovnani[x]["nav"] if srovnani[x]["nav"] else 999)
 sc1,sc2,sc3=st.columns(3)
 for col,mk in zip([sc1,sc2,sc3],["spolecne","jom","edc"]):
     sv=srovnani[mk]
     cisty_byt=sv["rok1"]["uspora_celkem"]/float(pocet_bytu)/12.0-splatka_vsichni
+    je_vybran = mk == model
+    je_nejlepsi = mk == best_mk
     with col:
-        st.markdown(f"**{nazvy[mk]}**")
+        # Záhlaví s označením
+        hlavicka = nazvy[mk]
+        if je_nejlepsi: hlavicka += " ⭐ nejlepší"
+        if je_vybran:   hlavicka += " ← váš výběr"
+        st.markdown(f"**{hlavicka}**")
         st.metric("Roční úspora",f"{sv['rok1']['uspora_celkem']:,.0f} Kč")
         st.metric("Vlastní spotřeba",f"{sv['sim']['mira_vs']*100:.1f} %")
         st.metric("Soběstačnost",f"{sv['sim']['mira_sob']*100:.1f} %")
@@ -735,6 +747,9 @@ for col,mk in zip([sc1,sc2,sc3],["spolecne","jom","edc"]):
             st.metric("Čistý přínos/byt",f"+{cisty_byt:.0f} Kč/měs",delta="kladný")
         else:
             st.metric("Čistý náklad/byt",f"{cisty_byt:.0f} Kč/měs",delta_color="inverse")
+        # Zvýraznění vybraného modelu
+        if je_vybran:
+            st.info("← Aktuálně simulovaný model")
 
 st.divider()
 
