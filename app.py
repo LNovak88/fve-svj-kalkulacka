@@ -188,10 +188,18 @@ def _simuluj(vyroba_15, sp_vt15, sp_nt15, bat=0.0, model="edc", edc_ztrata=0.0):
         # 3. Zbylá výroba → přetoky
         pr[i] = zbyla_v
 
-        # 4. Zbylá VT spotřeba → ze sítě
+        # 4. Zbylá VT spotřeba → vybít baterii (VT tarif = dražší → priorita!)
+        if zbyla_svt > 0.0 and bat > 0.0:
+            dos = (bkwh - bmin) * eta
+            vyb = min(zbyla_svt, dos)
+            bkwh -= vyb / eta
+            zbyla_svt -= vyb
+            vl_vt[i] += vyb  # z baterie do VT spotřeby → úspora VT cena
+
+        # 5. Zbylá VT spotřeba → ze sítě
         od_vt[i] = zbyla_svt
 
-        # 5. NT spotřeba → vybít baterii (přemostění VT→NT)
+        # 6. NT spotřeba → vybít zbylou baterii (VT spotřeba měla prioritu)
         if snti > 0.0 and bat > 0.0:
             dos = (bkwh - bmin) * eta
             vyb = min(snti, dos)
@@ -199,7 +207,7 @@ def _simuluj(vyroba_15, sp_vt15, sp_nt15, bat=0.0, model="edc", edc_ztrata=0.0):
             snti -= vyb
             vl_nt[i] = vyb
 
-        # 6. Zbylá NT spotřeba → ze sítě
+        # 7. Zbylá NT spotřeba → ze sítě
         od_nt[i] = snti
 
     tv   = float(v.sum())
