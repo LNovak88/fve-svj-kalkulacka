@@ -500,7 +500,20 @@ st.subheader("⚡ Parametry FVE a baterie")
 c1,c2=st.columns(2)
 with c1:
     vykon=st.number_input("Výkon FVE (kWp)",1.0,200.0,20.0,0.5,format="%.1f")
-    cena_kwp=st.slider("Cena FVE (Kč/kWp)",25000,50000,37000,1000)
+    # Automatická cena dle výkonu (množstevní sleva)
+    def _cena_kwp_auto(kw):
+        if kw < 10:   return 38000
+        elif kw < 20: return 33000
+        elif kw < 40: return 28000
+        elif kw < 80: return 24000
+        else:         return 21000
+    _cena_auto = _cena_kwp_auto(float(vykon))
+    rucne = st.checkbox("Upravit cenu ručně", value=False)
+    if rucne:
+        cena_kwp = st.slider("Cena FVE (Kč/kWp)",20000,50000,_cena_auto,500)
+    else:
+        cena_kwp = _cena_auto
+        st.caption(f"Cena dle výkonu: **{cena_kwp:,} Kč/kWp** (množstevní sleva)")
     cena_fve=int(float(vykon)*float(cena_kwp))
     st.caption(f"Odhadovaná cena FVE: **{cena_fve:,.0f} Kč**")
 with c2:
@@ -524,12 +537,17 @@ model=st.radio("Model",["spolecne","jom","edc"],horizontal=True,
                format_func=lambda x:{"spolecne":"🏢 Jen společné prostory",
                                      "jom":"⚡ Sjednocení odběrných míst",
                                      "edc":"🔗 EDC komunitní sdílení (iterační)"}[x])
-cena_mericu=int(pocet_bytu)*10000 if model=="jom" else 0
+# JOM: měřiče + paušál projekt/přepojení
+_jom_merici = int(pocet_bytu)*10000
+_jom_projekt = 75000  # paušál projekt elektro + přepojení
+cena_mericu = (_jom_merici + _jom_projekt) if model=="jom" else 0
 uspora_jist=jistic*(int(pocet_bytu)-1)*12.0 if model=="jom" else 0.0
 if model=="spolecne":
-    st.info(f"🏢 FVE pokrývá jen společnou spotřebu ({sp_sp_mwh:.1f} MWh/rok VT). Nejjednodušší realizace.")
+    st.info(f"🏢 FVE pokrývá jen společnou spotřebu ({sp_sp_mwh:.1f} MWh/rok VT). Nejjednodušší realizace, žádné extra náklady.")
 elif model=="jom":
-    st.info(f"⚡ Jeden elektroměr pro celý dům. Náklady na měřiče: **{cena_mericu:,} Kč**. Úspora distribuce: **{uspora_jist:,.0f} Kč/rok**.")
+    st.info(f"⚡ Jeden elektroměr pro celý dům. "
+            f"Náklady navíc: měřiče **{_jom_merici:,} Kč** + projekt/přepojení **{_jom_projekt:,} Kč** = **{cena_mericu:,} Kč**. "
+            f"Úspora distribuce: **{uspora_jist:,.0f} Kč/rok**.")
 else:
     st.info("🔗 Každý byt si zachovává dodavatele. Chytré měřiče zdarma od distributora. Registrace na edc.cz.")
 
@@ -606,8 +624,9 @@ with fc2:
 st.markdown("**Nízkopříjmové domácnosti**")
 nb1,nb2=st.columns(2)
 with nb1: pocet_nizko=st.number_input("Bytů s bonusem",0,int(pocet_bytu),0,1)
-with nb2: bonus_byt=st.number_input("Bonus na byt (Kč)",0,150000,50000,5000)
-bonus=int(pocet_nizko)*int(bonus_byt)
+with nb2: bonus_byt=st.number_input("Bonus na byt (Kč)",0,150000,100000,5000,
+                                     help="Přímý bonus NZÚ pro zranitelnou domácnost — snižuje její podíl splátky. Max avizováno 150 000 Kč/byt.")
+bonus=int(pocet_nizko)*int(bonus_byt)  # celkový bonus pro SVJ
 
 st.divider()
 
@@ -638,10 +657,22 @@ if 'deg_bat_val' not in dir(): deg_bat_val=2.0
 if 'edc_ztrata_val' not in dir(): edc_ztrata_val=min(5.0,round(10.0/pocet_bytu**0.5,1))
 
 # VÝPOČET INVESTICE
-cena_invest=cena_fve+cena_bat+cena_mericu
-vlastni_cast=float(cena_invest)*float(vlastni_pct)/100.0
-uver_cast=max(0.0,float(cena_invest)-vlastni_cast-float(bonus))
-rocni_spl=uver_cast/float(splatnost) if (scenar!="vlastni" and splatnost>0) else 0.0
+cena_invest = cena_fve + cena_bat + cena_mericu
+
+# Správná logika NZÚ:
+# SVJ si vezme bezúročný úvěr na celou investici (mínus vlastní zdroje)
+# Bonus jde přímo konkrétnímu bytu — NESNIŽUJE celkový úvěr SVJ
+vlastni_cast = float(cena_invest) * float(vlastni_pct) / 100.0
+uver_cast = max(0.0, float(cena_invest) - vlastni_cast)  # bonus neodečítáme z úvěru
+rocni_spl = uver_cast / float(splatnost) if (scenar!="vlastni" and splatnost>0) else 0.0
+
+# Splátka na byt a efekt bonusu
+podil_bytu_uver = uver_cast / float(pocet_bytu)  # podíl jednoho bytu na úvěru
+splatka_byt_std = podil_bytu_uver / float(splatnost) / 12.0 if (scenar!="vlastni" and splatnost>0) else 0.0
+# Bonus snižuje splátku konkrétního bytu (max do výše jeho podílu)
+bonus_efekt_byt = min(float(bonus_byt), podil_bytu_uver)
+zbytek_super = max(0.0, podil_bytu_uver - bonus_efekt_byt)
+splatka_byt_super = zbytek_super / float(splatnost) / 12.0 if (scenar!="vlastni" and splatnost>0) else 0.0
 
 bc1,bc2=st.columns([1,3])
 with bc1: spustit=st.button("🔄 Spočítat simulaci",type="primary",use_container_width=True)
@@ -681,13 +712,14 @@ if spustit:
 
         _edc_ztrata = float(edc_ztrata_val) if model=="edc" else 0.0
         sim=_simuluj(vyroba_15, sp_vt15, sp_nt15, float(bat), model, _edc_ztrata)
+        # Cashflow SVJ: bonus nesnižuje úvěr — jde přímo konkrétnímu bytu
         cf=_cashflow(
             vl_vt=sim["vlastni_vt_kwh"], vl_nt=sim["vlastni_nt_kwh"],
             pr=sim["pretoky_kwh"],
             cvt=float(cena_vt), cnt=float(cena_nt), cpr=float(cena_pretoky),
             vlast=vlastni_cast, uver=uver_cast, spl=rocni_spl, splat=int(splatnost),
             rust=float(rust_cen), deg=float(deg_pan), leta=25,
-            jist=float(uspora_jist), bonus=float(bonus), deg_bat=float(deg_bat_val))
+            jist=float(uspora_jist), bonus=0.0, deg_bat=float(deg_bat_val))
 
         # Porovnání modelů — FIXNI vstupy, kazdy model ma sve vlastni naklady
         sp_vt_celkem = sp_sp15 + sp_by_vt15  # celý dům VT
@@ -743,12 +775,12 @@ rok1=cf[0]
 nav=next((r["rok"] for r in cf if r["kumulativni"]>=0),None)
 
 stat_nav=float(cena_invest)/rok1["uspora_celkem"] if rok1["uspora_celkem"]>0 else 999
-splatka_vsichni=rocni_spl/float(pocet_bytu)/12.0
-solidarni_refund=float(bonus_byt)/(float(splatnost)*12.0) if splatnost>0 else 0.0
-cista_splatka_super=max(0.0,splatka_vsichni-solidarni_refund)
-splatka_bez_bonusu=float(cena_invest)/float(splatnost)/float(pocet_bytu)/12.0 if splatnost>0 else 0.0
-uspora_diky_bonusu=splatka_bez_bonusu-splatka_vsichni
-uspora_byt_mesic=rok1["uspora_celkem"]/float(pocet_bytu)/12.0
+# Splátky — správná logika NZÚ
+splatka_vsichni = splatka_byt_std  # předpočítáno výše
+uspora_byt_mesic = rok1["uspora_celkem"] / float(pocet_bytu) / 12.0
+# Byt se superdávkou má nižší splátku díky bonusu
+cista_splatka_super = splatka_byt_super  # předpočítáno výše
+uspora_diky_bonusu = splatka_byt_std - splatka_byt_super  # kolik ušetří díky bonusu
 
 st.divider()
 st.subheader("📊 Výsledky simulace")
@@ -861,20 +893,24 @@ with ba2:
         st.markdown(f"**Byt se superdávkou** ({pocet_nizko}× v domě)")
         cisty_super=uspora_byt_mesic-cista_splatka_super
         st.metric("Úspora z FVE",f"{uspora_byt_mesic:.0f} Kč/měs")
-        st.metric("Splátka úvěru",f"{splatka_vsichni:.0f} Kč/měs")
-        st.metric("Solidární refundace",f"+{solidarni_refund:.0f} Kč/měs",
-                  delta="odečteno od splátky",
-                  help=f"Bonus {bonus_byt:,} Kč ÷ {splatnost*12} měsíců — snižuje efektivní splátku tohoto bytu")
-        st.metric("Čistá splátka",f"{cista_splatka_super:.0f} Kč/měs")
-        st.metric("Čistý měsíční přínos",f"+{cisty_super:.0f} Kč/měs",
-                  delta=f"+{cisty_super-cisty_std:.0f} Kč vs std. byt")
+        st.metric("Podíl na úvěru (celkem)",f"{podil_bytu_uver:,.0f} Kč",
+                  help="Podíl tohoto bytu na celkovém úvěru SVJ")
+        st.metric("Přímý bonus NZÚ",f"{bonus_efekt_byt:,.0f} Kč",
+                  delta=f"pokryje {bonus_efekt_byt/podil_bytu_uver*100:.0f}% podílu" if podil_bytu_uver>0 else "",
+                  help="Přímá platba státu na konkrétní byt — snižuje jeho zbývající dluh na úvěru")
+        st.metric("Zbývající splátka",f"{cista_splatka_super:.0f} Kč/měs",
+                  help=f"Splátka po odečtení bonusu. Std byt: {splatka_vsichni:.0f} Kč/měs")
+        if cisty_super>=0:
+            st.metric("Čistý měsíční přínos",f"+{cisty_super:.0f} Kč/měs",
+                      delta=f"+{cisty_super-cisty_std:.0f} Kč vs std. byt")
+        else:
+            st.metric("Čistý měsíční náklad",f"{cisty_super:.0f} Kč/měs")
         st.divider()
-        st.markdown("**🤝 Přínos bonusu pro dům**")
-        st.write(f"• Státní bonus: **{bonus:,.0f} Kč**")
-        st.write(f"• Každý byt ušetří: **{uspora_diky_bonusu:.0f} Kč/měs** na splátce")
-        if solidarni_refund*pocet_nizko>0:
-            mesicu=float(bonus)/(solidarni_refund*pocet_nizko)
-            st.write(f"• Rezerva vydrží: **{mesicu:.0f} měsíců** ({'✅' if mesicu>=splatnost*12 else '⚠️'})")
+        st.markdown("**🤝 Přínos bonusu NZÚ**")
+        st.write(f"• Přímý bonus od státu: **{bonus_efekt_byt:,.0f} Kč** (na byt se superdávkou)")
+        st.write(f"• Bonus pokryje: **{bonus_efekt_byt/podil_bytu_uver*100:.0f}%** podílu na úvěru")
+        st.write(f"• Zbývající splátka super bytu: **{cista_splatka_super:.0f} Kč/měs** (vs {splatka_vsichni:.0f} Kč std)")
+        st.write(f"• Ostatní byty: splátka **{splatka_vsichni:.0f} Kč/měs** — beze změny")
     else:
         st.markdown("**Žádné byty se superdávkou**")
         st.caption("Zadejte počet bytů s bonusem výše.")
