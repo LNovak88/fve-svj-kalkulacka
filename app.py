@@ -958,18 +958,48 @@ with tab1:
         fig.add_trace(go.Scatter(x=hodiny,y=sp_den_nt*4,name="🌙 Spotřeba NT (kW)",
                                   fill="tozeroy",fillcolor="rgba(156,39,176,0.15)",
                                   line=dict(color="#9C27B0",width=1,dash="dot")))
-    # Baterie SOC
+    # Baterie SOC — stejná logika jako hlavní simulace
+    # VT spotřeba má prioritu před NT (dražší tarif)
     bat_soc=np.zeros(96)
     if bat>0:
-        bkwh=float(bat)*0.5
+        _bmin=float(bat)*0.10
+        _bmax=float(bat)*0.90
+        _eta=0.92
+        # Začínáme s vybitou baterií — realisticky po noční spotřebě
+        bkwh=float(bat)*0.20
         for i in range(96):
-            vi,svti,snti=float(vyr_den[i]),float(sp_den_vt[i]),float(sp_den_nt[i])
-            prime=min(vi,svti); zbv=vi-prime; zbsvt=svti-prime
-            if zbv>0: nab=min(zbv*0.92,float(bat)*0.9-bkwh); bkwh+=nab; zbv-=nab/0.92
-            if snti>0: dos=(bkwh-float(bat)*0.1)*0.92; vyb=min(snti,dos); bkwh-=vyb/0.92
-            bat_soc[i]=bkwh/float(bat)*100
+            vi   = float(vyr_den[i])
+            svti = float(sp_den_vt[i])
+            snti = float(sp_den_nt[i])
+
+            # 1. FVE → VT spotřeba přímo
+            prime = min(vi, svti)
+            zbv   = vi - prime
+            zbsvt = svti - prime
+
+            # 2. Přebytek výroby → nabít baterii
+            if zbv > 0:
+                nab = min(zbv*_eta, _bmax-bkwh)
+                bkwh += nab
+                zbv  -= nab/_eta
+
+            # 3. Zbylá VT spotřeba → vybít baterii (VT = dražší, priorita!)
+            if zbsvt > 0:
+                dos = (bkwh-_bmin)*_eta
+                vyb = min(zbsvt, dos)
+                bkwh -= vyb/_eta
+                zbsvt -= vyb
+
+            # 4. NT spotřeba → vybít zbylou baterii
+            if snti > 0:
+                dos = (bkwh-_bmin)*_eta
+                vyb = min(snti, dos)
+                bkwh -= vyb/_eta
+
+            bat_soc[i] = bkwh/float(bat)*100
+
         fig.add_trace(go.Scatter(x=hodiny,y=bat_soc,name="🔋 Baterie SOC (%)",
-                                  yaxis="y2",line=dict(color="#4CAF50",width=1,dash="dash")))
+                                  yaxis="y2",line=dict(color="#4CAF50",width=2,dash="dash")))
 
     lay=dict(_LAY); lay.update(dict(
         xaxis=dict(title="Hodina",tickmode="linear",tick0=0,dtick=2,
