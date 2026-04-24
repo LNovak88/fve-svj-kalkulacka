@@ -109,6 +109,53 @@ NT_HODINY = {
 _CD = 365 * 96
 _MESICE = ["Led","Úno","Bře","Dub","Kvě","Čvn","Čvc","Srp","Zář","Říj","Lis","Pro"]
 
+# ── TDD profily zařízení ──────────────────────────────────────────
+# Klimatizace — přes den v létě (překrývá se s FVE!)
+_TDD_KLIMA = np.array([0.10,0.10,0.10,0.10,0.10,0.10,0.20,0.50,0.90,1.30,1.70,
+                        2.00,2.00,1.80,1.60,1.40,1.10,0.80,0.50,0.30,0.20,0.15,0.12,0.10],dtype=float)
+_TDD_KLIMA = _TDD_KLIMA / _TDD_KLIMA.mean()
+
+# NT profil rovnoměrný (bojler, EV) — jen v NT hodinách
+# Použijeme existující _gen_profil_nt
+
+# Sezónní váhy pro každé zařízení (zima/prechodne/leto)
+_VAHY_ZAR = {
+    "zaklad":   {"zima":0.35,"prechodne":0.34,"leto":0.31},
+    "sporak":   {"zima":0.35,"prechodne":0.34,"leto":0.31},
+    "bojler":   {"zima":0.35,"prechodne":0.33,"leto":0.32},
+    "klima":    {"zima":0.05,"prechodne":0.20,"leto":0.75},
+    "akum":     {"zima":0.60,"prechodne":0.38,"leto":0.02},
+    "primotop": {"zima":0.65,"prechodne":0.33,"leto":0.02},
+    "tc":       {"zima":0.55,"prechodne":0.30,"leto":0.15},
+    "ev":       {"zima":0.35,"prechodne":0.33,"leto":0.32},
+}
+
+# Spotřeba VT a NT na byt/rok pro každé zařízení (kWh)
+_SP_ZAR = {
+    "zaklad":   {"vt":1200,"nt":0,   "nazev":"☑️ Svícení, spotřebiče, pračka, sušička","sazba":None},
+    "sporak":   {"vt":400, "nt":0,   "nazev":"🍳 Elektrický sporák / indukce","sazba":None},
+    "bojler":   {"vt":0,   "nt":800, "nazev":"🚿 Bojler — ohřev TUV elektřinou","sazba":"D25d"},
+    "klima":    {"vt":400, "nt":0,   "nazev":"❄️ Klimatizace (chlazení v létě)","sazba":None},
+    "akum":     {"vt":0,   "nt":2000,"nazev":"🔥 Akumulační kamna (topení)","sazba":"D26d"},
+    "primotop": {"vt":0,   "nt":2500,"nazev":"⚡ Přímotopy / elektrokotel","sazba":"D45d"},
+    "tc":       {"vt":0,   "nt":3000,"nazev":"♨️ Tepelné čerpadlo (vytápění + TUV)","sazba":"D57d"},
+    "ev":       {"vt":0,   "nt":1500,"nazev":"🚗 Elektromobil (dobíjení doma)","sazba":"D27d"},
+}
+
+def _doporucena_sazba(zarizeni):
+    """Doporučí sazbu dle vybraných zařízení."""
+    if "tc"      in zarizeni: return "D57d"
+    if "primotop"in zarizeni: return "D45d"
+    if "akum"    in zarizeni: return "D26d"
+    if "bojler"  in zarizeni or "ev" in zarizeni: return "D25d"
+    return "D02d"
+
+def _sp_z_zarizeni(zarizeni, pocet_bytu):
+    """Vypočítá celkovou VT a NT spotřebu domu dle výběru zařízení."""
+    vt = sum(_SP_ZAR[z]["vt"] for z in zarizeni if z in _SP_ZAR) * float(pocet_bytu)
+    nt = sum(_SP_ZAR[z]["nt"] for z in zarizeni if z in _SP_ZAR) * float(pocet_bytu)
+    return vt/1000.0, nt/1000.0  # MWh/rok
+
 
 def _sezona(m):
     if m in [11,12,1,2]: return "zima"
@@ -463,10 +510,34 @@ st.subheader("🏠 Základní údaje o domě")
 c1,c2,c3=st.columns(3)
 with c1:
     pocet_bytu=st.number_input("Počet bytů",2,200,12,1)
+    pocet_vchodu=st.number_input("Počet vchodů",1,10,1,1,
+                                  help="Ovlivňuje náklady na rozvod instalace — každý vchod má svůj rozvaděč")
     sp_sp_mwh=st.number_input("Spotřeba společných prostor (MWh/rok)",0.1,50.0,3.5,0.1,format="%.1f",
                                help="Výtah, osvětlení chodeb, čerpadla")
-    sp_by_vt_mwh=st.number_input("Spotřeba bytů VT (MWh/rok)",0.5,400.0,18.0,0.5,format="%.1f",
-                                  help="Spotřeba v době vysokého tarifu (přes den)")
+
+    # Checkboxy zařízení — automatická spotřeba
+    st.markdown("**Co v domě používáte na elektřinu?**")
+    zarizeni_sel = ["zaklad"]  # základní vždy
+    st.caption("☑️ Svícení, spotřebiče, pračka, sušička — vždy zahrnuto")
+    for zar_key in ["sporak","bojler","klima","akum","primotop","tc","ev"]:
+        zar = _SP_ZAR[zar_key]
+        label = zar["nazev"]
+        nt_info = f" (+{zar['nt']} kWh NT/byt)" if zar["nt"]>0 else f" (+{zar['vt']} kWh VT/byt)"
+        if st.checkbox(f"{label}{nt_info}", key=f"zar_{zar_key}"):
+            zarizeni_sel.append(zar_key)
+
+    # Vypočítej spotřebu automaticky
+    _vt_auto, _nt_auto = _sp_z_zarizeni(zarizeni_sel, pocet_bytu)
+    _sazba_auto = _doporucena_sazba(zarizeni_sel)
+
+    # Ruční přepsání
+    rucne_sp = st.checkbox("✏️ Zadat spotřebu ručně", value=False)
+    if rucne_sp:
+        sp_by_vt_mwh=st.number_input("Spotřeba bytů VT (MWh/rok)",0.5,400.0,
+                                      max(0.5,round(_vt_auto,1)),0.5,format="%.1f")
+    else:
+        sp_by_vt_mwh = round(_vt_auto, 1)
+        st.caption(f"Odhadovaná spotřeba VT: **{sp_by_vt_mwh:.1f} MWh/rok** ({sp_by_vt_mwh/pocet_bytu*1000:.0f} kWh/byt)")
 with c2:
     dist=st.selectbox("Distributor",list(CENY_VT.keys()),
                       help="ČEZ = většina ČR | EG.D = Morava/jih Čech | PRE = Praha")
@@ -477,6 +548,11 @@ with c3:
     profil=st.selectbox("Profil obyvatel",list(PROFILY.keys()),format_func=lambda x:PROFILY[x]["nazev"])
     st.caption(PROFILY[profil]["popis"])
 
+# Doporučená sazba dle výběru zařízení
+if _sazba_auto != sazba:
+    st.info(f"💡 Na základě vybraných zařízení doporučujeme sazbu **{_sazba_auto}** — "
+            f"upravte ji výše pokud máte jinou sazbu.")
+
 # NT spotřeba — jen pro sazby s NT tarifem
 ma_nt = sazba in SAZBY_NT
 sp_by_nt_mwh = 0.0
@@ -485,11 +561,14 @@ if ma_nt:
     st.info(f"📌 Sazba **{sazba}** má NT tarif ({nt_h_count} hodin/den). "
             f"NT spotřeba (bojler, TČ) probíhá v noci — FVE ji nepokrývá přímo, "
             f"ale **baterie ji může pokrýt z denních přebytků**.")
-    sp_by_nt_mwh = st.number_input(
-        f"Spotřeba bytů NT (MWh/rok)",0.0,200.0,
-        round(float(sp_by_vt_mwh)*PODIL_NT.get(sazba,0.3)/(1-PODIL_NT.get(sazba,0.3)),1),
-        0.5,format="%.1f",
-        help=f"Spotřeba v nízkém tarifu ({nt_h_count}h/den) — bojler, TČ, akumulační kamna")
+    if rucne_sp:
+        sp_by_nt_mwh = st.number_input(
+            f"Spotřeba bytů NT (MWh/rok)",0.0,200.0,
+            round(float(_nt_auto),1),0.5,format="%.1f",
+            help=f"Spotřeba v nízkém tarifu ({nt_h_count}h/den)")
+    else:
+        sp_by_nt_mwh = round(float(_nt_auto),1)
+        st.caption(f"Odhadovaná spotřeba NT: **{sp_by_nt_mwh:.1f} MWh/rok** ({sp_by_nt_mwh/pocet_bytu*1000:.0f} kWh/byt)")
 
 sp_sp  = float(sp_sp_mwh)*1000
 sp_by_vt = float(sp_by_vt_mwh)*1000
@@ -568,6 +647,10 @@ model=st.radio("Model",["spolecne","jom","edc"],horizontal=True,
 _jom_merici = int(pocet_bytu)*10000
 _jom_projekt = 75000  # paušál projekt elektro + přepojení
 cena_mericu = (_jom_merici + _jom_projekt) if model=="jom" else 0
+
+# Náklady na rozvod dle počtu vchodů (každý vchod = extra rozvaděč + kabeláž)
+_vchod_extra = max(0, int(pocet_vchodu)-1) * 30000  # každý další vchod +30k
+cena_mericu += _vchod_extra if model!="spolecne" else 0
 uspora_jist=jistic*(int(pocet_bytu)-1)*12.0 if model=="jom" else 0.0
 if model=="spolecne":
     st.info(f"🏢 FVE pokrývá jen společnou spotřebu ({sp_sp_mwh:.1f} MWh/rok VT). Nejjednodušší realizace, žádné extra náklady.")
@@ -985,7 +1068,7 @@ with m3:
 st.divider()
 
 # ── GRAFY ─────────────────────────────────────────────────────────
-tab1,tab2,tab3=st.tabs(["📅 Denní graf","📈 Roční přehled","💰 Cashflow 25 let"])
+tab1,tab2,tab3,tab4=st.tabs(["📅 Denní graf","📈 Roční přehled","💰 Cashflow 25 let","📊 Splátka vs Úspora"])
 
 with tab1:
     st.markdown("**Průměrný den — výroba vs spotřeba**")
@@ -1105,6 +1188,72 @@ with tab3:
         height=380,barmode="overlay"))
     fig3.update_layout(**lay3)
     st.plotly_chart(fig3,use_container_width=True,config=_CFG)
+
+with tab4:
+    st.markdown("**Splátka úvěru vs Úspora z FVE — rok po roku**")
+    st.caption("Klíčová otázka: od kdy je úspora vyšší než splátka?")
+
+    roky_g  = [r["rok"] for r in cf]
+    uspora_g = [r["uspora_celkem"] for r in cf]
+    splatka_g = [r["splatka"] for r in cf]
+    cisty_g  = [r["cisty_prinos"] for r in cf]
+    kum_g    = [r["kumulativni"] for r in cf]
+
+    fig4 = go.Figure()
+
+    # Úspora z FVE — roste každý rok
+    fig4.add_trace(go.Bar(
+        x=roky_g, y=uspora_g, name="Úspora z FVE (Kč/rok)",
+        marker_color="#4CAF50", opacity=0.85))
+
+    # Splátka úvěru — konstantní, pak 0
+    fig4.add_trace(go.Bar(
+        x=roky_g, y=[-s for s in splatka_g], name="Splátka úvěru (Kč/rok)",
+        marker_color="#F44336", opacity=0.75))
+
+    # Čistý přínos — linie
+    fig4.add_trace(go.Scatter(
+        x=roky_g, y=cisty_g, name="Čistý přínos (Kč/rok)",
+        line=dict(color="#2196F3", width=3),
+        mode="lines+markers", marker=dict(size=4)))
+
+    # Nulová linie
+    fig4.add_hline(y=0, line_dash="dash", line_color="#666", line_width=1)
+
+    # Označit rok splacení úvěru
+    if scenar != "vlastni" and splatnost > 0:
+        fig4.add_vline(x=splatnost+0.5, line_dash="dot", line_color="#FF9800",
+                       line_width=2,
+                       annotation_text=f"Úvěr splacen (rok {splatnost})",
+                       annotation_position="top left")
+
+    # Označit cashflow návratnost
+    if nav:
+        fig4.add_vline(x=nav, line_dash="dot", line_color="#4CAF50", line_width=2,
+                       annotation_text=f"Návratnost (rok {nav})",
+                       annotation_position="top right")
+
+    lay4 = dict(_LAY)
+    lay4.update(dict(
+        barmode="relative",
+        xaxis=dict(title="Rok", fixedrange=True, dtick=2),
+        yaxis=dict(title="Kč/rok", fixedrange=True, tickformat=","),
+        height=420,
+    ))
+    fig4.update_layout(**lay4)
+    st.plotly_chart(fig4, use_container_width=True, config=_CFG)
+
+    # Přehledná tabulka — jen klíčové roky
+    klic_roky = [1, 5, 10, int(splatnost) if splatnost else 15, 20, 25]
+    klic_roky = sorted(set(r for r in klic_roky if 1 <= r <= 25))
+    st.markdown("**Klíčové roky:**")
+    cols_tab4 = st.columns(len(klic_roky))
+    for col, rok in zip(cols_tab4, klic_roky):
+        r = cf[rok-1]
+        with col:
+            st.metric(f"Rok {rok}",
+                      f"{r['uspora_celkem']:,.0f} Kč",
+                      delta=f"splátka {r['splatka']:,.0f} Kč" if r['splatka']>0 else "bez splátky")
 
 st.divider()
 
