@@ -150,6 +150,20 @@ def _doporucena_sazba(zarizeni):
     if "bojler"  in zarizeni or "ev" in zarizeni: return "D25d"
     return "D02d"
 
+def _doporuceny_jistic(pocet_bytu, zarizeni):
+    """Doporučí velikost jističe dle počtu bytů a zařízení."""
+    vykon_kw = float(pocet_bytu) * 6.0
+    if "tc"      in zarizeni: vykon_kw += float(pocet_bytu) * 3.0
+    if "primotop"in zarizeni: vykon_kw += float(pocet_bytu) * 4.0
+    proud = vykon_kw * 1000 / (3 * 230) * 0.3
+    if proud <= 16: return "3×16A", 0
+    elif proud <= 20: return "3×20A", 1
+    elif proud <= 25: return "3×25A", 2
+    elif proud <= 32: return "3×32A", 3
+    elif proud <= 40: return "3×40A", 4
+    elif proud <= 50: return "3×50A", 5
+    else:             return "3×63A", 6
+
 def _sp_z_zarizeni(zarizeni, pocet_bytu):
     """Vypočítá celkovou VT a NT spotřebu domu dle výběru zařízení."""
     vt = sum(_SP_ZAR[z]["vt"] for z in zarizeni if z in _SP_ZAR) * float(pocet_bytu)
@@ -541,17 +555,29 @@ with c1:
 with c2:
     dist=st.selectbox("Distributor",list(CENY_VT.keys()),
                       help="ČEZ = většina ČR | EG.D = Morava/jih Čech | PRE = Praha")
-    sazba=st.selectbox("Distribuční sazba",list(CENY_VT[dist].keys()),
-                       format_func=lambda x:f"{x} — {POPIS_SAZEB[x]}",index=1)
+    # Automatická sazba dle zařízení — lze přepsat
+    _sazba_idx = list(CENY_VT[dist].keys()).index(_sazba_auto) if _sazba_auto in CENY_VT[dist] else 1
+    rucne_sazba = st.checkbox("✏️ Změnit sazbu ručně", value=False)
+    if rucne_sazba:
+        sazba=st.selectbox("Distribuční sazba",list(CENY_VT[dist].keys()),
+                           format_func=lambda x:f"{x} — {POPIS_SAZEB[x]}",index=_sazba_idx)
+    else:
+        sazba = _sazba_auto
+        st.success(f"✅ Sazba dle výběru: **{sazba}** — {POPIS_SAZEB.get(sazba,'')}")
+
 with c3:
-    st.selectbox("Hlavní jistič",["1×25A","3×16A","3×20A","3×25A","3×32A","3×40A","3×50A","3×63A"],index=3)
+    # Automatický jistič dle počtu bytů a zařízení
+    _jistic_auto, _jistic_idx = _doporuceny_jistic(pocet_bytu, zarizeni_sel)
+    _jistice = ["1×25A","3×16A","3×20A","3×25A","3×32A","3×40A","3×50A","3×63A"]
+    rucne_jistic = st.checkbox("✏️ Změnit jistič ručně", value=False)
+    if rucne_jistic:
+        _jistic_vyber = st.selectbox("Hlavní jistič", _jistice,
+                                      index=min(_jistic_idx+1, len(_jistice)-1))
+    else:
+        _jistic_vyber = _jistic_auto
+        st.success(f"✅ Jistič dle výkonu: **{_jistic_auto}**")
     profil=st.selectbox("Profil obyvatel",list(PROFILY.keys()),format_func=lambda x:PROFILY[x]["nazev"])
     st.caption(PROFILY[profil]["popis"])
-
-# Doporučená sazba dle výběru zařízení
-if _sazba_auto != sazba:
-    st.info(f"💡 Na základě vybraných zařízení doporučujeme sazbu **{_sazba_auto}** — "
-            f"upravte ji výše pokud máte jinou sazbu.")
 
 # NT spotřeba — jen pro sazby s NT tarifem
 ma_nt = sazba in SAZBY_NT
