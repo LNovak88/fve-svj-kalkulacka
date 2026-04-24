@@ -1,6 +1,7 @@
 # engine.py — Simulační engine: TDD profily, simulace, cashflow, geocoding
 # Importován z app.py
 
+import streamlit as st
 import requests
 from constants import *
 
