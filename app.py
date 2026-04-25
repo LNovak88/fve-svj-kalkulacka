@@ -931,10 +931,11 @@ else:
 
         w1c1, w1c2 = st.columns(2)
         with w1c1:
-            pocet_bytu = st.number_input("Počet bytů", 2, 200, 12, 1)
-            pocet_vchodu = st.number_input("Počet vchodů", 1, 10, 1, 1)
+            pocet_bytu = st.number_input("Počet bytů", 2, 200, 12, 1, key="w_pocet_bytu")
+            pocet_vchodu = st.number_input("Počet vchodů", 1, 10, 1, 1, key="w_pocet_vchodu")
             sp_sp_mwh = st.number_input("Spotřeba společných prostor (MWh/rok)",
                                          0.1, 50.0, 3.5, 0.1, format="%.1f",
+                                         key="w_sp_sp_mwh",
                                          help="Výtah, osvětlení chodeb, čerpadla")
 
         with w1c2:
@@ -958,8 +959,10 @@ else:
         )
 
         dist = st.selectbox("Distributor", list(CENY_VT.keys()),
+                             key="w_dist",
                              help="ČEZ = většina ČR | EG.D = Morava/jih Čech | PRE = Praha")
         profil = st.selectbox("Profil obyvatel", list(PROFILY.keys()),
+                               key="w_profil",
                                format_func=lambda x: PROFILY[x]["nazev"])
 
         if st.button("Další →", type="primary", use_container_width=True):
@@ -978,6 +981,7 @@ else:
         st.subheader("🌍 Krok 2: Adresa a střecha")
 
         lokace = st.text_input("Adresa nebo město",
+                                key="w_lokace",
                                 placeholder="např. Náměstí Míru 5, Praha 2")
         if lokace and len(lokace) >= 4:
             with st.spinner("Hledám adresu..."):
@@ -1000,18 +1004,19 @@ else:
                         lokace = vyber
 
         typ_str = st.radio("Typ střechy", ["sikma","plocha"],
+                            key="w_typ_str",
                             format_func=lambda x: "🏠 Šikmá" if x=="sikma" else "🏢 Plochá",
                             horizontal=True)
         if typ_str == "sikma":
             sc1,sc2 = st.columns(2)
-            with sc1: sklon = st.slider("Sklon (°)", 15, 60, 35)
-            with sc2: azimut = st.select_slider("Orientace",[-90,-45,0,45,90],0,
+            with sc1: sklon = st.slider("Sklon (°)", 15, 60, 35, key="w_sklon_sikma")
+            with sc2: azimut = st.select_slider("Orientace",[-90,-45,0,45,90],0,key="w_azimut",
                                 format_func=lambda x:{-90:"⬅️ Východ",-45:"↙️ JV",0:"⬆️ Jih",45:"↗️ JZ",90:"➡️ Západ"}[x])
             koef_str = 1.0
         else:
             pc1,pc2 = st.columns(2)
-            with pc1: sklon = st.slider("Sklon panelů (°)", 5, 20, 10)
-            with pc2: sys_pl = st.radio("Systém",["jih","jz_jv","vz"],
+            with pc1: sklon = st.slider("Sklon panelů (°)", 5, 20, 10, key="w_sklon_plocha")
+            with pc2: sys_pl = st.radio("Systém",["jih","jz_jv","vz"],key="w_sys_pl",
                         format_func=lambda x:{"jih":"⬆️ Jih","jz_jv":"↗️ JZ+JV","vz":"↔️ V+Z"}[x])
             azimut = 90 if sys_pl=="vz" else 0
             koef_str = {"jih":1.0,"jz_jv":0.97,"vz":0.88}[sys_pl]
@@ -1148,26 +1153,26 @@ else:
 
         fc1,fc2 = st.columns(2)
         with fc1:
-            scenar = st.radio("Scénář financování",["uver","vlastni","kombinace"],
+            scenar = st.radio("Scénář financování",["uver","vlastni","kombinace"],key="w_scenar",
                 format_func=lambda x:{"uver":"🏦 Bezúročný úvěr NZÚ (od září 2026)",
                                       "vlastni":"💵 Vlastní zdroje (fond oprav)",
                                       "kombinace":"🔀 Kombinace vlastní + úvěr"}[x])
         with fc2:
             if scenar=="uver":
-                splatnost=st.slider("Doba splácení (let)",5,25,15)
+                splatnost=st.slider("Doba splácení (let)",5,25,15,key="w_splatnost_uver")
                 vlastni_pct=0
                 st.info("✅ Úroky hradí stát. SVJ splácí jen jistinu. Standardně 15 let.")
             elif scenar=="vlastni":
                 splatnost=0; vlastni_pct=100
                 st.info("💡 SVJ hradí vše z fondu oprav.")
             else:
-                vlastni_pct=st.slider("Vlastní zdroje (%)",10,90,30,10)
-                splatnost=st.slider("Doba splácení (let)",5,25,15)
+                vlastni_pct=st.slider("Vlastní zdroje (%)",10,90,30,10,key="w_vlastni_pct")
+                splatnost=st.slider("Doba splácení (let)",5,25,15,key="w_splatnost_komb")
 
         st.markdown("**Nízkopříjmové domácnosti (NZÚ bonus)**")
         nb1,nb2 = st.columns(2)
-        with nb1: pocet_nizko=st.number_input("Bytů s bonusem",0,int(wd["pocet_bytu"]),0,1)
-        with nb2: bonus_byt=st.number_input("Bonus na byt (Kč)",0,150000,100000,5000)
+        with nb1: pocet_nizko=st.number_input("Bytů s bonusem",0,int(wd["pocet_bytu"]),0,1,key="w_pocet_nizko")
+        with nb2: bonus_byt=st.number_input("Bonus na byt (Kč)",0,150000,100000,5000,key="w_bonus_byt")
 
         col_back3,col_next3 = st.columns(2)
         with col_back3:
