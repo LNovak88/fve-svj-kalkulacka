@@ -518,8 +518,18 @@ st.set_page_config(page_title="FVE Kalkulačka pro SVJ", page_icon="☀️", lay
 
 st.title("☀️ FVE Kalkulačka pro SVJ")
 st.caption("Přesná 15minutová simulace · OTE TDD profily · Ceny dle ceníků 2026")
-st.divider()
 
+# ── PŘEPÍNAČ WIZARD / EXPERT ──────────────────────────────────────
+_mod_col1, _mod_col2 = st.columns([3,1])
+with _mod_col2:
+    expert_mod = st.toggle("⚙️ Expert mód", value=False,
+                           help="Zobrazí všechny parametry najednou")
+
+if expert_mod:
+    # ════════════════════════════════════════════════════════════════
+    # EXPERT MÓD — vše najednou (původní formulář)
+    # ════════════════════════════════════════════════════════════════
+    st.divider()
 # ── 1. ZÁKLADNÍ ÚDAJE ────────────────────────────────────────────
 st.subheader("🏠 Základní údaje o domě")
 c1,c2,c3=st.columns(3)
@@ -898,6 +908,409 @@ if spustit:
         "srovnani":srovnani}
     st.success(f"✅ Hotovo — {mesto} ({lat:.2f}°N, {lon:.2f}°E) {'· PVGIS data' if pvgis_ok else '· záložní model'}")
 
+
+else:
+    # ════════════════════════════════════════════════════════════════
+    # WIZARD MÓD — krok za krokem
+    # ════════════════════════════════════════════════════════════════
+
+    # Session state pro wizard
+    if "wizard_krok" not in st.session_state:
+        st.session_state.wizard_krok = 1
+    if "wizard_data" not in st.session_state:
+        st.session_state.wizard_data = {}
+
+    krok = st.session_state.wizard_krok
+
+    # Progress bar
+    st.progress(krok/5, text=f"Krok {krok} z 5")
+
+    # ── KROK 1: DŮM ──────────────────────────────────────────────
+    if krok == 1:
+        st.subheader("🏠 Krok 1: Váš dům")
+
+        w1c1, w1c2 = st.columns(2)
+        with w1c1:
+            pocet_bytu = st.number_input("Počet bytů", 2, 200, 12, 1)
+            pocet_vchodu = st.number_input("Počet vchodů", 1, 10, 1, 1)
+            sp_sp_mwh = st.number_input("Spotřeba společných prostor (MWh/rok)",
+                                         0.1, 50.0, 3.5, 0.1, format="%.1f",
+                                         help="Výtah, osvětlení chodeb, čerpadla")
+
+        with w1c2:
+            st.markdown("**Co v domě používáte na elektřinu?**")
+            zarizeni_sel = ["zaklad"]
+            st.caption("☑️ Svícení, spotřebiče, pračka, sušička — vždy zahrnuto")
+            for zar_key in ["sporak","bojler","klima","akum","primotop","tc","ev"]:
+                zar = _SP_ZAR[zar_key]
+                nt_info = f" (+{zar['nt']} kWh NT/byt)" if zar["nt"]>0 else f" (+{zar['vt']} kWh VT/byt)"
+                if st.checkbox(f"{zar['nazev']}{nt_info}", key=f"w_zar_{zar_key}"):
+                    zarizeni_sel.append(zar_key)
+
+        _vt_auto, _nt_auto = _sp_z_zarizeni(zarizeni_sel, pocet_bytu)
+        _sazba_auto = _doporucena_sazba(zarizeni_sel)
+        _jistic_auto, _ = _doporuceny_jistic(pocet_bytu, zarizeni_sel)
+
+        st.info(
+            f"📊 Odhadovaná spotřeba: **{_vt_auto:.1f} MWh VT** + **{_nt_auto:.1f} MWh NT** · "
+            f"Doporučená sazba: **{_sazba_auto}** · "
+            f"Jistič: **{_jistic_auto}**"
+        )
+
+        dist = st.selectbox("Distributor", list(CENY_VT.keys()),
+                             help="ČEZ = většina ČR | EG.D = Morava/jih Čech | PRE = Praha")
+        profil = st.selectbox("Profil obyvatel", list(PROFILY.keys()),
+                               format_func=lambda x: PROFILY[x]["nazev"])
+
+        if st.button("Další →", type="primary", use_container_width=True):
+            st.session_state.wizard_data.update({
+                "pocet_bytu": pocet_bytu, "pocet_vchodu": pocet_vchodu,
+                "sp_sp_mwh": sp_sp_mwh, "zarizeni_sel": zarizeni_sel,
+                "vt_mwh": _vt_auto, "nt_mwh": _nt_auto,
+                "sazba": _sazba_auto, "dist": dist, "profil": profil,
+                "jistic": _jistic_auto,
+            })
+            st.session_state.wizard_krok = 2
+            st.rerun()
+
+    # ── KROK 2: ADRESA + STŘECHA ─────────────────────────────────
+    elif krok == 2:
+        st.subheader("🌍 Krok 2: Adresa a střecha")
+
+        lokace = st.text_input("Adresa nebo město",
+                                placeholder="např. Náměstí Míru 5, Praha 2")
+        if lokace and len(lokace) >= 4:
+            with st.spinner("Hledám adresu..."):
+                navrhys = _geocode_search(lokace)
+            if navrhys:
+                moznosti = []
+                for n in navrhys[:5]:
+                    addr = n.get("address", {})
+                    parts = []
+                    if addr.get("road"): parts.append(addr["road"])
+                    if addr.get("house_number"): parts.append(addr["house_number"])
+                    mesto = addr.get("city") or addr.get("town") or addr.get("village","")
+                    if mesto: parts.append(mesto)
+                    if addr.get("postcode"): parts.append(addr["postcode"])
+                    label = ", ".join(parts) if parts else n.get("display_name","")[:60]
+                    moznosti.append(label)
+                if moznosti:
+                    vyber = st.selectbox("Vyberte adresu:", ["— zadejte výše —"] + moznosti)
+                    if vyber != "— zadejte výše —":
+                        lokace = vyber
+
+        typ_str = st.radio("Typ střechy", ["sikma","plocha"],
+                            format_func=lambda x: "🏠 Šikmá" if x=="sikma" else "🏢 Plochá",
+                            horizontal=True)
+        if typ_str == "sikma":
+            sc1,sc2 = st.columns(2)
+            with sc1: sklon = st.slider("Sklon (°)", 15, 60, 35)
+            with sc2: azimut = st.select_slider("Orientace",[-90,-45,0,45,90],0,
+                                format_func=lambda x:{-90:"⬅️ Východ",-45:"↙️ JV",0:"⬆️ Jih",45:"↗️ JZ",90:"➡️ Západ"}[x])
+            koef_str = 1.0
+        else:
+            pc1,pc2 = st.columns(2)
+            with pc1: sklon = st.slider("Sklon panelů (°)", 5, 20, 10)
+            with pc2: sys_pl = st.radio("Systém",["jih","jz_jv","vz"],
+                        format_func=lambda x:{"jih":"⬆️ Jih","jz_jv":"↗️ JZ+JV","vz":"↔️ V+Z"}[x])
+            azimut = 90 if sys_pl=="vz" else 0
+            koef_str = {"jih":1.0,"jz_jv":0.97,"vz":0.88}[sys_pl]
+
+        col_back, col_next = st.columns(2)
+        with col_back:
+            if st.button("← Zpět", use_container_width=True):
+                st.session_state.wizard_krok = 1; st.rerun()
+        with col_next:
+            if st.button("Spočítat doporučení →", type="primary", use_container_width=True):
+                if not lokace:
+                    st.error("Zadejte prosím adresu nebo město.")
+                else:
+                    st.session_state.wizard_data.update({
+                        "lokace": lokace, "typ_str": typ_str,
+                        "sklon": sklon, "azimut": azimut, "koef_str": koef_str,
+                    })
+                    st.session_state.wizard_krok = 3; st.rerun()
+
+    # ── KROK 3: DOPORUČENÍ ───────────────────────────────────────
+    elif krok == 3:
+        st.subheader("🎯 Krok 3: Doporučená konfigurace")
+
+        wd = st.session_state.wizard_data
+        pocet_bytu = wd["pocet_bytu"]
+        sp_vt = wd["vt_mwh"]*1000 + wd["sp_sp_mwh"]*1000
+        sp_nt = wd["nt_mwh"]*1000
+
+        with st.spinner("Stahuji solární data a počítám optimální konfiguraci..."):
+            lat,lon,mesto,geo_err = _geocode(wd["lokace"])
+            if geo_err:
+                st.error(f"Lokalita nenalezena: {geo_err}")
+                st.stop()
+
+            kwp_test = max(5.0, round(sp_vt/1000/1.0, 0)*5)  # hrubý odhad
+            vyroba_hod,pvgis_err = _pvgis(lat,lon,kwp_test*wd["koef_str"],wd["sklon"],wd["azimut"])
+            if pvgis_err:
+                vyroba_hod = _gen_vyroba_fallback(kwp_test*wd["koef_str"],wd["sklon"],wd["azimut"])
+
+            # Optimalizace — najdi nejlepší kWp
+            sazba = wd["sazba"]
+            dist_w = wd["dist"]
+            cena_vt_w = float(CENY_VT[dist_w][sazba])/1000
+            cena_nt_w = float(CENY_NT[dist_w].get(sazba,CENY_VT[dist_w][sazba]))/1000
+            profil_w = wd["profil"]
+            uprava_w = _UPRAVY.get(profil_w, np.ones(24))
+            sp_sp15 = _gen_profil_vt(wd["sp_sp_mwh"]*1000, _TDD_SP)
+            sp_by_vt15 = _gen_profil_vt(wd["vt_mwh"]*1000, _TDD4, uprava_w)
+            sp_by_nt15 = _gen_profil_nt(sp_nt, sazba)
+            sp_vt15 = sp_sp15 + sp_by_vt15
+
+            nejlepsi = {}
+            for kwp_opt in [10,15,20,25,30,35,40,50]:
+                # Přepočítej výrobu pro tento výkon
+                faktor = kwp_opt / kwp_test
+                vyr_opt = _interpoluj(vyroba_hod * faktor)
+                for bat_opt in [0, 10, 20]:
+                    for model_opt in ["edc","jom"]:
+                        ez = min(5.0, round(10.0/pocet_bytu**0.5,1)) if model_opt=="edc" else 0.0
+                        sim_opt = _simuluj(vyr_opt, sp_vt15, sp_by_nt15, float(bat_opt), model_opt, ez)
+                        # Investice
+                        def _ckwp(kw):
+                            if kw<10: return 38000
+                            elif kw<20: return 33000
+                            elif kw<40: return 28000
+                            elif kw<80: return 24000
+                            else: return 21000
+                        inv = kwp_opt*_ckwp(kwp_opt) + bat_opt*15000
+                        if model_opt=="jom": inv += pocet_bytu*10000+75000
+                        vchod_extra = max(0,int(wd.get("pocet_vchodu",1))-1)*30000
+                        inv += vchod_extra
+                        cf_opt = _cashflow(
+                            vl_vt=sim_opt["vlastni_vt_kwh"],vl_nt=sim_opt["vlastni_nt_kwh"],
+                            pr=sim_opt["pretoky_kwh"],cvt=cena_vt_w,cnt=cena_nt_w,
+                            cpr=0.95,vlast=0.0,uver=inv,spl=inv/15,splat=15,
+                            rust=3.0,deg=0.5,leta=25,deg_bat=2.0)
+                        nav_opt = next((r["rok"] for r in cf_opt if r["kumulativni"]>=0),None)
+                        if nav_opt and (not nejlepsi or nav_opt < nejlepsi.get("nav",999)):
+                            nejlepsi = {"kwp":kwp_opt,"bat":bat_opt,"model":model_opt,
+                                       "nav":nav_opt,"uspora":cf_opt[0]["uspora_celkem"],
+                                       "invest":inv,"sim":sim_opt}
+
+        # Zobrazit 3 varianty
+        st.success(f"✅ Solární data pro **{mesto}** stažena")
+        st.markdown("### Doporučené varianty:")
+
+        # Varianta 1: Základní (jen společné)
+        v1_kwp = max(5, round(wd["sp_sp_mwh"]/1.05*10)/10)
+        # Varianta 2: Optimální (nejlepší výsledek)
+        v2 = nejlepsi
+        # Varianta 3: Premium (větší FVE + baterie)
+        v3_kwp = min(v2["kwp"]+10, 80)
+
+        kv1,kv2,kv3 = st.columns(3)
+        _var_list = [
+            (kv1,"🏢 Základní — jen společné",v1_kwp,0,"spolecne",False),
+            (kv2,f"⭐ Doporučené — {v2['model'].upper()}",v2["kwp"],v2["bat"],v2["model"],True),
+            (kv3,"🔋 Premium — EDC + baterie",v3_kwp,20,"edc",False),
+        ]
+        for col,label,kwp,bat,model_v,highlight in _var_list:
+            _inv = kwp*(_ckwp(kwp) if kwp>0 else 0)+(bat*15000)
+            if model_v=="jom": _inv+=pocet_bytu*10000+75000
+            with col:
+                if highlight:
+                    st.markdown(f"**{label}**")
+                else:
+                    st.markdown(label)
+                st.metric("Výkon FVE",f"{kwp} kWp")
+                st.metric("Baterie",f"{bat} kWh" if bat>0 else "bez baterie")
+                st.metric("Investice",f"{_inv/1000:.0f} tis. Kč")
+                if highlight and v2.get("nav"):
+                    st.metric("Cashflow návratnost",f"{v2['nav']} let")
+                    st.metric("Roční úspora",f"{v2['uspora']:,.0f} Kč")
+                if st.button(f"Vybrat {'⭐' if highlight else ''}",
+                             key=f"vybrat_{model_v}_{kwp}",
+                             type="primary" if highlight else "secondary",
+                             use_container_width=True):
+                    st.session_state.wizard_data.update({
+                        "vykon":float(kwp),"bat":bat,"model":model_v,
+                        "lat":lat,"lon":lon,"mesto":mesto,
+                        "vyroba_hod":vyroba_hod*(kwp/kwp_test),
+                    })
+                    st.session_state.wizard_krok = 4; st.rerun()
+
+        col_back2, _ = st.columns(2)
+        with col_back2:
+            if st.button("← Zpět", use_container_width=True):
+                st.session_state.wizard_krok = 2; st.rerun()
+
+    # ── KROK 4: FINANCOVÁNÍ ──────────────────────────────────────
+    elif krok == 4:
+        st.subheader("💰 Krok 4: Financování")
+        wd = st.session_state.wizard_data
+
+        fc1,fc2 = st.columns(2)
+        with fc1:
+            scenar = st.radio("Scénář financování",["uver","vlastni","kombinace"],
+                format_func=lambda x:{"uver":"🏦 Bezúročný úvěr NZÚ (od září 2026)",
+                                      "vlastni":"💵 Vlastní zdroje (fond oprav)",
+                                      "kombinace":"🔀 Kombinace vlastní + úvěr"}[x])
+        with fc2:
+            if scenar=="uver":
+                splatnost=st.slider("Doba splácení (let)",5,25,15)
+                vlastni_pct=0
+                st.info("✅ Úroky hradí stát. SVJ splácí jen jistinu. Standardně 15 let.")
+            elif scenar=="vlastni":
+                splatnost=0; vlastni_pct=100
+                st.info("💡 SVJ hradí vše z fondu oprav.")
+            else:
+                vlastni_pct=st.slider("Vlastní zdroje (%)",10,90,30,10)
+                splatnost=st.slider("Doba splácení (let)",5,25,15)
+
+        st.markdown("**Nízkopříjmové domácnosti (NZÚ bonus)**")
+        nb1,nb2 = st.columns(2)
+        with nb1: pocet_nizko=st.number_input("Bytů s bonusem",0,int(wd["pocet_bytu"]),0,1)
+        with nb2: bonus_byt=st.number_input("Bonus na byt (Kč)",0,150000,100000,5000)
+
+        col_back3,col_next3 = st.columns(2)
+        with col_back3:
+            if st.button("← Zpět", use_container_width=True):
+                st.session_state.wizard_krok = 3; st.rerun()
+        with col_next3:
+            if st.button("Spočítat výsledky →", type="primary", use_container_width=True):
+                st.session_state.wizard_data.update({
+                    "scenar":scenar,"splatnost":splatnost,"vlastni_pct":vlastni_pct,
+                    "pocet_nizko":pocet_nizko,"bonus_byt":bonus_byt,
+                })
+                st.session_state.wizard_krok = 5; st.rerun()
+
+    # ── KROK 5: VÝSLEDKY ─────────────────────────────────────────
+    elif krok == 5:
+        wd = st.session_state.wizard_data
+
+        # Nastavíme všechny proměnné z wizard_data
+        pocet_bytu    = wd["pocet_bytu"]
+        pocet_vchodu  = wd.get("pocet_vchodu",1)
+        sp_sp_mwh     = wd["sp_sp_mwh"]
+        zarizeni_sel  = wd["zarizeni_sel"]
+        dist          = wd["dist"]
+        sazba         = wd["sazba"]
+        profil        = wd["profil"]
+        vykon         = wd["vykon"]
+        bat           = wd["bat"]
+        model         = wd["model"]
+        scenar        = wd["scenar"]
+        splatnost     = wd["splatnost"]
+        vlastni_pct   = wd["vlastni_pct"]
+        pocet_nizko   = wd["pocet_nizko"]
+        bonus_byt     = wd["bonus_byt"]
+        lokace        = wd["lokace"]
+        sklon         = wd["sklon"]
+        azimut        = wd["azimut"]
+        koef_str      = wd["koef_str"]
+        typ_str       = wd["typ_str"]
+        rust_cen      = 3.0
+        deg_pan       = 0.5
+        cena_pretoky  = 0.95
+        deg_bat_val   = 2.0
+        edc_ztrata_val= min(5.0,round(10.0/pocet_bytu**0.5,1))
+
+        sp_sp    = sp_sp_mwh*1000
+        sp_by_vt = wd["vt_mwh"]*1000
+        sp_by_nt = wd["nt_mwh"]*1000
+        sp_cel   = sp_sp+sp_by_vt+sp_by_nt
+        sp_by_vt_mwh = wd["vt_mwh"]
+        sp_by_nt_mwh = wd["nt_mwh"]
+        ma_nt    = sazba in SAZBY_NT
+        cena_vt  = float(CENY_VT[dist][sazba])/1000
+        cena_nt  = float(CENY_NT[dist].get(sazba,CENY_VT[dist][sazba]))/1000
+        stay     = float(STAY_PLAT[dist])
+        jistic   = float(JISTIC_3x25[dist][sazba])
+
+        def _ckwp_w(kw):
+            if kw<10: return 38000
+            elif kw<20: return 33000
+            elif kw<40: return 28000
+            elif kw<80: return 24000
+            else: return 21000
+        cena_kwp   = _ckwp_w(float(vykon))
+        cena_fve   = int(float(vykon)*cena_kwp)
+        cena_bat   = int(float(bat)*15000)
+        _jom_merici  = int(pocet_bytu)*10000
+        _jom_projekt = 75000
+        cena_mericu  = (_jom_merici+_jom_projekt) if model=="jom" else 0
+        _vchod_extra = max(0,int(pocet_vchodu)-1)*30000
+        cena_mericu += _vchod_extra if model!="spolecne" else 0
+        cena_invest  = cena_fve+cena_bat+cena_mericu
+        vlastni_cast = float(cena_invest)*float(vlastni_pct)/100
+        uver_cast    = max(0.0,float(cena_invest)-vlastni_cast)
+        rocni_spl    = uver_cast/float(splatnost) if (scenar!="vlastni" and splatnost>0) else 0.0
+        uspora_jist  = jistic*(int(pocet_bytu)-1)*12.0 if model=="jom" else 0.0
+        bonus        = int(pocet_nizko)*int(bonus_byt)
+        podil_bytu_uver = uver_cast/float(pocet_bytu)
+        bonus_efekt_byt = min(float(bonus_byt),podil_bytu_uver)
+        zbytek_super = max(0.0,podil_bytu_uver-bonus_efekt_byt)
+        splatka_byt_std  = podil_bytu_uver/float(splatnost)/12 if (scenar!="vlastni" and splatnost>0) else 0
+        splatka_byt_super= zbytek_super/float(splatnost)/12 if (scenar!="vlastni" and splatnost>0) else 0
+        splatka_vsichni  = splatka_byt_std
+        uspora_diky_bonusu = splatka_byt_std-splatka_byt_super
+
+        # Spustit simulaci
+        with st.spinner("Simuluji..."):
+            vyroba_hod = wd["vyroba_hod"]
+            kwp_eff = float(vykon)*float(koef_str)
+            vyroba_15 = _interpoluj(vyroba_hod)
+            uprava = _UPRAVY.get(str(profil),np.ones(24,dtype=float))
+            sp_sp15    = _gen_profil_vt(sp_sp,_TDD_SP)
+            sp_by_vt15 = _gen_profil_vt(sp_by_vt,_TDD4,uprava)
+            sp_by_nt15 = _gen_profil_nt(sp_by_nt,sazba)
+            if model=="spolecne":
+                sp_vt15=sp_sp15; sp_nt15=np.zeros(_CD,dtype=float)
+            else:
+                sp_vt15=sp_sp15+sp_by_vt15; sp_nt15=sp_by_nt15
+            _edc_ztrata=float(edc_ztrata_val) if model=="edc" else 0.0
+            sim=_simuluj(vyroba_15,sp_vt15,sp_nt15,float(bat),model,_edc_ztrata)
+            cf=_cashflow(
+                vl_vt=sim["vlastni_vt_kwh"],vl_nt=sim["vlastni_nt_kwh"],
+                pr=sim["pretoky_kwh"],cvt=float(cena_vt),cnt=float(cena_nt),
+                cpr=float(cena_pretoky),vlast=vlastni_cast,uver=uver_cast,
+                spl=rocni_spl,splat=int(splatnost),rust=float(rust_cen),
+                deg=float(deg_pan),leta=25,jist=float(uspora_jist),
+                bonus=0.0,deg_bat=float(deg_bat_val))
+            sp_vt_celkem=sp_sp15+sp_by_vt15; sp_nt_celkem=sp_by_nt15
+            srovnani={}
+            for mk in ["spolecne","jom","edc"]:
+                _mericu_mk=int(pocet_bytu)*10000+75000 if mk=="jom" else 0
+                _mericu_mk+=_vchod_extra if mk!="spolecne" else 0
+                _jist_mk=jistic*(int(pocet_bytu)-1)*12.0 if mk=="jom" else 0.0
+                _invest_mk=cena_fve+cena_bat+_mericu_mk
+                _vlast_mk=float(_invest_mk)*float(vlastni_pct)/100
+                _uver_mk=max(0.0,float(_invest_mk)-_vlast_mk)
+                _spl_mk=_uver_mk/float(splatnost) if (scenar!="vlastni" and splatnost>0) else 0.0
+                _ez_mk=float(edc_ztrata_val) if mk=="edc" else 0.0
+                svt=sp_sp15 if mk=="spolecne" else sp_vt_celkem
+                snt=np.zeros(_CD,dtype=float) if mk=="spolecne" else sp_nt_celkem
+                sm=_simuluj(vyroba_15,svt,snt,float(bat),mk,_ez_mk)
+                cfm=_cashflow(vl_vt=sm["vlastni_vt_kwh"],vl_nt=sm["vlastni_nt_kwh"],
+                              pr=sm["pretoky_kwh"],cvt=float(cena_vt),cnt=float(cena_nt),
+                              cpr=float(cena_pretoky),vlast=_vlast_mk,uver=_uver_mk,
+                              spl=_spl_mk,splat=int(splatnost),rust=float(rust_cen),
+                              deg=float(deg_pan),leta=25,jist=_jist_mk,bonus=0.0,
+                              deg_bat=float(deg_bat_val))
+                nav_m=next((r["rok"] for r in cfm if r["kumulativni"]>=0),None)
+                stat_m=float(_invest_mk)/cfm[0]["uspora_celkem"] if cfm[0]["uspora_celkem"]>0 else 999
+                splatka_mk=_spl_mk/float(pocet_bytu)/12
+                cisty_byt_mk=cfm[0]["uspora_celkem"]/float(pocet_bytu)/12-splatka_mk
+                srovnani[mk]={"sim":sm,"cf":cfm,"nav":nav_m,"stat":stat_m,
+                              "rok1":cfm[0],"invest":_invest_mk,
+                              "splatka_byt":splatka_mk,"cisty_byt":cisty_byt_mk}
+            st.session_state["res"]={
+                "sim":sim,"cf":cf,"vyroba_15":vyroba_15,
+                "sp_vt15":sp_vt15,"sp_nt15":sp_nt15,
+                "pvgis_ok":True,"mesto":wd["mesto"],"lat":wd["lat"],"lon":wd["lon"],
+                "srovnani":srovnani}
+
+        st.button("← Upravit parametry", on_click=lambda: st.session_state.update({"wizard_krok":1}))
+        st.divider()
+
+# Zobrazit výsledky (pro oba módy)
 if "res" not in st.session_state:
     st.info("👆 Vyplňte parametry a klikněte na **Spočítat simulaci**.")
     st.stop()
