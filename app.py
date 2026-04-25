@@ -1165,7 +1165,7 @@ else:
             (kv3,"⚡ JOM",v2["kwp"],v2["bat"],"jom",False),
             (kv4,f"⭐ Nejlepší",v2["kwp"],v2["bat"],v2["model"],True),
         ]
-        for col,label,kwp,bat_v,model_v,highlight in _var_list:
+        for _var_idx,(col,label,kwp,bat_v,model_v,highlight) in enumerate(_var_list):
             _inv = kwp*_ckwp(kwp)+(bat_v*15000)
             if model_v=="jom": _inv+=pocet_bytu*10000+75000+max(0,int(wd.get("pocet_vchodu",1))-1)*30000
             # Spočítáme simulaci pro tuto variantu
@@ -1197,7 +1197,7 @@ else:
                 st.metric("Cashflow návratnost",f"{_nav_v} let" if _nav_v else ">25 let")
                 st.metric("Úspora za 25 let",f"{_us25:,.0f} Kč")
                 if st.button(f"{'✅ ' if highlight else ''}Vybrat",
-                             key=f"vybrat_{model_v}_{kwp}_{bat_v}",
+                             key=f"vybrat_{_var_idx}_{model_v}_{kwp}_{bat_v}",
                              type="primary" if highlight else "secondary",
                              use_container_width=True):
                     st.session_state.wizard_data.update({
