@@ -1031,8 +1031,11 @@ else:
             koef_str = 1.0
         else:
             pc1,pc2 = st.columns(2)
-            with pc1: sklon = st.slider("Sklon panelů (°)", 5, 20, 10, key="w_sklon_plocha")
-            with pc2: sys_pl = st.radio("Systém",["jih","jz_jv","vz"],key="w_sys_pl",
+            _prev_sklon_pl = st.session_state.wizard_data.get("sklon", 10)
+            _prev_sys_pl = st.session_state.wizard_data.get("sys_pl", "jih")
+            _sys_pl_idx = ["jih","jz_jv","vz"].index(_prev_sys_pl) if _prev_sys_pl in ["jih","jz_jv","vz"] else 0
+            with pc1: sklon = st.slider("Sklon panelů (°)", 5, 20, int(_prev_sklon_pl), key="w_sklon_plocha")
+            with pc2: sys_pl = st.radio("Systém",["jih","jz_jv","vz"],index=_sys_pl_idx,key="w_sys_pl",
                         format_func=lambda x:{"jih":"⬆️ Jih","jz_jv":"↗️ JZ+JV","vz":"↔️ V+Z"}[x])
             azimut = 90 if sys_pl=="vz" else 0
             koef_str = {"jih":1.0,"jz_jv":0.97,"vz":0.88}[sys_pl]
@@ -1046,9 +1049,11 @@ else:
                 if not lokace:
                     st.error("Zadejte prosím adresu nebo město.")
                 else:
+                    _sys_pl_save = sys_pl if typ_str=="plocha" else "jih"
                     st.session_state.wizard_data.update({
                         "lokace": lokace, "typ_str": typ_str,
                         "sklon": sklon, "azimut": azimut, "koef_str": koef_str,
+                        "sys_pl": _sys_pl_save,
                     })
                     st.session_state.wizard_krok = 3; st.rerun()
 
@@ -1153,43 +1158,68 @@ else:
         v3_kwp = min(v2["kwp"]+10, 80)
 
         kv1,kv2,kv3 = st.columns(3)
+        # Najdi nejlepší JOM variantu zvlášť
+        nejlepsi_jom = max(
+            [v for k,v in [(k2,v2)] + [(f"{m}_{kp}_{bp}", 
+                {"kwp":kp,"bat":bp,"model":"jom","uspora":0,"invest":0,"sim":{},"nav":30,"skore":0,"mira_vs":0,"mira_sob":0})
+                for kp in [v2["kwp"]] for bp in [v2["bat"]]]
+             if v.get("model")=="jom"],
+            key=lambda x:x.get("skore",0), default=v2)
+
+        # 4 varianty: Základní / EDC bez bat / JOM / Doporučené (nejlepší)
+        kv1,kv2,kv3,kv4 = st.columns(4)
         _var_list = [
-            (kv1,"🏢 Základní — jen společné",v1_kwp,0,"spolecne",False),
-            (kv2,f"⭐ Doporučené — {v2['model'].upper()}",v2["kwp"],v2["bat"],v2["model"],True),
-            (kv3,"🔋 Premium — EDC + baterie",v3_kwp,20,"edc",False),
+            (kv1,"🏢 Jen společné",v1_kwp,0,"spolecne",False),
+            (kv2,"🔗 EDC bez baterie",v2["kwp"],0,"edc",False),
+            (kv3,"⚡ JOM",v2["kwp"],v2["bat"],"jom",False),
+            (kv4,f"⭐ Nejlepší",v2["kwp"],v2["bat"],v2["model"],True),
         ]
-        for col,label,kwp,bat,model_v,highlight in _var_list:
-            _inv = kwp*(_ckwp(kwp) if kwp>0 else 0)+(bat*15000)
-            if model_v=="jom": _inv+=pocet_bytu*10000+75000
+        for col,label,kwp,bat_v,model_v,highlight in _var_list:
+            _inv = kwp*_ckwp(kwp)+(bat_v*15000)
+            if model_v=="jom": _inv+=pocet_bytu*10000+75000+max(0,int(wd.get("pocet_vchodu",1))-1)*30000
+            # Spočítáme simulaci pro tuto variantu
+            _faktor = kwp/kwp_test if kwp_test>0 else 1
+            _vyr_v = _interpoluj(vyroba_hod*_faktor)
+            _ez = min(5.0,round(10.0/pocet_bytu**0.5,1)) if model_v=="edc" else 0.0
+            _sv = sp_vt15 if model_v!="spolecne" else sp_sp15
+            _sn = sp_by_nt15 if model_v!="spolecne" else np.zeros(_CD,dtype=float)
+            _sm_v = _simuluj(_vyr_v,_sv,_sn,float(bat_v),model_v,_ez)
+            _cf_v = _cashflow(vl_vt=_sm_v["vlastni_vt_kwh"],vl_nt=_sm_v["vlastni_nt_kwh"],
+                              pr=_sm_v["pretoky_kwh"],cvt=cena_vt_w,cnt=cena_nt_w,
+                              cpr=0.95,vlast=0.0,uver=_inv,spl=_inv/15,splat=15,
+                              rust=3.0,deg=0.5,leta=25,deg_bat=2.0)
+            _nav_v = next((r["rok"] for r in _cf_v if r["kumulativni"]>=0),None)
+            _us25 = sum(_cf_v[r-1]["uspora_celkem"] for r in range(1,26))
             with col:
                 if highlight:
-                    st.markdown(f"**{label}**")
+                    st.markdown(f"### {label}")
                 else:
-                    st.markdown(label)
+                    st.markdown(f"**{label}**")
+                st.caption(f"Model: {model_v.upper()}")
                 st.metric("Výkon FVE",f"{kwp} kWp")
-                st.metric("Baterie",f"{bat} kWh" if bat>0 else "bez baterie")
+                st.metric("Baterie",f"{bat_v} kWh" if bat_v>0 else "bez baterie")
                 st.metric("Investice",f"{_inv:,.0f} Kč")
-                if highlight and v2.get("nav"):
-                    # Úspora za 25 let
-                    _uspora_25 = sum(v2["uspora"]*(1+3/100)**(r-1)*(1-0.5/100)**(r-1)
-                                     for r in range(1,26))
-                    st.metric("Vlastní spotřeba výroby",f"{v2['mira_vs']*100:.1f} %",
-                              help="% výroby FVE spotřebované v domě — klíčová metrika")
-                    st.metric("Cashflow návratnost",f"{v2['nav']} let")
-                    st.metric("Roční úspora",f"{v2['uspora']:,.0f} Kč")
-                    st.metric("Úspora za 25 let",f"{_uspora_25:,.0f} Kč",
-                              delta=f"{_uspora_25/12/1000:.0f} tis. Kč/byt",
-                              help="Celková úspora za 25 let životnosti panelů")
-                if st.button(f"Vybrat {'⭐' if highlight else ''}",
-                             key=f"vybrat_{model_v}_{kwp}",
+                st.metric("Vlastní spotřeba",f"{_sm_v['mira_vs']*100:.1f} %",
+                          help="% výroby spotřebované v domě")
+                st.metric("Soběstačnost",f"{_sm_v['mira_sob']*100:.1f} %")
+                st.metric("Roční úspora",f"{_cf_v[0]['uspora_celkem']:,.0f} Kč")
+                st.metric("Cashflow návratnost",f"{_nav_v} let" if _nav_v else ">25 let")
+                st.metric("Úspora za 25 let",f"{_us25:,.0f} Kč")
+                if st.button(f"{'✅ ' if highlight else ''}Vybrat",
+                             key=f"vybrat_{model_v}_{kwp}_{bat_v}",
                              type="primary" if highlight else "secondary",
                              use_container_width=True):
                     st.session_state.wizard_data.update({
-                        "vykon":float(kwp),"bat":bat,"model":model_v,
+                        "vykon":float(kwp),"bat":bat_v,"model":model_v,
                         "lat":lat,"lon":lon,"mesto":mesto,
-                        "vyroba_hod":vyroba_hod*(kwp/kwp_test),
+                        "vyroba_hod":vyroba_hod*_faktor,
+                        "cena_invest":_inv,
                     })
                     st.session_state.wizard_krok = 4; st.rerun()
+
+        # Tip o strategii EDC → JOM
+        st.info("💡 **Tip:** Začněte s EDC (minimální investice, žádné stavební práce). "
+                "Za 3–5 let při rekonstrukci domu můžete přejít na JOM a získat úsporu na distribuci.")
 
         col_back2, _ = st.columns(2)
         with col_back2:
@@ -1379,13 +1409,45 @@ sim=d["sim"]; cf=d["cf"]; srovnani=d["srovnani"]
 rok1=cf[0]
 nav=next((r["rok"] for r in cf if r["kumulativni"]>=0),None)
 
+# Načteme proměnné z res nebo wizard_data (pro wizard mód)
+if "cena_invest" not in dir() or not isinstance(cena_invest, (int,float)):
+    cena_invest = d.get("cena_invest", 0)
+if "pocet_bytu" not in dir() or not isinstance(pocet_bytu, (int,float)):
+    _wd = st.session_state.get("wizard_data",{})
+    pocet_bytu = _wd.get("pocet_bytu", 12)
+    pocet_nizko = _wd.get("pocet_nizko", 0)
+    bonus_byt = _wd.get("bonus_byt", 100000)
+    splatnost = _wd.get("splatnost", 15)
+    scenar = _wd.get("scenar", "uver")
+    bat = _wd.get("bat", 0)
+    ma_nt = False
+    sp_by_vt_mwh = _wd.get("vt_mwh", 0)
+    sp_by_nt_mwh = _wd.get("nt_mwh", 0)
+    rust_cen = 3.0; deg_pan = 0.5
+    cena_pretoky = 0.95; deg_bat_val = 2.0
+
 stat_nav=float(cena_invest)/rok1["uspora_celkem"] if rok1["uspora_celkem"]>0 else 999
-# Splátky — správná logika NZÚ
-splatka_vsichni = splatka_byt_std  # předpočítáno výše
+
+# Splátky — bezpečný výpočet
+_uver_v = getattr(d.get("cf",[{}])[0], "get", lambda k,v: v)("uver", 0) if False else 0
+try:
+    _uver_v = uver_cast
+except NameError:
+    _wd2 = st.session_state.get("wizard_data",{})
+    _uver_v = float(cena_invest) * (1 - _wd2.get("vlastni_pct",0)/100)
+try:
+    splatka_vsichni = splatka_byt_std
+except NameError:
+    splatka_vsichni = _uver_v/float(max(splatnost,1))/float(pocet_bytu)/12 if scenar!="vlastni" else 0.0
+try:
+    cista_splatka_super = splatka_byt_super
+except NameError:
+    _bonus_ef = min(float(bonus_byt), _uver_v/float(pocet_bytu))
+    _zbytek = max(0, _uver_v/float(pocet_bytu) - _bonus_ef)
+    cista_splatka_super = _zbytek/float(max(splatnost,1))/12 if scenar!="vlastni" else 0.0
+
 uspora_byt_mesic = rok1["uspora_celkem"] / float(pocet_bytu) / 12.0
-# Byt se superdávkou má nižší splátku díky bonusu
-cista_splatka_super = splatka_byt_super  # předpočítáno výše
-uspora_diky_bonusu = splatka_byt_std - splatka_byt_super  # kolik ušetří díky bonusu
+uspora_diky_bonusu = splatka_vsichni - cista_splatka_super
 
 st.divider()
 st.subheader("📊 Výsledky simulace")
@@ -1648,7 +1710,7 @@ with tab1:
         yaxis=dict(title="kW",fixedrange=True),height=350))
     if bat>0: lay["yaxis2"]=dict(title="SOC %",overlaying="y",side="right",range=[0,100],fixedrange=True)
     fig.update_layout(**lay)
-    st.plotly_chart(fig,use_container_width=True,config=_CFG)
+    st.plotly_chart(fig,use_container_width=True,config=_CFG,key="chart_1")
 
 with tab2:
     fig2=go.Figure()
@@ -1661,7 +1723,7 @@ with tab2:
     lay2=dict(_LAY); lay2.update(dict(barmode="overlay",
         yaxis=dict(title="MWh",fixedrange=True),height=350))
     fig2.update_layout(**lay2)
-    st.plotly_chart(fig2,use_container_width=True,config=_CFG)
+    st.plotly_chart(fig2,use_container_width=True,config=_CFG,key="chart_2")
 
 with tab3:
     roky=[r["rok"] for r in cf]
@@ -1682,7 +1744,7 @@ with tab3:
         yaxis=dict(title="Kč",fixedrange=True,tickformat=","),
         height=380,barmode="overlay"))
     fig3.update_layout(**lay3)
-    st.plotly_chart(fig3,use_container_width=True,config=_CFG)
+    st.plotly_chart(fig3,use_container_width=True,config=_CFG,key="chart_3")
 
 with tab4:
     st.markdown("**Splátka úvěru vs Úspora z FVE — rok po roku**")
@@ -1736,7 +1798,7 @@ with tab4:
         height=420,
     ))
     fig4.update_layout(**lay4)
-    st.plotly_chart(fig4, use_container_width=True, config=_CFG)
+    st.plotly_chart(fig4, use_container_width=True, config=_CFG,key="chart_4")
 
     # Přehledná tabulka — jen klíčové roky
     klic_roky = [1, 5, 10, int(splatnost) if splatnost else 15, 20, 25]
@@ -1946,13 +2008,45 @@ sim=d["sim"]; cf=d["cf"]; srovnani=d["srovnani"]
 rok1=cf[0]
 nav=next((r["rok"] for r in cf if r["kumulativni"]>=0),None)
 
+# Načteme proměnné z res nebo wizard_data (pro wizard mód)
+if "cena_invest" not in dir() or not isinstance(cena_invest, (int,float)):
+    cena_invest = d.get("cena_invest", 0)
+if "pocet_bytu" not in dir() or not isinstance(pocet_bytu, (int,float)):
+    _wd = st.session_state.get("wizard_data",{})
+    pocet_bytu = _wd.get("pocet_bytu", 12)
+    pocet_nizko = _wd.get("pocet_nizko", 0)
+    bonus_byt = _wd.get("bonus_byt", 100000)
+    splatnost = _wd.get("splatnost", 15)
+    scenar = _wd.get("scenar", "uver")
+    bat = _wd.get("bat", 0)
+    ma_nt = False
+    sp_by_vt_mwh = _wd.get("vt_mwh", 0)
+    sp_by_nt_mwh = _wd.get("nt_mwh", 0)
+    rust_cen = 3.0; deg_pan = 0.5
+    cena_pretoky = 0.95; deg_bat_val = 2.0
+
 stat_nav=float(cena_invest)/rok1["uspora_celkem"] if rok1["uspora_celkem"]>0 else 999
-# Splátky — správná logika NZÚ
-splatka_vsichni = splatka_byt_std  # předpočítáno výše
+
+# Splátky — bezpečný výpočet
+_uver_v = getattr(d.get("cf",[{}])[0], "get", lambda k,v: v)("uver", 0) if False else 0
+try:
+    _uver_v = uver_cast
+except NameError:
+    _wd2 = st.session_state.get("wizard_data",{})
+    _uver_v = float(cena_invest) * (1 - _wd2.get("vlastni_pct",0)/100)
+try:
+    splatka_vsichni = splatka_byt_std
+except NameError:
+    splatka_vsichni = _uver_v/float(max(splatnost,1))/float(pocet_bytu)/12 if scenar!="vlastni" else 0.0
+try:
+    cista_splatka_super = splatka_byt_super
+except NameError:
+    _bonus_ef = min(float(bonus_byt), _uver_v/float(pocet_bytu))
+    _zbytek = max(0, _uver_v/float(pocet_bytu) - _bonus_ef)
+    cista_splatka_super = _zbytek/float(max(splatnost,1))/12 if scenar!="vlastni" else 0.0
+
 uspora_byt_mesic = rok1["uspora_celkem"] / float(pocet_bytu) / 12.0
-# Byt se superdávkou má nižší splátku díky bonusu
-cista_splatka_super = splatka_byt_super  # předpočítáno výše
-uspora_diky_bonusu = splatka_byt_std - splatka_byt_super  # kolik ušetří díky bonusu
+uspora_diky_bonusu = splatka_vsichni - cista_splatka_super
 
 st.divider()
 st.subheader("📊 Výsledky simulace")
@@ -2215,7 +2309,7 @@ with tab1:
         yaxis=dict(title="kW",fixedrange=True),height=350))
     if bat>0: lay["yaxis2"]=dict(title="SOC %",overlaying="y",side="right",range=[0,100],fixedrange=True)
     fig.update_layout(**lay)
-    st.plotly_chart(fig,use_container_width=True,config=_CFG)
+    st.plotly_chart(fig,use_container_width=True,config=_CFG,key="chart_5")
 
 with tab2:
     fig2=go.Figure()
@@ -2228,7 +2322,7 @@ with tab2:
     lay2=dict(_LAY); lay2.update(dict(barmode="overlay",
         yaxis=dict(title="MWh",fixedrange=True),height=350))
     fig2.update_layout(**lay2)
-    st.plotly_chart(fig2,use_container_width=True,config=_CFG)
+    st.plotly_chart(fig2,use_container_width=True,config=_CFG,key="chart_6")
 
 with tab3:
     roky=[r["rok"] for r in cf]
@@ -2249,7 +2343,7 @@ with tab3:
         yaxis=dict(title="Kč",fixedrange=True,tickformat=","),
         height=380,barmode="overlay"))
     fig3.update_layout(**lay3)
-    st.plotly_chart(fig3,use_container_width=True,config=_CFG)
+    st.plotly_chart(fig3,use_container_width=True,config=_CFG,key="chart_7")
 
 with tab4:
     st.markdown("**Splátka úvěru vs Úspora z FVE — rok po roku**")
@@ -2303,7 +2397,7 @@ with tab4:
         height=420,
     ))
     fig4.update_layout(**lay4)
-    st.plotly_chart(fig4, use_container_width=True, config=_CFG)
+    st.plotly_chart(fig4, use_container_width=True, config=_CFG,key="chart_8")
 
     # Přehledná tabulka — jen klíčové roky
     klic_roky = [1, 5, 10, int(splatnost) if splatnost else 15, 20, 25]
