@@ -363,7 +363,7 @@ def _simuluj(vyroba_15, sp_vt15, sp_nt15, bat=0.0, model="edc", edc_ztrata=0.0):
         "vyroba_kwh":      tv,
         "spotreba_kwh":    tsp,
         "mira_vs":         tvl/tv  if tv>0  else 0.0,
-        "mira_sob":        tvl/tsp if tsp>0 else 0.0,  # přepočítáno v UI pro "spolecne"
+        "mira_sob":        min(1.0, tvl/tsp) if tsp>0 else 0.0,  # max 100%
         "edc_efektivita":  edc_efektivita,
         "mesice_vyroba":   mv,
         "mesice_spotreba": ms,
@@ -907,7 +907,15 @@ if expert_mod:
             "sim":sim,"cf":cf,"vyroba_15":vyroba_15,
             "sp_vt15":sp_vt15,"sp_nt15":sp_nt15,
             "pvgis_ok":pvgis_ok,"mesto":mesto,"lat":lat,"lon":lon,
-            "srovnani":srovnani}
+            "srovnani":srovnani,"cena_invest":cena_invest,
+            "params":{
+                "pocet_bytu":pocet_bytu,"scenar":scenar,"splatnost":splatnost,
+                "vlastni_pct":vlastni_pct,"bonus_byt":bonus_byt,"pocet_nizko":pocet_nizko,
+                "bat":bat,"ma_nt":ma_nt,"sp_by_vt_mwh":sp_by_vt_mwh,
+                "sp_by_nt_mwh":sp_by_nt_mwh,"rust_cen":rust_cen,"deg_pan":deg_pan,
+                "cena_pretoky":cena_pretoky,"splatka_byt_std":splatka_byt_std,
+                "splatka_byt_super":splatka_byt_super,"sp_cel":sp_cel,
+            }}
         st.success(f"✅ Hotovo — {mesto} ({lat:.2f}°N, {lon:.2f}°E) {'· PVGIS data' if pvgis_ok else '· záložní model'}")
 
 
@@ -1076,12 +1084,31 @@ else:
                 st.error(f"Lokalita nenalezena: {geo_err}")
                 st.stop()
 
-            kwp_test = max(5.0, round(sp_vt/1000/1.0, 0)*5)  # hrubý odhad
+            # Pomocná funkce cena/kWp
+            def _ckwp(kw):
+                if kw<10: return 38000
+                elif kw<20: return 33000
+                elif kw<40: return 28000
+                elif kw<80: return 24000
+                else: return 21000
+
+            # Algoritmus doporučení: 75% VT spotřeby, baterie 1.5× výkon FVE
+            # Zdroj: praxe instalačních firem, optimalizace vlastní spotřeby
+            sp_total_vt_kwh = sp_vt / 1000.0  # MWh/rok
+            kwp_75 = max(5.0, sp_total_vt_kwh / 1.05 * (1/0.75))  # 75% pokrytí VT
+            kwp_75 = round(kwp_75 / 5) * 5  # zaokrouhlit na 5 kWp
+            kwp_75 = max(5.0, min(100.0, kwp_75))
+
+            # Baterie: 1.5× výkon FVE (kWh), zaokrouhleno na 5 kWh
+            bat_75 = round(kwp_75 * 1.5 / 5) * 5
+
+            # Testovací výkon pro PVGIS (doporučený výkon)
+            kwp_test = kwp_75
             vyroba_hod,pvgis_err = _pvgis(lat,lon,kwp_test*wd["koef_str"],wd["sklon"],wd["azimut"])
             if pvgis_err:
                 vyroba_hod = _gen_vyroba_fallback(kwp_test*wd["koef_str"],wd["sklon"],wd["azimut"])
 
-            # Optimalizace — najdi nejlepší kWp
+            # Profily spotřeby
             sazba = wd["sazba"]
             dist_w = wd["dist"]
             cena_vt_w = float(CENY_VT[dist_w][sazba])/1000
@@ -1092,45 +1119,24 @@ else:
             sp_by_vt15 = _gen_profil_vt(wd["vt_mwh"]*1000, _TDD4, uprava_w)
             sp_by_nt15 = _gen_profil_nt(sp_nt, sazba)
             sp_vt15 = sp_sp15 + sp_by_vt15
+            vchod_extra = max(0,int(wd.get("pocet_vchodu",1))-1)*30000
 
-            nejlepsi = {}
-            for kwp_opt in [10,15,20,25,30,35,40,50]:
-                # Přepočítej výrobu pro tento výkon
-                faktor = kwp_opt / kwp_test
-                vyr_opt = _interpoluj(vyroba_hod * faktor)
-                for bat_opt in [0, 10, 20]:
-                    for model_opt in ["edc","jom"]:
-                        ez = min(5.0, round(10.0/pocet_bytu**0.5,1)) if model_opt=="edc" else 0.0
-                        sim_opt = _simuluj(vyr_opt, sp_vt15, sp_by_nt15, float(bat_opt), model_opt, ez)
-                        # Investice
-                        def _ckwp(kw):
-                            if kw<10: return 38000
-                            elif kw<20: return 33000
-                            elif kw<40: return 28000
-                            elif kw<80: return 24000
-                            else: return 21000
-                        inv = kwp_opt*_ckwp(kwp_opt) + bat_opt*15000
-                        if model_opt=="jom": inv += pocet_bytu*10000+75000
-                        vchod_extra = max(0,int(wd.get("pocet_vchodu",1))-1)*30000
-                        inv += vchod_extra
-                        cf_opt = _cashflow(
-                            vl_vt=sim_opt["vlastni_vt_kwh"],vl_nt=sim_opt["vlastni_nt_kwh"],
-                            pr=sim_opt["pretoky_kwh"],cvt=cena_vt_w,cnt=cena_nt_w,
-                            cpr=0.95,vlast=0.0,uver=inv,spl=inv/15,splat=15,
-                            rust=3.0,deg=0.5,leta=25,deg_bat=2.0)
-                        nav_opt = next((r["rok"] for r in cf_opt if r["kumulativni"]>=0),None)
-                        # Skóre: vážená kombinace vlastní spotřeby + cashflow
-                        # Priorita = maximalizovat spotřebu v budově
-                        _vs = sim_opt["mira_vs"]  # % výroby spotřebované v domě
-                        _sob = sim_opt["mira_sob"]  # % spotřeby pokryté FVE
-                        _uspora = cf_opt[0]["uspora_celkem"]
-                        # Skóre: vlastní spotřeba (70%) + soběstačnost (30%) / návratnost
-                        _skore = (_vs*0.7 + _sob*0.3) * _uspora / (nav_opt if nav_opt else 30)
-                        if not nejlepsi or _skore > nejlepsi.get("skore",0):
-                            nejlepsi = {"kwp":kwp_opt,"bat":bat_opt,"model":model_opt,
-                                       "nav":nav_opt,"uspora":_uspora,
-                                       "invest":inv,"sim":sim_opt,"skore":_skore,
-                                       "mira_vs":_vs,"mira_sob":_sob}
+            # Simulujeme doporučenou konfiguraci
+            vyr_opt = _interpoluj(vyroba_hod)
+            ez = min(5.0, round(10.0/pocet_bytu**0.5,1))
+            sim_opt = _simuluj(vyr_opt, sp_vt15, sp_by_nt15, float(bat_75), "edc", ez)
+            inv_edc = kwp_test*_ckwp(kwp_test) + bat_75*15000 + vchod_extra
+            cf_opt = _cashflow(
+                vl_vt=sim_opt["vlastni_vt_kwh"],vl_nt=sim_opt["vlastni_nt_kwh"],
+                pr=sim_opt["pretoky_kwh"],cvt=cena_vt_w,cnt=cena_nt_w,
+                cpr=0.95,vlast=0.0,uver=inv_edc,spl=inv_edc/15,splat=15,
+                rust=3.0,deg=0.5,leta=25,deg_bat=2.0)
+            nav_opt = next((r["rok"] for r in cf_opt if r["kumulativni"]>=0),None)
+
+            nejlepsi = {"kwp":kwp_test,"bat":bat_75,"model":"edc",
+                       "nav":nav_opt,"uspora":cf_opt[0]["uspora_celkem"],
+                       "invest":inv_edc,"sim":sim_opt,"skore":1.0,
+                       "mira_vs":sim_opt["mira_vs"],"mira_sob":sim_opt["mira_sob"]}
 
         # Zobrazit 3 varianty
         st.success(f"✅ Solární data pro **{mesto}** stažena")
@@ -1404,22 +1410,42 @@ sim=d["sim"]; cf=d["cf"]; srovnani=d["srovnani"]
 rok1=cf[0]
 nav=next((r["rok"] for r in cf if r["kumulativni"]>=0),None)
 
-# Načteme proměnné z res nebo wizard_data (pro wizard mód)
-if "cena_invest" not in dir() or not isinstance(cena_invest, (int,float)):
-    cena_invest = d.get("cena_invest", 0)
-if "pocet_bytu" not in dir() or not isinstance(pocet_bytu, (int,float)):
-    _wd = st.session_state.get("wizard_data",{})
+# Načteme proměnné z res["params"] — uloženy při simulaci
+cena_invest = d.get("cena_invest", 0)
+_p = d.get("params", {})
+if _p:
+    pocet_bytu      = _p.get("pocet_bytu", 12)
+    scenar          = _p.get("scenar", "uver")
+    splatnost       = _p.get("splatnost", 15)
+    vlastni_pct     = _p.get("vlastni_pct", 0)
+    bonus_byt       = _p.get("bonus_byt", 100000)
+    pocet_nizko     = _p.get("pocet_nizko", 0)
+    bat             = _p.get("bat", 0)
+    ma_nt           = _p.get("ma_nt", False)
+    sp_by_vt_mwh    = _p.get("sp_by_vt_mwh", 0)
+    sp_by_nt_mwh    = _p.get("sp_by_nt_mwh", 0)
+    rust_cen        = _p.get("rust_cen", 3.0)
+    deg_pan         = _p.get("deg_pan", 0.5)
+    cena_pretoky    = _p.get("cena_pretoky", 0.95)
+    sp_cel          = _p.get("sp_cel", 0)
+    splatka_byt_std = _p.get("splatka_byt_std", 0)
+    splatka_byt_super = _p.get("splatka_byt_super", 0)
+    deg_bat_val     = 2.0
+else:
+    # Fallback — wizard data
+    _wd = st.session_state.get("wizard_data", {})
     pocet_bytu = _wd.get("pocet_bytu", 12)
     pocet_nizko = _wd.get("pocet_nizko", 0)
     bonus_byt = _wd.get("bonus_byt", 100000)
     splatnost = _wd.get("splatnost", 15)
     scenar = _wd.get("scenar", "uver")
+    vlastni_pct = _wd.get("vlastni_pct", 0)
     bat = _wd.get("bat", 0)
     ma_nt = False
     sp_by_vt_mwh = _wd.get("vt_mwh", 0)
     sp_by_nt_mwh = _wd.get("nt_mwh", 0)
-    rust_cen = 3.0; deg_pan = 0.5
-    cena_pretoky = 0.95; deg_bat_val = 2.0
+    rust_cen = 3.0; deg_pan = 0.5; cena_pretoky = 0.95; deg_bat_val = 2.0
+    sp_cel = 0; splatka_byt_std = 0; splatka_byt_super = 0
 
 stat_nav=float(cena_invest)/rok1["uspora_celkem"] if rok1["uspora_celkem"]>0 else 999
 
@@ -1468,7 +1494,7 @@ else:
     util_delta = "zvažte baterii"
 
 # Soběstačnost — vždy vůči celkové spotřebě domu (i pro model "spolecne")
-mira_sob_real = sim["vlastni_kwh"] / float(sp_cel) if sp_cel > 0 else 0.0
+mira_sob_real = min(1.0, sim["vlastni_kwh"] / float(sp_cel)) if sp_cel > 0 else 0.0
 
 r1,r2,r3,r4,r5,r6=st.columns(6)
 with r1: st.metric("Roční výroba FVE",f"{sim['vyroba_kwh']/1000:.1f} MWh")
@@ -1532,7 +1558,7 @@ for col,mk in zip([sc1,sc2,sc3],["spolecne","jom","edc"]):
         st.metric("Roční úspora",f"{sv['rok1']['uspora_celkem']:,.0f} Kč")
         st.metric("Vlastní spotřeba",f"{sv['sim']['mira_vs']*100:.1f} %")
         # Pro "spolecne" počítáme soběstačnost vůči celé spotřebě domu
-        _sob = sv["sim"]["vlastni_kwh"] / float(sp_cel) if sp_cel>0 else 0.0
+        _sob = min(1.0, sv["sim"]["vlastni_kwh"] / float(sp_cel)) if sp_cel>0 else 0.0
         st.metric("Soběstačnost",f"{_sob*100:.1f} %",
                   help="% celkové spotřeby domu pokryté FVE" if mk!="spolecne" else "% celkové spotřeby domu — FVE kryje jen společné prostory")
         st.metric("Statická návratnost",f"{sv['stat']:.1f} let")
@@ -1712,9 +1738,12 @@ with tab1:
 
     lay=dict(_LAY); lay.update(dict(
         xaxis=dict(title="Hodina",tickmode="linear",tick0=0,dtick=2,
-                   range=[0,24],fixedrange=True),
-        yaxis=dict(title="kW",fixedrange=True),height=350))
-    if bat>0: lay["yaxis2"]=dict(title="SOC %",overlaying="y",side="right",range=[0,100],fixedrange=True)
+                   range=[0,24],fixedrange=True,
+                   tickvals=list(range(0,25,2)),
+                   ticktext=[f"{h}:00" for h in range(0,25,2)]),
+        yaxis=dict(title="kW",fixedrange=True,rangemode="tozero"),height=380))
+    if bat>0: lay["yaxis2"]=dict(title="SOC %",overlaying="y",side="right",
+                                  range=[0,100],fixedrange=True)
     fig.update_layout(**lay)
     st.plotly_chart(fig,use_container_width=True,config=_CFG,key="chart_1")
 
@@ -1864,617 +1893,7 @@ for col,rust_sc,nazev in zip(
     uspora_sc=sum(
         rok1["uspora_celkem"]*(1+rust_sc/100)**(r-1)*(1-float(deg_pan)/100)**(r-1)
         for r in range(1,26))
-    naklad_s=naklad_bez-uspora_sc
-    # Cashflow návratnost pro tento scénář
-    kum_sc=-(vlastni_cast+uver_cast-float(bonus))
-    nav_sc=None
-    for r in range(1,26):
-        u_sc=rok1["uspora_celkem"]*(1+rust_sc/100)**(r-1)*(1-float(deg_pan)/100)**(r-1)
-        s_sc=rocni_spl if r<=int(splatnost) else 0.0
-        kum_sc+=u_sc-s_sc
-        if kum_sc>=0 and nav_sc is None: nav_sc=r
-    with col:
-        st.markdown(f"**{nazev}**")
-        st.metric("Bez FVE (25 let)",f"{naklad_bez/1e6:.2f} mil. Kč")
-        st.metric("S FVE (25 let)",f"{naklad_s/1e6:.2f} mil. Kč",
-                  delta=f"−{uspora_sc/1e6:.2f} mil. Kč úspora",delta_color="normal")
-        st.metric("Cashflow návratnost",f"{nav_sc} let" if nav_sc else ">25 let")
-
-st.caption(f"💡 Bez FVE zaplatíte za 25 let více na elektřině — i při pesimistickém scénáři. "
-           f"Bezúročný úvěr znamená že úspory FVE začínají okamžitě pokrývat splátky.")
-
-st.divider()
-
-# ── CASHFLOW TABULKA ──────────────────────────────────────────────
-st.subheader("📋 Cashflow rok po roku (25 let)")
-df=pd.DataFrame([{"Rok":r["rok"],"Výroba MWh":r["vyroba_mwh"],"Vlastní MWh":r["vlastni_mwh"],
-                   "Přetoky MWh":r["pretoky_mwh"],"Úspora VT Kč":r["uspora_vt"],
-                   "Úspora NT Kč":r["uspora_nt"],"Příjem přetoky Kč":r["uspora_pretoky"],
-                   "Úspora celkem Kč":r["uspora_celkem"],"Splátka Kč":r["splatka"],
-                   "Čistý přínos Kč":r["cisty_prinos"],"Kumulativní Kč":r["kumulativni"],
-                   "Cena VT Kč/kWh":r["cena_vt"]} for r in cf])
-
-def hl(row):
-    if nav and row["Rok"]==nav: return ["background-color:#d4edda"]*len(row)
-    if row["Kumulativní Kč"]<0: return ["background-color:#fff3cd"]*len(row)
-    return [""]*len(row)
-
-# Skryjeme NT sloupec pokud není NT sazba
-cols_show=["Rok","Výroba MWh","Vlastní MWh","Přetoky MWh","Úspora VT Kč"]
-if ma_nt: cols_show.append("Úspora NT Kč")
-cols_show+=["Příjem přetoky Kč","Úspora celkem Kč","Splátka Kč","Čistý přínos Kč","Kumulativní Kč","Cena VT Kč/kWh"]
-
-fmt={"Výroba MWh":"{:.2f}","Vlastní MWh":"{:.2f}","Přetoky MWh":"{:.2f}",
-     "Úspora VT Kč":"{:,.0f}","Úspora NT Kč":"{:,.0f}","Příjem přetoky Kč":"{:,.0f}",
-     "Úspora celkem Kč":"{:,.0f}","Splátka Kč":"{:,.0f}",
-     "Čistý přínos Kč":"{:,.0f}","Kumulativní Kč":"{:,.0f}","Cena VT Kč/kWh":"{:.3f}"}
-
-st.dataframe(df[cols_show].style.apply(hl,axis=1).format({k:v for k,v in fmt.items() if k in cols_show}),
-             use_container_width=True,hide_index=True)
-
-st.divider()
-
-# ── DETAIL INVESTICE ──────────────────────────────────────────────
-st.subheader("💰 Detail investice a výnosů")
-di1,di2=st.columns(2)
-with di1:
-    st.markdown("**Investice**")
-    st.write(f"• FVE {vykon} kWp × {cena_kwp:,} Kč/kWp: **{cena_fve:,.0f} Kč**")
-    _ckwh_bat = cena_bat // int(bat) if bat > 0 else 15000
-    if cena_bat>0: st.write(f"• Baterie {bat} kWh × {_ckwh_bat:,} Kč/kWh: **{cena_bat:,.0f} Kč**")
-    if cena_mericu>0: st.write(f"• Podružné měřiče: **{cena_mericu:,.0f} Kč**")
-    st.write(f"• **Celková investice: {cena_invest:,.0f} Kč**")
-    if bonus>0: st.write(f"• Bonus NZÚ: **− {bonus:,.0f} Kč**")
-    if scenar!="vlastni":
-        st.write(f"• Bezúročný úvěr NZÚ: **{uver_cast:,.0f} Kč**")
-        st.write(f"• Roční splátka: **{rocni_spl:,.0f} Kč** ({splatnost} let)")
-with di2:
-    st.markdown("**Výnosy rok 1**")
-    _nm={"spolecne":"Jen společné prostory","jom":"Sjednocení odběrných míst","edc":"EDC komunitní sdílení"}
-    st.write(f"• Model: **{_nm[model]}** · Profil: **{PROFILY[profil]['nazev']}**")
-    st.write(f"• Vlastní spotřeba VT (FVE): **{sim['vlastni_vt_kwh']:,.0f} kWh** → **{rok1['uspora_vt']:,.0f} Kč**")
-    if ma_nt: st.write(f"• Vlastní spotřeba NT (baterie): **{sim['vlastni_nt_kwh']:,.0f} kWh** → **{rok1['uspora_nt']:,.0f} Kč**")
-    st.write(f"• Přetoky: **{sim['pretoky_kwh']:,.0f} kWh** @ {cena_pretoky:.2f} Kč → **{rok1['uspora_pretoky']:,.0f} Kč**")
-    if uspora_jist>0: st.write(f"• Úspora distribuce (JOM): **{uspora_jist:,.0f} Kč**")
-    st.write(f"• **Celkem: {rok1['uspora_celkem']:,.0f} Kč/rok**")
-    st.write(f"• Na byt: **{uspora_byt_mesic*12:,.0f} Kč/rok** · **{uspora_byt_mesic:.0f} Kč/měs**")
-
-st.divider()
-
-# ── JEDNOVĚTÝ ZÁVĚR ───────────────────────────────────────────────
-kum25_final = cf[-1]["kumulativni"]
-uspora_25_total = sum(r["uspora_celkem"] for r in cf)
-rust_real = float(rust_cen)
-
-# Závěr dle scénáře
-if nav and nav <= 12:
-    zaver = (f"✅ **Projekt se jednoznačně vyplatí** — i při konzervativním scénáři "
-             f"se investice vrátí za {nav} let a za 25 let ušetříte "
-             f"**{kum25_final:,.0f} Kč** ({kum25_final/float(pocet_bytu):,.0f} Kč/byt).")
-elif nav and nav <= 18:
-    uspora_pess = sum(
-        rok1["uspora_celkem"]*(1+1.0/100)**(r-1)*(1-float(deg_pan)/100)**(r-1)
-        for r in range(1,26))
-    zaver = (f"⚠️ **Projekt se vyplatí při realistickém vývoji cen** (+{rust_real}%/rok) — "
-             f"návratnost {nav} let. Při pesimistickém scénáři (+1%/rok) "
-             f"{'se také vrátí' if uspora_pess > float(cena_invest) else 'se nemusí vrátit'}. "
-             f"Bezúročný úvěr NZÚ výrazně snižuje riziko.")
-elif nav:
-    zaver = (f"⚠️ **Projekt je ekonomicky hraniční** — návratnost {nav} let je dlouhá. "
-             f"Doporučujeme zvýšit výkon FVE, přidat baterii nebo zvolit model JOM/EDC "
-             f"pro lepší využití výroby.")
-else:
-    zaver = (f"❌ **Projekt se za 25 let nevrátí** při současných parametrech. "
-             f"Zásadně přehodnoťte výkon FVE a model sdílení.")
-
-st.info(zaver)
-
-# Klíčový insight o baterii
-if bat > 0 and ma_nt:
-    st.caption(
-        f"💡 **Baterie nepřidává výrobu — jen posouvá hodnotu z dne do noci.** "
-        f"Přes den zachytí přebytky FVE, v noci pokryje NT spotřebu (bojler, TČ) "
-        f"za cenu VT místo NT ze sítě."
-    )
-
-st.divider()
-
-# ── NZÚ INFO ──────────────────────────────────────────────────────
-st.subheader("🏛️ Státní podpora NZÚ 2026")
-ni1,ni2=st.columns(2)
-with ni1:
-    st.markdown("**Co existuje pro SVJ (dle sfzp.gov.cz):**")
-    st.write("✅ **Bezúročný úvěr NZÚ** — od září 2026, splácení standardně 15 let (max. 25 let)")
-    st.write("✅ **Bonus za zranitelné domácnosti** — za byty se superdávkou")
-    st.write("✅ **NZÚ Light** — přímá dotace jen pro nízkopříjmové")
-with ni2:
-    st.markdown("**Další technologie (bezúročný úvěr):**")
-    st.write("• Zateplení fasády a střechy · Výměna oken")
-    st.write("• Tepelné čerpadlo · Rekuperace")
-    st.info("📋 Vždy ověřte na **[novazelenausporam.cz](https://novazelenausporam.cz)**")
-
-st.divider()
-st.caption(
-    "⚠️ Orientační výpočty — 15minutová simulace. "
-    "Profily spotřeby: OTE ČR — Typové diagramy dodávek elektřiny (TDD4). "
-    "Solární data: PVGIS TMY © Evropská komise, JRC. "
-    "Ceny dle ceníků ČEZ, E.ON, PRE od 1.1.2026 (s DPH 21 %, POZE=0 Kč). "
-    "NZÚ: sfzp.gov.cz · EDC: edc.cz"
-)
-if "res" not in st.session_state:
-    st.info("👆 Vyplňte parametry a klikněte na **Spočítat simulaci**.")
-    st.stop()
-
-# ================================================================
-# VÝSLEDKY
-# ================================================================
-
-d=st.session_state["res"]
-sim=d["sim"]; cf=d["cf"]; srovnani=d["srovnani"]
-rok1=cf[0]
-nav=next((r["rok"] for r in cf if r["kumulativni"]>=0),None)
-
-# Načteme proměnné z res nebo wizard_data (pro wizard mód)
-if "cena_invest" not in dir() or not isinstance(cena_invest, (int,float)):
-    cena_invest = d.get("cena_invest", 0)
-if "pocet_bytu" not in dir() or not isinstance(pocet_bytu, (int,float)):
-    _wd = st.session_state.get("wizard_data",{})
-    pocet_bytu = _wd.get("pocet_bytu", 12)
-    pocet_nizko = _wd.get("pocet_nizko", 0)
-    bonus_byt = _wd.get("bonus_byt", 100000)
-    splatnost = _wd.get("splatnost", 15)
-    scenar = _wd.get("scenar", "uver")
-    bat = _wd.get("bat", 0)
-    ma_nt = False
-    sp_by_vt_mwh = _wd.get("vt_mwh", 0)
-    sp_by_nt_mwh = _wd.get("nt_mwh", 0)
-    rust_cen = 3.0; deg_pan = 0.5
-    cena_pretoky = 0.95; deg_bat_val = 2.0
-
-stat_nav=float(cena_invest)/rok1["uspora_celkem"] if rok1["uspora_celkem"]>0 else 999
-
-# Splátky — bezpečný výpočet z session_state
-_wd2 = st.session_state.get("wizard_data", {})
-_scenar    = locals().get("scenar",    _wd2.get("scenar",    "uver"))
-_splatnost = locals().get("splatnost", _wd2.get("splatnost", 15))
-_pocet_bytu= locals().get("pocet_bytu",_wd2.get("pocet_bytu", 12))
-_bonus_byt2= locals().get("bonus_byt", _wd2.get("bonus_byt", 100000))
-
-try:
-    _uver_v = uver_cast
-except NameError:
-    _uver_v = float(cena_invest) * (1 - float(_wd2.get("vlastni_pct", 0))/100)
-
-if _scenar != "vlastni" and _splatnost > 0:
-    splatka_vsichni = _uver_v / float(max(_splatnost,1)) / float(_pocet_bytu) / 12
-else:
-    splatka_vsichni = 0.0
-
-try:
-    splatka_vsichni = splatka_byt_std  # přepíše pokud je k dispozici
-except NameError:
-    pass
-
-try:
-    cista_splatka_super = splatka_byt_super
-except NameError:
-    _bonus_ef = min(float(_bonus_byt2), _uver_v/float(max(_pocet_bytu,1)))
-    _zbytek = max(0, _uver_v/float(max(_pocet_bytu,1)) - _bonus_ef)
-    cista_splatka_super = _zbytek/float(max(_splatnost,1))/12 if _scenar!="vlastni" else 0.0
-
-uspora_byt_mesic = rok1["uspora_celkem"] / float(_pocet_bytu) / 12.0
-uspora_diky_bonusu = splatka_vsichni - cista_splatka_super
-
-st.divider()
-st.subheader("📊 Výsledky simulace")
-
-# Killer metrika nahoře — kolik % výroby se využije
-util_pct = sim["mira_vs"]*100
-if util_pct >= 70:
-    util_delta = "výborné využití ✅"
-elif util_pct >= 50:
-    util_delta = "dobré využití"
-else:
-    util_delta = "zvažte baterii"
-
-# Soběstačnost — vždy vůči celkové spotřebě domu (i pro model "spolecne")
-mira_sob_real = sim["vlastni_kwh"] / float(sp_cel) if sp_cel > 0 else 0.0
-
-r1,r2,r3,r4,r5,r6=st.columns(6)
-with r1: st.metric("Roční výroba FVE",f"{sim['vyroba_kwh']/1000:.1f} MWh")
-with r2: st.metric("Využití výroby v domě",f"{util_pct:.1f} %",
-                   delta=util_delta,
-                   help="Klíčová metrika: kolik % výroby FVE se spotřebuje přímo v domě nebo přes baterii. Zbytek jde za nízkou výkupní cenu.")
-with r3: st.metric("Soběstačnost",f"{mira_sob_real*100:.1f} %",help="% celkové spotřeby domu (vč. bytů) pokryté FVE")
-with r4: st.metric("Roční úspora (rok 1)",f"{rok1['uspora_celkem']:,.0f} Kč")
-with r5: st.metric("Orientační návratnost",f"{stat_nav:.1f} let",
-                   help="Investice ÷ roční úspora — pouze orientačně, bez vlivu růstu cen")
-with r6: st.metric("Cashflow návratnost",f"{nav} let" if nav else ">25 let",
-                   help="Realistická návratnost: kdy kumulativní cashflow přejde do kladných čísel")
-
-# EDC efektivita
-# Míra časového překryvu — zobrazit vždy (pro všechny modely)
-prekryv = sim.get("edc_efektivita", 1.0) * 100
-if prekryv >= 70:
-    prekryv_hod = "výborné — výroba a spotřeba jsou dobře sladěny"
-elif prekryv >= 50:
-    prekryv_hod = "dobré — baterie může pomoci s nesouladem"
-else:
-    prekryv_hod = "nízké — velká část výroby jde mimo dobu spotřeby, baterie velmi doporučena"
-st.info(f"⏱️ **Míra časového sladění výroby a spotřeby: {prekryv:.1f} %** — "
-        f"{prekryv_hod}. "
-        f"Závisí na profilu: senioři = vyšší, pracující = nižší.")
-
-# VT/NT rozpad úspory
-if ma_nt and sim["vlastni_nt_kwh"]>0:
-    st.info(
-        f"🔋 **Rozpad úspory:** "
-        f"VT přímá spotřeba: **{rok1['uspora_vt']:,.0f} Kč** · "
-        f"NT z baterie: **{rok1['uspora_nt']:,.0f} Kč** · "
-        f"Přetoky: **{rok1['uspora_pretoky']:,.0f} Kč**"
-    )
-
-st.divider()
-
-# ── POROVNÁNÍ MODELŮ ──────────────────────────────────────────────
-st.subheader("📊 Porovnání modelů sdílení")
-st.caption("Stejná FVE a investice pro všechny modely — mění se jen co FVE pokrývá.")
-nazvy={"spolecne":"🏢 Jen společné","jom":"⚡ JOM","edc":"🔗 EDC"}
-# Najdi nejlepší model dle cashflow návratnosti
-best_mk = min(["spolecne","jom","edc"],
-              key=lambda x: srovnani[x]["nav"] if srovnani[x]["nav"] else 999)
-sc1,sc2,sc3=st.columns(3)
-for col,mk in zip([sc1,sc2,sc3],["spolecne","jom","edc"]):
-    sv=srovnani[mk]
-    cisty_byt=sv["cisty_byt"]        # počítáno s vlastní investicí modelu
-    splatka_byt_mk=sv["splatka_byt"] # splátka pro tento konkrétní model
-    je_vybran = mk == model
-    je_nejlepsi = mk == best_mk
-    with col:
-        hlavicka = nazvy[mk]
-        if je_nejlepsi: hlavicka += " ⭐"
-        if je_vybran:   hlavicka += " ✓"
-        st.markdown(f"**{hlavicka}**")
-        if mk=="jom":
-            st.caption(f"Investice: {sv['invest']:,.0f} Kč (vč. měřičů)")
-        else:
-            st.caption(f"Investice: {sv['invest']:,.0f} Kč")
-        st.metric("Roční úspora",f"{sv['rok1']['uspora_celkem']:,.0f} Kč")
-        st.metric("Vlastní spotřeba",f"{sv['sim']['mira_vs']*100:.1f} %")
-        # Pro "spolecne" počítáme soběstačnost vůči celé spotřebě domu
-        _sob = sv["sim"]["vlastni_kwh"] / float(sp_cel) if sp_cel>0 else 0.0
-        st.metric("Soběstačnost",f"{_sob*100:.1f} %",
-                  help="% celkové spotřeby domu pokryté FVE" if mk!="spolecne" else "% celkové spotřeby domu — FVE kryje jen společné prostory")
-        st.metric("Statická návratnost",f"{sv['stat']:.1f} let")
-        st.metric("Cashflow návratnost",f"{sv['nav']} let" if sv['nav'] else ">25 let")
-        st.metric("Splátka/byt",f"{splatka_byt_mk:.0f} Kč/měs")
-        if cisty_byt>=0:
-            st.metric("Čistý přínos/byt",f"+{cisty_byt:.0f} Kč/měs",delta="kladný")
-        else:
-            st.metric("Čistý náklad/byt",f"{cisty_byt:.0f} Kč/měs",delta_color="inverse")
-        if je_vybran:
-            st.info("✓ Váš výběr")
-
-st.divider()
-
-# ── PŘEHLED NA BYT ────────────────────────────────────────────────
-st.subheader("🏠 Přehled na jednotlivý byt (měsíčně)")
-ba1,ba2=st.columns(2)
-with ba1:
-    st.markdown("**Standardní byt**")
-    cisty_std=uspora_byt_mesic-splatka_vsichni
-    st.metric("Úspora z FVE",f"{uspora_byt_mesic:.0f} Kč/měs")
-    st.metric("Splátka úvěru",f"{splatka_vsichni:.0f} Kč/měs")
-    if cisty_std>=0:
-        st.metric("Čistý měsíční přínos",f"+{cisty_std:.0f} Kč/měs",delta="kladný od roku 1")
-    else:
-        st.metric("Čistý měsíční náklad",f"{cisty_std:.0f} Kč/měs")
-    if bonus>0 and uspora_diky_bonusu>0:
-        st.info(f"💡 Díky bonusu ušetří každý byt **{uspora_diky_bonusu:.0f} Kč/měs** na splátce.")
-with ba2:
-    if pocet_nizko>0:
-        st.markdown(f"**Byt se superdávkou** ({pocet_nizko}× v domě)")
-        cisty_super=uspora_byt_mesic-cista_splatka_super
-        st.metric("Úspora z FVE",f"{uspora_byt_mesic:.0f} Kč/měs")
-        st.metric("Podíl na úvěru (celkem)",f"{podil_bytu_uver:,.0f} Kč",
-                  help="Podíl tohoto bytu na celkovém úvěru SVJ")
-        st.metric("Přímý bonus NZÚ",f"{bonus_efekt_byt:,.0f} Kč",
-                  delta=f"pokryje {bonus_efekt_byt/podil_bytu_uver*100:.0f}% podílu" if podil_bytu_uver>0 else "",
-                  help="Přímá platba státu na konkrétní byt — snižuje jeho zbývající dluh na úvěru")
-        st.metric("Zbývající splátka",f"{cista_splatka_super:.0f} Kč/měs",
-                  help=f"Splátka po odečtení bonusu. Std byt: {splatka_vsichni:.0f} Kč/měs")
-        if cisty_super>=0:
-            st.metric("Čistý měsíční přínos",f"+{cisty_super:.0f} Kč/měs",
-                      delta=f"+{cisty_super-cisty_std:.0f} Kč vs std. byt")
-        else:
-            st.metric("Čistý měsíční náklad",f"{cisty_super:.0f} Kč/měs")
-        st.divider()
-        st.markdown("**🤝 Přínos bonusu NZÚ**")
-        st.write(f"• Přímý bonus od státu: **{bonus_efekt_byt:,.0f} Kč** (na byt se superdávkou)")
-        st.write(f"• Bonus pokryje: **{bonus_efekt_byt/podil_bytu_uver*100:.0f}%** podílu na úvěru")
-        st.write(f"• Zbývající splátka super bytu: **{cista_splatka_super:.0f} Kč/měs** (vs {splatka_vsichni:.0f} Kč std)")
-        st.write(f"• Ostatní byty: splátka **{splatka_vsichni:.0f} Kč/měs** — beze změny")
-    else:
-        st.markdown("**Žádné byty se superdávkou**")
-        st.caption("Zadejte počet bytů s bonusem výše.")
-
-st.divider()
-
-# ── MILNÍKY ───────────────────────────────────────────────────────
-st.markdown("**📍 Klíčové milníky**")
-m1,m2,m3=st.columns(3)
-with m1:
-    lines=["**Rok 1**",
-           f"Vlastní spotřeba VT: **{sim['vlastni_vt_kwh']:,.0f} kWh**",
-           f"Vlastní spotřeba NT (bat): **{sim['vlastni_nt_kwh']:,.0f} kWh**",
-           f"Přetoky do sítě: **{sim['pretoky_kwh']:,.0f} kWh**",
-           f"**Celková úspora: {rok1['uspora_celkem']:,.0f} Kč/rok**",
-           f"Na byt: **{uspora_byt_mesic*12:,.0f} Kč/rok** · **{uspora_byt_mesic:.0f} Kč/měs**",
-           f"Splátka na byt: **{splatka_vsichni:.0f} Kč/měs**"]
-    st.info("  \n".join(lines))
-with m2:
-    if scenar!="vlastni" and splatnost>0 and splatnost<=25:
-        rs=cf[min(splatnost-1,len(cf)-1)]
-        lines=[f"**Rok {splatnost} — úvěr splacen ✅**",
-               f"Úspora v tom roce: **{rs['uspora_celkem']:,.0f} Kč**",
-               f"(vč. růstu cen +{rust_cen}%/rok)",
-               f"Poté plný přínos bez splátky:",
-               f"**{rs['uspora_celkem']:,.0f} Kč/rok**"]
-        st.info("  \n".join(lines))
-    else:
-        st.info("  \n".join(["**Vlastní financování**","Žádné splátky",
-                              f"Plný přínos od roku 1:",f"**{rok1['uspora_celkem']:,.0f} Kč/rok**"]))
-with m3:
-    kum25=cf[-1]["kumulativni"]
-    if nav:
-        lines=[f"**Rok {nav} — investice se vrátí ✅**",
-               f"Statická: **{stat_nav:.1f} let** · Cashflow: **{nav} let**",
-               f"Za 25 let celková úspora:",
-               f"**{kum25:,.0f} Kč** ({kum25/float(pocet_bytu):,.0f} Kč/byt)",
-               f"→ dalších {max(0,25-nav)} let čistý zisk!"]
-        st.success("  \n".join(lines))
-    else:
-        st.warning("  \n".join([f"**Za 25 let investice se nevrátí**",
-                                f"Cashflow: **{kum25:,.0f} Kč**",
-                                "Zvyšte výkon FVE nebo zvolte jiný model."]))
-
-st.divider()
-
-# ── GRAFY ─────────────────────────────────────────────────────────
-tab1,tab2,tab3,tab4=st.tabs(["📅 Denní graf","📈 Roční přehled","💰 Cashflow 25 let","📊 Splátka vs Úspora"])
-
-with tab1:
-    st.markdown("**Průměrný den — výroba vs spotřeba**")
-    gc1,gc2=st.columns(2)
-    with gc1: sezona_g=st.radio("Sezóna",["zima","prechodne","leto"],horizontal=True,key="r1_sezona",
-                                 format_func=lambda x:{"zima":"❄️ Zima","prechodne":"🌤️ Jaro/Podzim","leto":"☀️ Léto"}[x])
-    with gc2: pocasi_g=st.radio("Počasí",["jasno","polojasno","zatazeno"],horizontal=True,key="r1_pocasi",
-                                 format_func=lambda x:{"jasno":"☀️ Jasno","polojasno":"⛅ Polojasno","zatazeno":"☁️ Zataženo"}[x])
-
-    kwp_eff=float(vykon)*float(koef_str)
-    vyr_den=_gen_vyroba_den(kwp_eff,sezona_g,pocasi_g)
-    sp_total_vt=(sp_sp+sp_by_vt) if model!="spolecne" else sp_sp
-    sp_total_nt=sp_by_nt if model!="spolecne" else 0.0
-    sp_den_vt=_gen_spotreba_den(sp_total_vt,sezona_g,profil,False)
-    # NT profil pro den
-    nt_h=NT_HODINY.get(sazba,set())
-    sp_den_nt=np.zeros(96,dtype=float)
-    if sp_total_nt>0 and nt_h:
-        nt_den=sp_total_nt/365.0
-        for i in range(96):
-            if (i//4) in nt_h: sp_den_nt[i]=nt_den/len(nt_h)/4.0 if len(nt_h)>0 else 0
-
-    hodiny=[i/4.0 for i in range(96)]
-    sp_den_total=sp_den_vt+sp_den_nt
-
-    fig=go.Figure()
-    fig.add_trace(go.Scatter(x=hodiny,y=vyr_den*4,name="⚡ Výroba FVE (kW)",
-                              fill="tozeroy",fillcolor="rgba(255,193,7,0.2)",
-                              line=dict(color="#FFC107",width=2)))
-    fig.add_trace(go.Scatter(x=hodiny,y=sp_den_vt*4,name="🏠 Spotřeba VT (kW)",
-                              line=dict(color="#2196F3",width=2)))
-    if ma_nt and sp_total_nt>0:
-        fig.add_trace(go.Scatter(x=hodiny,y=sp_den_nt*4,name="🌙 Spotřeba NT (kW)",
-                                  fill="tozeroy",fillcolor="rgba(156,39,176,0.15)",
-                                  line=dict(color="#9C27B0",width=1,dash="dot")))
-    # Baterie SOC — stejná logika jako hlavní simulace
-    # VT spotřeba má prioritu před NT (dražší tarif)
-    bat_soc=np.zeros(96)
-    if bat>0:
-        _bmin=float(bat)*0.10
-        _bmax=float(bat)*0.90
-        _eta=0.92
-        # Začínáme s vybitou baterií — realisticky po noční spotřebě
-        bkwh=float(bat)*0.20
-        for i in range(96):
-            vi   = float(vyr_den[i])
-            svti = float(sp_den_vt[i])
-            snti = float(sp_den_nt[i])
-
-            # 1. FVE → VT spotřeba přímo
-            prime = min(vi, svti)
-            zbv   = vi - prime
-            zbsvt = svti - prime
-
-            # 2. Přebytek výroby → nabít baterii
-            if zbv > 0:
-                nab = min(zbv*_eta, _bmax-bkwh)
-                bkwh += nab
-                zbv  -= nab/_eta
-
-            # 3. Zbylá VT spotřeba → vybít baterii (VT = dražší, priorita!)
-            if zbsvt > 0:
-                dos = (bkwh-_bmin)*_eta
-                vyb = min(zbsvt, dos)
-                bkwh -= vyb/_eta
-                zbsvt -= vyb
-
-            # 4. NT spotřeba → vybít zbylou baterii
-            if snti > 0:
-                dos = (bkwh-_bmin)*_eta
-                vyb = min(snti, dos)
-                bkwh -= vyb/_eta
-
-            bat_soc[i] = bkwh/float(bat)*100
-
-        fig.add_trace(go.Scatter(x=hodiny,y=bat_soc,name="🔋 Baterie SOC (%)",
-                                  yaxis="y2",line=dict(color="#4CAF50",width=2,dash="dash")))
-
-    lay=dict(_LAY); lay.update(dict(
-        xaxis=dict(title="Hodina",tickmode="linear",tick0=0,dtick=2,
-                   range=[0,24],fixedrange=True),
-        yaxis=dict(title="kW",fixedrange=True),height=350))
-    if bat>0: lay["yaxis2"]=dict(title="SOC %",overlaying="y",side="right",range=[0,100],fixedrange=True)
-    fig.update_layout(**lay)
-    st.plotly_chart(fig,use_container_width=True,config=_CFG,key="chart_5")
-
-with tab2:
-    fig2=go.Figure()
-    fig2.add_trace(go.Bar(x=_MESICE,y=[x/1000 for x in sim["mesice_vyroba"]],
-                           name="Výroba FVE (MWh)",marker_color="#FFC107",opacity=0.8))
-    fig2.add_trace(go.Bar(x=_MESICE,y=[x/1000 for x in sim["mesice_vlastni"]],
-                           name="Vlastní spotřeba (MWh)",marker_color="#4CAF50",opacity=0.9))
-    fig2.add_trace(go.Bar(x=_MESICE,y=[x/1000 for x in sim["mesice_pretoky"]],
-                           name="Přetoky (MWh)",marker_color="#9E9E9E",opacity=0.7))
-    lay2=dict(_LAY); lay2.update(dict(barmode="overlay",
-        yaxis=dict(title="MWh",fixedrange=True),height=350))
-    fig2.update_layout(**lay2)
-    st.plotly_chart(fig2,use_container_width=True,config=_CFG,key="chart_6")
-
-with tab3:
-    roky=[r["rok"] for r in cf]
-    kum=[r["kumulativni"] for r in cf]
-    fig3=go.Figure()
-    fig3.add_trace(go.Scatter(x=roky,y=kum,name="Kumulativní cashflow",
-                               fill="tozeroy",fillcolor="rgba(33,150,243,0.15)",
-                               line=dict(color="#2196F3",width=3)))
-    fig3.add_hline(y=0,line_dash="dash",line_color="#666",line_width=1)
-    if nav:
-        fig3.add_vline(x=nav,line_dash="dot",line_color="#4CAF50",line_width=2,
-                       annotation_text=f"Rok {nav}",annotation_position="top right")
-    if scenar!="vlastni":
-        fig3.add_trace(go.Bar(x=roky,y=[-r["splatka"] for r in cf],
-                               name="Splátka úvěru",marker_color="rgba(244,67,54,0.4)"))
-    lay3=dict(_LAY); lay3.update(dict(
-        xaxis=dict(title="Rok",fixedrange=True,dtick=2),
-        yaxis=dict(title="Kč",fixedrange=True,tickformat=","),
-        height=380,barmode="overlay"))
-    fig3.update_layout(**lay3)
-    st.plotly_chart(fig3,use_container_width=True,config=_CFG,key="chart_7")
-
-with tab4:
-    st.markdown("**Splátka úvěru vs Úspora z FVE — rok po roku**")
-    st.caption("Klíčová otázka: od kdy je úspora vyšší než splátka?")
-
-    roky_g  = [r["rok"] for r in cf]
-    uspora_g = [r["uspora_celkem"] for r in cf]
-    splatka_g = [r["splatka"] for r in cf]
-    cisty_g  = [r["cisty_prinos"] for r in cf]
-    kum_g    = [r["kumulativni"] for r in cf]
-
-    fig4 = go.Figure()
-
-    # Úspora z FVE — roste každý rok
-    fig4.add_trace(go.Bar(
-        x=roky_g, y=uspora_g, name="Úspora z FVE (Kč/rok)",
-        marker_color="#4CAF50", opacity=0.85))
-
-    # Splátka úvěru — konstantní, pak 0
-    fig4.add_trace(go.Bar(
-        x=roky_g, y=[-s for s in splatka_g], name="Splátka úvěru (Kč/rok)",
-        marker_color="#F44336", opacity=0.75))
-
-    # Čistý přínos — linie
-    fig4.add_trace(go.Scatter(
-        x=roky_g, y=cisty_g, name="Čistý přínos (Kč/rok)",
-        line=dict(color="#2196F3", width=3),
-        mode="lines+markers", marker=dict(size=4)))
-
-    # Nulová linie
-    fig4.add_hline(y=0, line_dash="dash", line_color="#666", line_width=1)
-
-    # Označit rok splacení úvěru
-    if scenar != "vlastni" and splatnost > 0:
-        fig4.add_vline(x=splatnost+0.5, line_dash="dot", line_color="#FF9800",
-                       line_width=2,
-                       annotation_text=f"Úvěr splacen (rok {splatnost})",
-                       annotation_position="top left")
-
-    # Označit cashflow návratnost
-    if nav:
-        fig4.add_vline(x=nav, line_dash="dot", line_color="#4CAF50", line_width=2,
-                       annotation_text=f"Návratnost (rok {nav})",
-                       annotation_position="top right")
-
-    lay4 = dict(_LAY)
-    lay4.update(dict(
-        barmode="relative",
-        xaxis=dict(title="Rok", fixedrange=True, dtick=2),
-        yaxis=dict(title="Kč/rok", fixedrange=True, tickformat=","),
-        height=420,
-    ))
-    fig4.update_layout(**lay4)
-    st.plotly_chart(fig4, use_container_width=True, config=_CFG,key="chart_8")
-
-    # Přehledná tabulka — jen klíčové roky
-    klic_roky = [1, 5, 10, int(splatnost) if splatnost else 15, 20, 25]
-    klic_roky = sorted(set(r for r in klic_roky if 1 <= r <= 25))
-    st.markdown("**Klíčové roky:**")
-    cols_tab4 = st.columns(len(klic_roky))
-    for col, rok in zip(cols_tab4, klic_roky):
-        r = cf[rok-1]
-        with col:
-            st.metric(f"Rok {rok}",
-                      f"{r['uspora_celkem']:,.0f} Kč",
-                      delta=f"splátka {r['splatka']:,.0f} Kč" if r['splatka']>0 else "bez splátky")
-
-st.divider()
-
-# ── VERDIKT ───────────────────────────────────────────────────────
-st.subheader("🎯 Verdikt a scénáře")
-
-# Verdikt
-kum25=cf[-1]["kumulativni"]
-if nav and nav <= 12:
-    verdikt_text = "✅ PROJEKT SE JEDNOZNAČNĚ VYPLATÍ"
-    verdikt_color = "success"
-    verdikt_popis = f"Cashflow návratnost {nav} let je výborná. Investice je bezpečná i při konzervativním scénáři (+1%/rok)."
-elif nav and nav <= 20:
-    verdikt_text = "⚠️ PROJEKT JE HRANIČNÍ"
-    verdikt_color = "warning"
-    verdikt_popis = f"Cashflow návratnost {nav} let závisí na vývoji cen elektřiny. Při realistickém scénáři (+{rust_cen:.0f}%/rok) se vyplatí. Bezúročný úvěr NZÚ výrazně snižuje riziko."
-elif nav:
-    verdikt_text = "⚠️ PROJEKT JE RIZIKOVÝ"
-    verdikt_color = "warning"
-    verdikt_popis = f"Cashflow návratnost {nav} let je dlouhá. Zvažte vyšší výkon FVE, baterii nebo model JOM/EDC pro lepší využití výroby."
-else:
-    verdikt_text = "❌ PROJEKT SE NEVRÁTÍ ZA 25 LET"
-    verdikt_color = "error"
-    verdikt_popis = "Při současných parametrech se investice nevrátí za životnost panelů. Zásadně přehodnoťte výkon FVE a model sdílení."
-
-if verdikt_color == "success":
-    st.success(f"**{verdikt_text}**  \n{verdikt_popis}")
-elif verdikt_color == "warning":
-    st.warning(f"**{verdikt_text}**  \n{verdikt_popis}")
-else:
-    st.error(f"**{verdikt_text}**  \n{verdikt_popis}")
-
-# Bez FVE vs s FVE
-st.markdown("**💡 Bez FVE vs s FVE — celkové náklady za 25 let**")
-bv1,bv2,bv3=st.columns(3)
-
-for col,rust_sc,nazev in zip(
-    [bv1,bv2,bv3],
-    [1.0, float(rust_cen), 6.0],
-    ["😐 Pesimistický (+1%/rok)","📊 Realistický (+{}%/rok)".format(rust_cen),"🔥 Krizový (+6%/rok)"]
-):
-    # Náklady bez FVE
-    naklad_bez=sum(sp_cel*cena_vt*(1+rust_sc/100)**(r-1) for r in range(1,26))
-    # Úspory s FVE (degradace + růst cen)
-    uspora_sc=sum(
-        rok1["uspora_celkem"]*(1+rust_sc/100)**(r-1)*(1-float(deg_pan)/100)**(r-1)
-        for r in range(1,26))
-    naklad_s=naklad_bez-uspora_sc
+    naklad_s=max(0.0, naklad_bez-uspora_sc)
     # Cashflow návratnost pro tento scénář
     kum_sc=-(vlastni_cast+uver_cast-float(bonus))
     nav_sc=None
