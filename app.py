@@ -532,10 +532,10 @@ if expert_mod:
     st.subheader("🏠 Základní údaje o domě")
     c1,c2,c3=st.columns(3)
     with c1:
-        pocet_bytu=st.number_input("Počet bytů",2,200,12,1)
-        pocet_vchodu=st.number_input("Počet vchodů",1,10,1,1,
+        pocet_bytu=st.number_input("Počet bytů",2,200,12,1,key="e_pocet_bytu")
+        pocet_vchodu=st.number_input("Počet vchodů",1,10,1,1,key="e_pocet_vchodu",
                                       help="Ovlivňuje náklady na rozvod instalace — každý vchod má svůj rozvaděč")
-        sp_sp_mwh=st.number_input("Spotřeba společných prostor (MWh/rok)",0.1,50.0,3.5,0.1,format="%.1f",
+        sp_sp_mwh=st.number_input("Spotřeba společných prostor (MWh/rok)",0.1,50.0,3.5,0.1,format="%.1f",key="e_sp_sp",
                                    help="Výtah, osvětlení chodeb, čerpadla")
 
         # Checkboxy zařízení — automatická spotřeba
@@ -554,7 +554,7 @@ if expert_mod:
         _sazba_auto = _doporucena_sazba(zarizeni_sel)
 
         # Ruční přepsání
-        rucne_sp = st.checkbox("✏️ Zadat spotřebu ručně", value=False)
+        rucne_sp = st.checkbox("✏️ Zadat spotřebu ručně", value=False, key="e_rucne_sp")
         if rucne_sp:
             sp_by_vt_mwh=st.number_input("Spotřeba bytů VT (MWh/rok)",0.5,400.0,
                                           max(0.5,round(_vt_auto,1)),0.5,format="%.1f")
@@ -562,13 +562,13 @@ if expert_mod:
             sp_by_vt_mwh = round(_vt_auto, 1)
             st.caption(f"Odhadovaná spotřeba VT: **{sp_by_vt_mwh:.1f} MWh/rok** ({sp_by_vt_mwh/pocet_bytu*1000:.0f} kWh/byt)")
     with c2:
-        dist=st.selectbox("Distributor",list(CENY_VT.keys()),
+        dist=st.selectbox("Distributor",list(CENY_VT.keys()),key="e_dist",
                           help="ČEZ = většina ČR | EG.D = Morava/jih Čech | PRE = Praha")
         # Automatická sazba dle zařízení — lze přepsat
         _sazba_idx = list(CENY_VT[dist].keys()).index(_sazba_auto) if _sazba_auto in CENY_VT[dist] else 1
-        rucne_sazba = st.checkbox("✏️ Změnit sazbu ručně", value=False)
+        rucne_sazba = st.checkbox("✏️ Změnit sazbu ručně", value=False, key="e_rucne_sazba")
         if rucne_sazba:
-            sazba=st.selectbox("Distribuční sazba",list(CENY_VT[dist].keys()),
+            sazba=st.selectbox("Distribuční sazba",list(CENY_VT[dist].keys()),key="e_sazba",
                                format_func=lambda x:f"{x} — {POPIS_SAZEB[x]}",index=_sazba_idx)
         else:
             sazba = _sazba_auto
@@ -578,14 +578,14 @@ if expert_mod:
         # Automatický jistič dle počtu bytů a zařízení
         _jistic_auto, _jistic_idx = _doporuceny_jistic(pocet_bytu, zarizeni_sel)
         _jistice = ["1×25A","3×16A","3×20A","3×25A","3×32A","3×40A","3×50A","3×63A"]
-        rucne_jistic = st.checkbox("✏️ Změnit jistič ručně", value=False)
+        rucne_jistic = st.checkbox("✏️ Změnit jistič ručně", value=False, key="e_rucne_jistic")
         if rucne_jistic:
-            _jistic_vyber = st.selectbox("Hlavní jistič", _jistice,
+            _jistic_vyber = st.selectbox("Hlavní jistič", _jistice, key="e_jistic",
                                           index=min(_jistic_idx+1, len(_jistice)-1))
         else:
             _jistic_vyber = _jistic_auto
             st.success(f"✅ Jistič dle výkonu: **{_jistic_auto}**")
-        profil=st.selectbox("Profil obyvatel",list(PROFILY.keys()),format_func=lambda x:PROFILY[x]["nazev"])
+        profil=st.selectbox("Profil obyvatel",list(PROFILY.keys()),key="e_profil",format_func=lambda x:PROFILY[x]["nazev"])
         st.caption(PROFILY[profil]["popis"])
 
     # NT spotřeba — jen pro sazby s NT tarifem
@@ -629,7 +629,7 @@ if expert_mod:
 
     with st.expander("✏️ Upravit ceny ručně"):
         u1,u2=st.columns(2)
-        with u1: cena_vt=st.number_input("Cena VT (Kč/kWh)",1.0,15.0,round(cena_vt,2),0.01,format="%.2f")
+        with u1: cena_vt=st.number_input("Cena VT (Kč/kWh)",1.0,15.0,round(cena_vt,2),0.01,format="%.2f",key="e_cena_vt")
         with u2:
             if ma_nt:
                 cena_nt=st.number_input("Cena NT (Kč/kWh)",1.0,12.0,round(cena_nt,2),0.01,format="%.2f")
@@ -640,7 +640,7 @@ if expert_mod:
     st.subheader("⚡ Parametry FVE a baterie")
     c1,c2=st.columns(2)
     with c1:
-        vykon=st.number_input("Výkon FVE (kWp)",1.0,200.0,20.0,0.5,format="%.1f")
+        vykon=st.number_input("Výkon FVE (kWp)",1.0,200.0,20.0,0.5,format="%.1f",key="e_vykon")
         # Automatická cena dle výkonu (množstevní sleva)
         def _cena_kwp_auto(kw):
             if kw < 10:   return 38000
@@ -649,19 +649,19 @@ if expert_mod:
             elif kw < 80: return 24000
             else:         return 21000
         _cena_auto = _cena_kwp_auto(float(vykon))
-        rucne = st.checkbox("Upravit cenu ručně", value=False)
+        rucne = st.checkbox("Upravit cenu ručně", value=False, key="e_rucne_cena")
         if rucne:
-            cena_kwp = st.slider("Cena FVE (Kč/kWp)",20000,50000,_cena_auto,500)
+            cena_kwp = st.slider("Cena FVE (Kč/kWp)",20000,50000,_cena_auto,500,key="e_cena_kwp")
         else:
             cena_kwp = _cena_auto
             st.caption(f"Cena dle výkonu: **{cena_kwp:,} Kč/kWp** (množstevní sleva)")
         cena_fve=int(float(vykon)*float(cena_kwp))
         st.caption(f"Odhadovaná cena FVE: **{cena_fve:,.0f} Kč**")
     with c2:
-        bat=st.number_input("Kapacita baterie (kWh)",0,200,0,5,
+        bat=st.number_input("Kapacita baterie (kWh)",0,200,0,5,key="e_bat",
                              help="Nabíjí se z přetoků FVE přes den, vybíjí do NT spotřeby v noci" if ma_nt else "Nabíjí z přetoků FVE, vybíjí při nedostatku")
         if bat>0:
-            cena_kwh_bat=st.slider("Cena baterie (Kč/kWh)",10000,20000,15000,500)
+            cena_kwh_bat=st.slider("Cena baterie (Kč/kWh)",10000,20000,15000,500,key="e_cena_bat")
             cena_bat=int(float(bat)*float(cena_kwh_bat))
             st.caption(f"Odhadovaná cena baterie: **{cena_bat:,.0f} Kč**")
             if ma_nt and bat>0:
@@ -674,7 +674,7 @@ if expert_mod:
 
     # ── 3. MODEL SDÍLENÍ ─────────────────────────────────────────────
     st.subheader("🔗 Model sdílení energie")
-    model=st.radio("Model",["spolecne","jom","edc"],horizontal=True,
+    model=st.radio("Model",["spolecne","jom","edc"],horizontal=True,key="e_model",
                    format_func=lambda x:{"spolecne":"🏢 Jen společné prostory",
                                          "jom":"⚡ Sjednocení odběrných míst",
                                          "edc":"🔗 EDC komunitní sdílení (iterační)"}[x])
@@ -703,7 +703,7 @@ if expert_mod:
     lc1,lc2=st.columns([2,1])
 
     with lc1:
-        lokace=st.text_input("Adresa nebo město",
+        lokace=st.text_input("Adresa nebo město",key="e_lokace",
                               placeholder="např. Náměstí Míru 5, Praha 2",
                               help="Zadejte přesnou adresu nebo název města pro přesnější výsledky")
 
@@ -724,25 +724,25 @@ if expert_mod:
                     label = ", ".join(parts) if parts else n.get("display_name","")[:60]
                     moznosti.append(label)
                 if moznosti:
-                    vyber = st.selectbox("Vyberte adresu ze seznamu:", ["— zadejte výše —"] + moznosti)
+                    vyber = st.selectbox("Vyberte adresu ze seznamu:", ["— zadejte výše —"] + moznosti, key="e_vyber_addr")
                     if vyber != "— zadejte výše —":
                         lokace = vyber
 
     with lc2:
-        typ_str=st.radio("Typ střechy",["sikma","plocha"],
+        typ_str=st.radio("Typ střechy",["sikma","plocha"],key="e_typ_str",
                          format_func=lambda x:"🏠 Šikmá" if x=="sikma" else "🏢 Plochá",
                          horizontal=True)
 
     if typ_str=="sikma":
         sc1,sc2=st.columns(2)
-        with sc1: sklon=st.slider("Sklon (°)",15,60,35)
-        with sc2: azimut=st.select_slider("Orientace",[-90,-45,0,45,90],0,
+        with sc1: sklon=st.slider("Sklon (°)",15,60,35,key="e_sklon")
+        with sc2: azimut=st.select_slider("Orientace",[-90,-45,0,45,90],0,key="e_azimut",
                                            format_func=lambda x:{-90:"⬅️ Východ",-45:"↙️ JV",0:"⬆️ Jih",45:"↗️ JZ",90:"➡️ Západ"}[x])
         koef_str=1.0
     else:
         pc1,pc2=st.columns(2)
-        with pc1: sklon=st.slider("Sklon panelů (°)",5,20,10)
-        with pc2: sys_pl=st.radio("Systém",["jih","jz_jv","vz"],format_func=lambda x:{"jih":"⬆️ Jih","jz_jv":"↗️ JZ+JV","vz":"↔️ V+Z"}[x])
+        with pc1: sklon=st.slider("Sklon panelů (°)",5,20,10,key="e_sklon_pl")
+        with pc2: sys_pl=st.radio("Systém",["jih","jz_jv","vz"],key="e_sys_pl",format_func=lambda x:{"jih":"⬆️ Jih","jz_jv":"↗️ JZ+JV","vz":"↔️ V+Z"}[x])
         azimut=90 if sys_pl=="vz" else 0
         koef_str={"jih":1.0,"jz_jv":0.97,"vz":0.88}[sys_pl]
 
@@ -752,24 +752,24 @@ if expert_mod:
     st.subheader("💰 Financování")
     fc1,fc2=st.columns(2)
     with fc1:
-        scenar=st.radio("Scénář",["uver","vlastni","kombinace"],
+        scenar=st.radio("Scénář",["uver","vlastni","kombinace"],key="e_scenar",
                         format_func=lambda x:{"uver":"🏦 Bezúročný úvěr NZÚ (od září 2026)",
                                               "vlastni":"💵 Vlastní zdroje (fond oprav)",
                                               "kombinace":"🔀 Kombinace vlastní + úvěr"}[x])
     with fc2:
         if scenar=="uver":
-            splatnost=st.slider("Doba splácení (let)",5,25,15); vlastni_pct=0
+            splatnost=st.slider("Doba splácení (let)",5,25,15,key="e_spl"); vlastni_pct=0
             st.info("✅ Úroky hradí stát. SVJ splácí jen jistinu. Standardně 15 let — přesné podmínky NZÚ v září 2026.")
         elif scenar=="vlastni":
             splatnost=0; vlastni_pct=100; st.info("💡 SVJ hradí vše z fondu oprav.")
         else:
-            vlastni_pct=st.slider("Vlastní zdroje (%)",10,90,30,10)
-            splatnost=st.slider("Doba splácení (let)",5,25,15)
+            vlastni_pct=st.slider("Vlastní zdroje (%)",10,90,30,10,key="e_vl_pct")
+            splatnost=st.slider("Doba splácení (let)",5,25,15,key="e_spl_k")
 
     st.markdown("**Nízkopříjmové domácnosti**")
     nb1,nb2=st.columns(2)
-    with nb1: pocet_nizko=st.number_input("Bytů s bonusem",0,int(pocet_bytu),0,1)
-    with nb2: bonus_byt=st.number_input("Bonus na byt (Kč)",0,150000,100000,5000,
+    with nb1: pocet_nizko=st.number_input("Bytů s bonusem",0,int(pocet_bytu),0,1,key="e_nizko")
+    with nb2: bonus_byt=st.number_input("Bonus na byt (Kč)",0,150000,100000,5000,key="e_bonus_byt",
                                          help="Přímý bonus NZÚ pro zranitelnou domácnost — snižuje její podíl splátky. Max avizováno 150 000 Kč/byt.")
     bonus=int(pocet_nizko)*int(bonus_byt)  # celkový bonus pro SVJ
 
@@ -778,19 +778,19 @@ if expert_mod:
     # ── 6. PARAMETRY SIMULACE ────────────────────────────────────────
     st.subheader("⚙️ Parametry simulace")
     sc1,sc2,sc3=st.columns(3)
-    with sc1: cena_pretoky=st.number_input("Výkupní cena přetoků (Kč/kWh)",0.30,2.50,0.95,0.05,format="%.2f")
-    with sc2: rust_cen=st.slider("Růst cen elektřiny (%/rok)",0.0,8.0,3.0,0.5)
-    with sc3: deg_pan=st.slider("Degradace panelů (%/rok)",0.2,1.0,0.5,0.1)
+    with sc1: cena_pretoky=st.number_input("Výkupní cena přetoků (Kč/kWh)",0.30,2.50,0.95,0.05,format="%.2f",key="e_pretoky")
+    with sc2: rust_cen=st.slider("Růst cen elektřiny (%/rok)",0.0,8.0,3.0,0.5,key="e_rust")
+    with sc3: deg_pan=st.slider("Degradace panelů (%/rok)",0.2,1.0,0.5,0.1,key="e_deg")
 
     with st.expander("⚙️ Pokročilé parametry"):
         ap1,ap2=st.columns(2)
         with ap1:
-            deg_bat_val=st.slider("Degradace baterie (%/rok)",0.5,5.0,2.0,0.5,
+            deg_bat_val=st.slider("Degradace baterie (%/rok)",0.5,5.0,2.0,0.5,key="e_deg_bat",
                                   help="Baterie ztrácí kapacitu ~2% ročně (výchozí)")
         with ap2:
             # EDC ztráta sdílení — výchozí z počtu bytů
             _edc_default=min(5.0,round(10.0/pocet_bytu**0.5,1))
-            edc_ztrata_val=st.slider("Ztráta sdílení EDC (%)",0.0,10.0,_edc_default,0.5,
+            edc_ztrata_val=st.slider("Ztráta sdílení EDC (%)",0.0,10.0,_edc_default,0.5,key="e_edc",
                                       help=f"Ztráta alokace pro {pocet_bytu} bytů. "
                                            f"Výchozí {_edc_default}% (menší dům = vyšší ztráta). "
                                            f"S chytrým řízením může být nižší.")
@@ -1003,11 +1003,11 @@ else:
                     label = ", ".join(parts) if parts else n.get("display_name","")[:60]
                     moznosti.append(label)
                 if moznosti:
-                    vyber = st.selectbox("Vyberte adresu:", ["— zadejte výše —"] + moznosti)
+                    vyber = st.selectbox("Vyberte adresu:", ["— zadejte výše —"] + moznosti, key="w_vyber_addr")
                     if vyber != "— zadejte výše —":
                         lokace = vyber
 
-        typ_str = st.radio("Typ střechy", ["sikma","plocha"],
+        typ_str = st.radio("Typ střechy", ["sikma","plocha"],key="w_typ_str2",
                             key="w_typ_str",
                             format_func=lambda x: "🏠 Šikmá" if x=="sikma" else "🏢 Plochá",
                             horizontal=True)
@@ -1522,9 +1522,9 @@ tab1,tab2,tab3,tab4=st.tabs(["📅 Denní graf","📈 Roční přehled","💰 Ca
 with tab1:
     st.markdown("**Průměrný den — výroba vs spotřeba**")
     gc1,gc2=st.columns(2)
-    with gc1: sezona_g=st.radio("Sezóna",["zima","prechodne","leto"],horizontal=True,
+    with gc1: sezona_g=st.radio("Sezóna",["zima","prechodne","leto"],horizontal=True,key="r_sezona",
                                  format_func=lambda x:{"zima":"❄️ Zima","prechodne":"🌤️ Jaro/Podzim","leto":"☀️ Léto"}[x])
-    with gc2: pocasi_g=st.radio("Počasí",["jasno","polojasno","zatazeno"],horizontal=True,
+    with gc2: pocasi_g=st.radio("Počasí",["jasno","polojasno","zatazeno"],horizontal=True,key="r_pocasi",
                                  format_func=lambda x:{"jasno":"☀️ Jasno","polojasno":"⛅ Polojasno","zatazeno":"☁️ Zataženo"}[x])
 
     kwp_eff=float(vykon)*float(koef_str)
@@ -2088,9 +2088,9 @@ tab1,tab2,tab3,tab4=st.tabs(["📅 Denní graf","📈 Roční přehled","💰 Ca
 with tab1:
     st.markdown("**Průměrný den — výroba vs spotřeba**")
     gc1,gc2=st.columns(2)
-    with gc1: sezona_g=st.radio("Sezóna",["zima","prechodne","leto"],horizontal=True,
+    with gc1: sezona_g=st.radio("Sezóna",["zima","prechodne","leto"],horizontal=True,key="r1_sezona",
                                  format_func=lambda x:{"zima":"❄️ Zima","prechodne":"🌤️ Jaro/Podzim","leto":"☀️ Léto"}[x])
-    with gc2: pocasi_g=st.radio("Počasí",["jasno","polojasno","zatazeno"],horizontal=True,
+    with gc2: pocasi_g=st.radio("Počasí",["jasno","polojasno","zatazeno"],horizontal=True,key="r1_pocasi",
                                  format_func=lambda x:{"jasno":"☀️ Jasno","polojasno":"⛅ Polojasno","zatazeno":"☁️ Zataženo"}[x])
 
     kwp_eff=float(vykon)*float(koef_str)
