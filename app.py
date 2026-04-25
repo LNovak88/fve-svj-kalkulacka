@@ -530,16 +530,23 @@ with _mod_col2:
 st.session_state["expert_mod_val"] = expert_mod
 
 if expert_mod:
-    # Expert mód — všechny parametry najednou
+    # Expert mód — načteme výchozí hodnoty z wizard_data nebo params
+    _wd_e = st.session_state.get("wizard_data", {})
+    _p_e  = st.session_state.get("res", {}).get("params", {})
+    def _wg(key, default, src="wd"):
+        """Načte hodnotu z wizard_data nebo params."""
+        if src=="wd": return _wd_e.get(key, _p_e.get(key, default))
+        return _p_e.get(key, _wd_e.get(key, default))
+
     st.divider()
     # ── 1. ZÁKLADNÍ ÚDAJE ────────────────────────────────────────────
     st.subheader("🏠 Základní údaje o domě")
     c1,c2,c3=st.columns(3)
     with c1:
-        pocet_bytu=st.number_input("Počet bytů",2,200,12,1,key="e_pocet_bytu")
-        pocet_vchodu=st.number_input("Počet vchodů",1,10,1,1,key="e_pocet_vchodu",
+        pocet_bytu=st.number_input("Počet bytů",2,200,int(_wg("pocet_bytu",12)),1,key="e_pocet_bytu")
+        pocet_vchodu=st.number_input("Počet vchodů",1,10,int(_wg("pocet_vchodu",1)),1,key="e_pocet_vchodu",
                                       help="Ovlivňuje náklady na rozvod instalace — každý vchod má svůj rozvaděč")
-        sp_sp_mwh=st.number_input("Spotřeba společných prostor (MWh/rok)",0.1,50.0,3.5,0.1,format="%.1f",key="e_sp_sp",
+        sp_sp_mwh=st.number_input("Spotřeba společných prostor (MWh/rok)",0.1,50.0,float(_wg("sp_sp_mwh",3.5)),0.1,format="%.1f",key="e_sp_sp",
                                    help="Výtah, osvětlení chodeb, čerpadla")
 
         # Checkboxy zařízení — automatická spotřeba
@@ -566,7 +573,7 @@ if expert_mod:
             sp_by_vt_mwh = round(_vt_auto, 1)
             st.caption(f"Odhadovaná spotřeba VT: **{sp_by_vt_mwh:.1f} MWh/rok** ({sp_by_vt_mwh/pocet_bytu*1000:.0f} kWh/byt)")
     with c2:
-        dist=st.selectbox("Distributor",list(CENY_VT.keys()),key="e_dist",
+        dist=st.selectbox("Distributor",list(CENY_VT.keys()),index=list(CENY_VT.keys()).index(_wg("dist",list(CENY_VT.keys())[0])) if _wg("dist","") in CENY_VT else 0,key="e_dist",
                           help="ČEZ = většina ČR | EG.D = Morava/jih Čech | PRE = Praha")
         # Automatická sazba dle zařízení — lze přepsat
         _sazba_idx = list(CENY_VT[dist].keys()).index(_sazba_auto) if _sazba_auto in CENY_VT[dist] else 1
@@ -589,7 +596,7 @@ if expert_mod:
         else:
             _jistic_vyber = _jistic_auto
             st.success(f"✅ Jistič dle výkonu: **{_jistic_auto}**")
-        profil=st.selectbox("Profil obyvatel",list(PROFILY.keys()),key="e_profil",format_func=lambda x:PROFILY[x]["nazev"])
+        profil=st.selectbox("Profil obyvatel",list(PROFILY.keys()),index=list(PROFILY.keys()).index(_wg("profil","mix")) if _wg("profil","mix") in PROFILY else 0,key="e_profil",format_func=lambda x:PROFILY[x]["nazev"])
         st.caption(PROFILY[profil]["popis"])
 
     # NT spotřeba — jen pro sazby s NT tarifem
@@ -644,7 +651,7 @@ if expert_mod:
     st.subheader("⚡ Parametry FVE a baterie")
     c1,c2=st.columns(2)
     with c1:
-        vykon=st.number_input("Výkon FVE (kWp)",1.0,200.0,20.0,0.5,format="%.1f",key="e_vykon")
+        vykon=st.number_input("Výkon FVE (kWp)",1.0,200.0,float(_wg("vykon",20.0)),0.5,format="%.1f",key="e_vykon")
         # Automatická cena dle výkonu (množstevní sleva)
         def _cena_kwp_auto(kw):
             if kw < 10:   return 38000
@@ -662,7 +669,7 @@ if expert_mod:
         cena_fve=int(float(vykon)*float(cena_kwp))
         st.caption(f"Odhadovaná cena FVE: **{cena_fve:,.0f} Kč**")
     with c2:
-        bat=st.number_input("Kapacita baterie (kWh)",0,200,0,5,key="e_bat",
+        bat=st.number_input("Kapacita baterie (kWh)",0,200,int(_wg("bat",0)),5,key="e_bat",
                              help="Nabíjí se z přetoků FVE přes den, vybíjí do NT spotřeby v noci" if ma_nt else "Nabíjí z přetoků FVE, vybíjí při nedostatku")
         if bat>0:
             cena_kwh_bat=st.slider("Cena baterie (Kč/kWh)",10000,20000,15000,500,key="e_cena_bat")
@@ -915,6 +922,7 @@ if expert_mod:
                 "sp_by_nt_mwh":sp_by_nt_mwh,"rust_cen":rust_cen,"deg_pan":deg_pan,
                 "cena_pretoky":cena_pretoky,"splatka_byt_std":splatka_byt_std,
                 "splatka_byt_super":splatka_byt_super,"sp_cel":sp_cel,
+                "model":model,
             }}
         st.success(f"✅ Hotovo — {mesto} ({lat:.2f}°N, {lon:.2f}°E) {'· PVGIS data' if pvgis_ok else '· záložní model'}")
 
@@ -1100,7 +1108,7 @@ else:
             kwp_75 = max(5.0, min(100.0, kwp_75))
 
             # Baterie: 1.5× výkon FVE (kWh), zaokrouhleno na 5 kWh
-            bat_75 = round(kwp_75 * 1.5 / 5) * 5
+            bat_75 = round(kwp_75 * 1.4 / 5) * 5
 
             # Testovací výkon pro PVGIS (doporučený výkon)
             kwp_test = kwp_75
@@ -1133,10 +1141,32 @@ else:
                 rust=3.0,deg=0.5,leta=25,deg_bat=2.0)
             nav_opt = next((r["rok"] for r in cf_opt if r["kumulativni"]>=0),None)
 
+            # Zkontroluj statickou návratnost a uprav výkon pokud > 10 let
+            stat_nav_opt = inv_edc / cf_opt[0]["uspora_celkem"] if cf_opt[0]["uspora_celkem"]>0 else 99
+            _iter = 0
+            while stat_nav_opt > 10.0 and _iter < 5:
+                # Snižujeme baterii jako první (dražší poměrově)
+                if bat_75 > 0:
+                    bat_75 = max(0, bat_75 - 5)
+                else:
+                    kwp_test = max(5.0, kwp_test - 5)
+                inv_edc = kwp_test*_ckwp(kwp_test) + bat_75*15000 + vchod_extra
+                vyr_opt = _interpoluj(vyroba_hod * (kwp_test/kwp_75 if kwp_75>0 else 1))
+                sim_opt = _simuluj(vyr_opt, sp_vt15, sp_by_nt15, float(bat_75), "edc", ez)
+                cf_opt = _cashflow(
+                    vl_vt=sim_opt["vlastni_vt_kwh"],vl_nt=sim_opt["vlastni_nt_kwh"],
+                    pr=sim_opt["pretoky_kwh"],cvt=cena_vt_w,cnt=cena_nt_w,
+                    cpr=0.95,vlast=0.0,uver=inv_edc,spl=inv_edc/15,splat=15,
+                    rust=3.0,deg=0.5,leta=25,deg_bat=2.0)
+                nav_opt = next((r["rok"] for r in cf_opt if r["kumulativni"]>=0),None)
+                stat_nav_opt = inv_edc / cf_opt[0]["uspora_celkem"] if cf_opt[0]["uspora_celkem"]>0 else 99
+                _iter += 1
+
             nejlepsi = {"kwp":kwp_test,"bat":bat_75,"model":"edc",
                        "nav":nav_opt,"uspora":cf_opt[0]["uspora_celkem"],
                        "invest":inv_edc,"sim":sim_opt,"skore":1.0,
-                       "mira_vs":sim_opt["mira_vs"],"mira_sob":sim_opt["mira_sob"]}
+                       "mira_vs":sim_opt["mira_vs"],"mira_sob":sim_opt["mira_sob"],
+                       "stat_nav":stat_nav_opt}
 
         # Zobrazit 3 varianty
         st.success(f"✅ Solární data pro **{mesto}** stažena")
@@ -1425,6 +1455,7 @@ if _p:
     sp_by_vt_mwh    = _p.get("sp_by_vt_mwh", 0)
     sp_by_nt_mwh    = _p.get("sp_by_nt_mwh", 0)
     rust_cen        = _p.get("rust_cen", 3.0)
+    model           = _p.get("model", "edc")
     deg_pan         = _p.get("deg_pan", 0.5)
     cena_pretoky    = _p.get("cena_pretoky", 0.95)
     sp_cel          = _p.get("sp_cel", 0)
@@ -1494,7 +1525,8 @@ else:
     util_delta = "zvažte baterii"
 
 # Soběstačnost — vždy vůči celkové spotřebě domu (i pro model "spolecne")
-mira_sob_real = min(1.0, sim["vlastni_kwh"] / float(sp_cel)) if sp_cel > 0 else 0.0
+_sp_cel_res = float(sp_cel) if sp_cel > 0 else float(sim.get("spotreba_kwh", sim["vlastni_kwh"]+sim["odber_vt_kwh"]+sim.get("odber_nt_kwh",0)))
+mira_sob_real = min(1.0, sim["vlastni_kwh"] / _sp_cel_res) if _sp_cel_res > 0 else 0.0
 
 r1,r2,r3,r4,r5,r6=st.columns(6)
 with r1: st.metric("Roční výroba FVE",f"{sim['vyroba_kwh']/1000:.1f} MWh")
