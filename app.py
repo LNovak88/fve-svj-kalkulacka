@@ -943,10 +943,12 @@ else:
             st.markdown("**Co v domě používáte na elektřinu?**")
             zarizeni_sel = ["zaklad"]
             st.caption("☑️ Svícení, spotřebiče, pračka, sušička — vždy zahrnuto")
+            _prev_zar = st.session_state.wizard_data.get("zarizeni_sel", ["zaklad"])
             for zar_key in ["sporak","bojler","klima","akum","primotop","tc","ev"]:
                 zar = _SP_ZAR[zar_key]
                 nt_info = f" (+{zar['nt']} kWh NT/byt)" if zar["nt"]>0 else f" (+{zar['vt']} kWh VT/byt)"
-                if st.checkbox(f"{zar['nazev']}{nt_info}", key=f"w_zar_{zar_key}"):
+                _default_zar = zar_key in _prev_zar
+                if st.checkbox(f"{zar['nazev']}{nt_info}", key=f"w_zar_{zar_key}", value=_default_zar):
                     zarizeni_sel.append(zar_key)
 
         _vt_auto, _nt_auto = _sp_z_zarizeni(zarizeni_sel, pocet_bytu)
@@ -959,10 +961,16 @@ else:
             f"Jistič: **{_jistic_auto}**"
         )
 
+        _prev_dist = st.session_state.wizard_data.get("dist", list(CENY_VT.keys())[0])
+        _dist_idx = list(CENY_VT.keys()).index(_prev_dist) if _prev_dist in CENY_VT else 0
         dist = st.selectbox("Distributor", list(CENY_VT.keys()),
+                             index=_dist_idx,
                              key="w_dist",
                              help="ČEZ = většina ČR | EG.D = Morava/jih Čech | PRE = Praha")
+        _prev_profil = st.session_state.wizard_data.get("profil", "mix")
+        _profil_idx = list(PROFILY.keys()).index(_prev_profil) if _prev_profil in PROFILY else 0
         profil = st.selectbox("Profil obyvatel", list(PROFILY.keys()),
+                               index=_profil_idx,
                                key="w_profil",
                                format_func=lambda x: PROFILY[x]["nazev"])
 
@@ -1007,14 +1015,18 @@ else:
                     if vyber != "— zadejte výše —":
                         lokace = vyber
 
+        _prev_typ = st.session_state.wizard_data.get("typ_str", "sikma")
         typ_str = st.radio("Typ střechy", ["sikma","plocha"],
+                            index=0 if _prev_typ=="sikma" else 1,
                             key="w_typ_str2",
                             format_func=lambda x: "🏠 Šikmá" if x=="sikma" else "🏢 Plochá",
                             horizontal=True)
         if typ_str == "sikma":
             sc1,sc2 = st.columns(2)
-            with sc1: sklon = st.slider("Sklon (°)", 15, 60, 35, key="w_sklon_sikma")
-            with sc2: azimut = st.select_slider("Orientace",[-90,-45,0,45,90],0,key="w_azimut",
+            _prev_sklon = st.session_state.wizard_data.get("sklon", 35)
+            _prev_azimut = st.session_state.wizard_data.get("azimut", 0)
+            with sc1: sklon = st.slider("Sklon (°)", 15, 60, int(_prev_sklon), key="w_sklon_sikma")
+            with sc2: azimut = st.select_slider("Orientace",[-90,-45,0,45,90],_prev_azimut,key="w_azimut",
                                 format_func=lambda x:{-90:"⬅️ Východ",-45:"↙️ JV",0:"⬆️ Jih",45:"↗️ JZ",90:"➡️ Západ"}[x])
             koef_str = 1.0
         else:
@@ -1098,13 +1110,39 @@ else:
                             cpr=0.95,vlast=0.0,uver=inv,spl=inv/15,splat=15,
                             rust=3.0,deg=0.5,leta=25,deg_bat=2.0)
                         nav_opt = next((r["rok"] for r in cf_opt if r["kumulativni"]>=0),None)
-                        if nav_opt and (not nejlepsi or nav_opt < nejlepsi.get("nav",999)):
+                        # Skóre: vážená kombinace vlastní spotřeby + cashflow
+                        # Priorita = maximalizovat spotřebu v budově
+                        _vs = sim_opt["mira_vs"]  # % výroby spotřebované v domě
+                        _sob = sim_opt["mira_sob"]  # % spotřeby pokryté FVE
+                        _uspora = cf_opt[0]["uspora_celkem"]
+                        # Skóre: vlastní spotřeba (70%) + soběstačnost (30%) / návratnost
+                        _skore = (_vs*0.7 + _sob*0.3) * _uspora / (nav_opt if nav_opt else 30)
+                        if not nejlepsi or _skore > nejlepsi.get("skore",0):
                             nejlepsi = {"kwp":kwp_opt,"bat":bat_opt,"model":model_opt,
-                                       "nav":nav_opt,"uspora":cf_opt[0]["uspora_celkem"],
-                                       "invest":inv,"sim":sim_opt}
+                                       "nav":nav_opt,"uspora":_uspora,
+                                       "invest":inv,"sim":sim_opt,"skore":_skore,
+                                       "mira_vs":_vs,"mira_sob":_sob}
 
         # Zobrazit 3 varianty
         st.success(f"✅ Solární data pro **{mesto}** stažena")
+
+        # Insight o baterii dle profilu
+        profil_w = wd.get("profil","mix")
+        if profil_w == "pracujici":
+            st.info("🔋 **Pro váš profil (převaha pracujících) baterie výrazně pomůže** — "
+                    "přes den FVE vyrábí do prázdného domu, večer lidé přijdou a spotřebují. "
+                    "Baterie zachytí denní přebytky a pokryje večerní špičku.")
+        elif profil_w == "seniori":
+            st.info("☀️ **Pro váš profil (senioři doma) baterie méně potřebná** — "
+                    "spotřeba přes den se přirozeně překrývá s výrobou FVE. "
+                    "Větší FVE bez baterie může být výhodnější.")
+        elif profil_w == "provozovna":
+            st.info("🏪 **Výborný profil pro FVE** — provozovna spotřebovává přes den "
+                    "kdy FVE vyrábí. Přímý překryv bez nutnosti baterie.")
+        else:
+            st.info("⚡ **Smíšený profil** — baterie pomůže zachytit přebytky "
+                    "pro večerní spotřebu pracujících obyvatel.")
+
         st.markdown("### Doporučené varianty:")
 
         # Varianta 1: Základní (jen společné)
@@ -1132,8 +1170,16 @@ else:
                 st.metric("Baterie",f"{bat} kWh" if bat>0 else "bez baterie")
                 st.metric("Investice",f"{_inv:,.0f} Kč")
                 if highlight and v2.get("nav"):
+                    # Úspora za 25 let
+                    _uspora_25 = sum(v2["uspora"]*(1+3/100)**(r-1)*(1-0.5/100)**(r-1)
+                                     for r in range(1,26))
+                    st.metric("Vlastní spotřeba výroby",f"{v2['mira_vs']*100:.1f} %",
+                              help="% výroby FVE spotřebované v domě — klíčová metrika")
                     st.metric("Cashflow návratnost",f"{v2['nav']} let")
                     st.metric("Roční úspora",f"{v2['uspora']:,.0f} Kč")
+                    st.metric("Úspora za 25 let",f"{_uspora_25:,.0f} Kč",
+                              delta=f"{_uspora_25/12/1000:.0f} tis. Kč/byt",
+                              help="Celková úspora za 25 let životnosti panelů")
                 if st.button(f"Vybrat {'⭐' if highlight else ''}",
                              key=f"vybrat_{model_v}_{kwp}",
                              type="primary" if highlight else "secondary",
@@ -1806,7 +1852,8 @@ di1,di2=st.columns(2)
 with di1:
     st.markdown("**Investice**")
     st.write(f"• FVE {vykon} kWp × {cena_kwp:,} Kč/kWp: **{cena_fve:,.0f} Kč**")
-    if cena_bat>0: st.write(f"• Baterie {bat} kWh × {cena_kwh_bat:,} Kč/kWh: **{cena_bat:,.0f} Kč**")
+    _ckwh_bat = cena_bat // int(bat) if bat > 0 else 15000
+    if cena_bat>0: st.write(f"• Baterie {bat} kWh × {_ckwh_bat:,} Kč/kWh: **{cena_bat:,.0f} Kč**")
     if cena_mericu>0: st.write(f"• Podružné měřiče: **{cena_mericu:,.0f} Kč**")
     st.write(f"• **Celková investice: {cena_invest:,.0f} Kč**")
     if bonus>0: st.write(f"• Bonus NZÚ: **− {bonus:,.0f} Kč**")
@@ -2372,7 +2419,8 @@ di1,di2=st.columns(2)
 with di1:
     st.markdown("**Investice**")
     st.write(f"• FVE {vykon} kWp × {cena_kwp:,} Kč/kWp: **{cena_fve:,.0f} Kč**")
-    if cena_bat>0: st.write(f"• Baterie {bat} kWh × {cena_kwh_bat:,} Kč/kWh: **{cena_bat:,.0f} Kč**")
+    _ckwh_bat = cena_bat // int(bat) if bat > 0 else 15000
+    if cena_bat>0: st.write(f"• Baterie {bat} kWh × {_ckwh_bat:,} Kč/kWh: **{cena_bat:,.0f} Kč**")
     if cena_mericu>0: st.write(f"• Podružné měřiče: **{cena_mericu:,.0f} Kč**")
     st.write(f"• **Celková investice: {cena_invest:,.0f} Kč**")
     if bonus>0: st.write(f"• Bonus NZÚ: **− {bonus:,.0f} Kč**")
