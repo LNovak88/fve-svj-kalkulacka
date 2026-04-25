@@ -1007,8 +1007,8 @@ else:
                     if vyber != "— zadejte výše —":
                         lokace = vyber
 
-        typ_str = st.radio("Typ střechy", ["sikma","plocha"],key="w_typ_str2",
-                            key="w_typ_str",
+        typ_str = st.radio("Typ střechy", ["sikma","plocha"],
+                            key="w_typ_str2",
                             format_func=lambda x: "🏠 Šikmá" if x=="sikma" else "🏢 Plochá",
                             horizontal=True)
         if typ_str == "sikma":
