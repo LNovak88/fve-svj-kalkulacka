@@ -572,7 +572,7 @@ if expert_mod:
                                format_func=lambda x:f"{x} — {POPIS_SAZEB[x]}",index=_sazba_idx)
         else:
             sazba = _sazba_auto
-            st.success(f"✅ Sazba dle výběru: **{sazba}** — {POPIS_SAZEB.get(sazba,'')}")
+            st.success(f"✅ Odhadovaná sazba: **{sazba}** — {POPIS_SAZEB.get(sazba,'')}")
 
     with c3:
         # Automatický jistič dle počtu bytů a zařízení
@@ -929,12 +929,15 @@ else:
 
         w1c1, w1c2 = st.columns(2)
         with w1c1:
-            pocet_bytu = st.number_input("Počet bytů", 2, 200, 12, 1, key="w_pocet_bytu")
-            pocet_vchodu = st.number_input("Počet vchodů", 1, 10, 1, 1, key="w_pocet_vchodu")
+            _def_bytu = st.session_state.wizard_data.get("pocet_bytu", 12)
+            pocet_bytu = st.number_input("Počet bytů", 2, 200, _def_bytu, 1, key="w_pocet_bytu")
+            _def_vchodu = st.session_state.wizard_data.get("pocet_vchodu", 1)
+            pocet_vchodu = st.number_input("Počet vchodů", 1, 10, _def_vchodu, 1, key="w_pocet_vchodu")
+            _def_sp = st.session_state.wizard_data.get("sp_sp_mwh", 3.5)
             sp_sp_mwh = st.number_input("Spotřeba společných prostor (MWh/rok)",
-                                         0.1, 50.0, 3.5, 0.1, format="%.1f",
-                                         key="w_sp_sp_mwh",
-                                         help="Výtah, osvětlení chodeb, čerpadla")
+                                             0.1, 50.0, _def_sp, 0.1, format="%.1f",
+                                             key="w_sp_sp_mwh",
+                                             help="Výtah, osvětlení chodeb, čerpadla")
 
         with w1c2:
             st.markdown("**Co v domě používáte na elektřinu?**")
@@ -952,7 +955,7 @@ else:
 
         st.info(
             f"📊 Odhadovaná spotřeba: **{_vt_auto:.1f} MWh VT** + **{_nt_auto:.1f} MWh NT** · "
-            f"Doporučená sazba: **{_sazba_auto}** · "
+            f"Odhadovaná sazba: **{_sazba_auto}** · "
             f"Jistič: **{_jistic_auto}**"
         )
 
@@ -978,9 +981,12 @@ else:
     elif krok == 2:
         st.subheader("🌍 Krok 2: Adresa a střecha")
 
+        _def_lok = st.session_state.wizard_data.get("lokace", "")
         lokace = st.text_input("Adresa nebo město",
+                                value=_def_lok,
                                 key="w_lokace",
-                                placeholder="např. Náměstí Míru 5, Praha 2")
+                                placeholder="např. Náměstí Míru 5, Praha 2",
+                                help="Zadejte adresu a stiskněte Enter — zobrazí se návrhy")
         if lokace and len(lokace) >= 4:
             with st.spinner("Hledám adresu..."):
                 navrhys = _geocode_search(lokace)
@@ -1124,7 +1130,7 @@ else:
                     st.markdown(label)
                 st.metric("Výkon FVE",f"{kwp} kWp")
                 st.metric("Baterie",f"{bat} kWh" if bat>0 else "bez baterie")
-                st.metric("Investice",f"{_inv/1000:.0f} tis. Kč")
+                st.metric("Investice",f"{_inv:,.0f} Kč")
                 if highlight and v2.get("nav"):
                     st.metric("Cashflow návratnost",f"{v2['nav']} let")
                     st.metric("Roční úspora",f"{v2['uspora']:,.0f} Kč")
@@ -1829,7 +1835,7 @@ rust_real = float(rust_cen)
 if nav and nav <= 12:
     zaver = (f"✅ **Projekt se jednoznačně vyplatí** — i při konzervativním scénáři "
              f"se investice vrátí za {nav} let a za 25 let ušetříte "
-             f"**{kum25_final/1000:.0f} tis. Kč** ({kum25_final/float(pocet_bytu)/1000:.0f} tis. Kč/byt).")
+             f"**{kum25_final:,.0f} Kč** ({kum25_final/float(pocet_bytu):,.0f} Kč/byt).")
 elif nav and nav <= 18:
     uspora_pess = sum(
         rok1["uspora_celkem"]*(1+1.0/100)**(r-1)*(1-float(deg_pan)/100)**(r-1)
@@ -2395,7 +2401,7 @@ rust_real = float(rust_cen)
 if nav and nav <= 12:
     zaver = (f"✅ **Projekt se jednoznačně vyplatí** — i při konzervativním scénáři "
              f"se investice vrátí za {nav} let a za 25 let ušetříte "
-             f"**{kum25_final/1000:.0f} tis. Kč** ({kum25_final/float(pocet_bytu)/1000:.0f} tis. Kč/byt).")
+             f"**{kum25_final:,.0f} Kč** ({kum25_final/float(pocet_bytu):,.0f} Kč/byt).")
 elif nav and nav <= 18:
     uspora_pess = sum(
         rok1["uspora_celkem"]*(1+1.0/100)**(r-1)*(1-float(deg_pan)/100)**(r-1)
