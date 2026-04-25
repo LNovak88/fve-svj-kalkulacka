@@ -147,6 +147,7 @@ def _doporucena_sazba(zarizeni):
     if "tc"      in zarizeni: return "D57d"
     if "primotop"in zarizeni: return "D45d"
     if "akum"    in zarizeni: return "D26d"
+    if "ev"      in zarizeni and "bojler" not in zarizeni: return "D27d"
     if "bojler"  in zarizeni or "ev" in zarizeni: return "D25d"
     return "D02d"
 
