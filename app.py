@@ -1157,15 +1157,6 @@ else:
         # Varianta 3: Premium (větší FVE + baterie)
         v3_kwp = min(v2["kwp"]+10, 80)
 
-        kv1,kv2,kv3 = st.columns(3)
-        # Najdi nejlepší JOM variantu zvlášť
-        nejlepsi_jom = max(
-            [v for k,v in [(k2,v2)] + [(f"{m}_{kp}_{bp}", 
-                {"kwp":kp,"bat":bp,"model":"jom","uspora":0,"invest":0,"sim":{},"nav":30,"skore":0,"mira_vs":0,"mira_sob":0})
-                for kp in [v2["kwp"]] for bp in [v2["bat"]]]
-             if v.get("model")=="jom"],
-            key=lambda x:x.get("skore",0), default=v2)
-
         # 4 varianty: Základní / EDC bez bat / JOM / Doporučené (nejlepší)
         kv1,kv2,kv3,kv4 = st.columns(4)
         _var_list = [
