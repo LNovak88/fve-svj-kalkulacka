@@ -922,7 +922,7 @@ if expert_mod:
                 "sp_by_nt_mwh":sp_by_nt_mwh,"rust_cen":rust_cen,"deg_pan":deg_pan,
                 "cena_pretoky":cena_pretoky,"splatka_byt_std":splatka_byt_std,
                 "splatka_byt_super":splatka_byt_super,"sp_cel":sp_cel,
-                "model":model,
+                "model":model,"vykon":float(vykon),
             }}
         st.success(f"✅ Hotovo — {mesto} ({lat:.2f}°N, {lon:.2f}°E) {'· PVGIS data' if pvgis_ok else '· záložní model'}")
 
@@ -1103,9 +1103,11 @@ else:
             # Algoritmus doporučení: 75% VT spotřeby, baterie 1.5× výkon FVE
             # Zdroj: praxe instalačních firem, optimalizace vlastní spotřeby
             sp_total_vt_kwh = sp_vt / 1000.0  # MWh/rok
-            kwp_75 = max(5.0, sp_total_vt_kwh / 1.05 * (1/0.75))  # 75% pokrytí VT
-            kwp_75 = round(kwp_75 / 5) * 5  # zaokrouhlit na 5 kWp
-            kwp_75 = max(5.0, min(100.0, kwp_75))
+            # FVE: 75% VT spotřeby, max 1:1 (nepřekračovat roční spotřebu)
+            kwp_75_min = max(5.0, sp_total_vt_kwh / 1.05 * 0.75)  # 75% pokrytí
+            kwp_75_max = max(5.0, sp_total_vt_kwh / 1.05 * 1.0)   # max 1:1
+            kwp_75 = round(kwp_75_min / 5) * 5  # zaokrouhlit na 5 kWp
+            kwp_75 = max(5.0, min(kwp_75_max, kwp_75))
 
             # Baterie: 1.5× výkon FVE (kWh), zaokrouhleno na 5 kWh
             bat_75 = round(kwp_75 * 1.4 / 5) * 5
@@ -1421,7 +1423,16 @@ else:
                 "sim":sim,"cf":cf,"vyroba_15":vyroba_15,
                 "sp_vt15":sp_vt15,"sp_nt15":sp_nt15,
                 "pvgis_ok":True,"mesto":wd["mesto"],"lat":wd["lat"],"lon":wd["lon"],
-                "srovnani":srovnani}
+                "srovnani":srovnani,"cena_invest":cena_invest,
+                "params":{
+                    "pocet_bytu":pocet_bytu,"scenar":scenar,"splatnost":splatnost,
+                    "vlastni_pct":vlastni_pct,"bonus_byt":bonus_byt,"pocet_nizko":pocet_nizko,
+                    "bat":bat,"ma_nt":ma_nt,"sp_by_vt_mwh":sp_by_vt_mwh,
+                    "sp_by_nt_mwh":sp_by_nt_mwh,"rust_cen":3.0,"deg_pan":0.5,
+                    "cena_pretoky":0.95,"splatka_byt_std":splatka_byt_std,
+                    "splatka_byt_super":splatka_byt_super,"sp_cel":float(sp_sp+sp_by_vt+sp_by_nt),
+                    "model":model,"vykon":float(vykon),
+                }}
 
         st.button("← Upravit parametry", on_click=lambda: st.session_state.update({"wizard_krok":1}))
         st.divider()
@@ -1477,6 +1488,33 @@ else:
     sp_by_nt_mwh = _wd.get("nt_mwh", 0)
     rust_cen = 3.0; deg_pan = 0.5; cena_pretoky = 0.95; deg_bat_val = 2.0
     sp_cel = 0; splatka_byt_std = 0; splatka_byt_super = 0
+
+# Bezpečný výpočet odvozených hodnot ze sim pokud params chybí
+if sp_cel == 0:
+    sp_cel = float(sim.get("spotreba_kwh",0) or
+                   sim["vlastni_kwh"]+sim["odber_vt_kwh"]+sim.get("odber_nt_kwh",0))
+
+if cena_invest == 0:
+    cena_invest = d.get("cena_invest",0)
+    # Pokud stále 0 — spočítáme z params
+    if cena_invest == 0 and _p:
+        _bat_p = _p.get("bat",0)
+        _vykon_p = _p.get("vykon", sp_cel/1000/1.05 if sp_cel>0 else 20)
+        def _ckwp_r(kw):
+            if kw<10: return 38000
+            elif kw<20: return 33000
+            elif kw<40: return 28000
+            elif kw<80: return 24000
+            else: return 21000
+        cena_invest = _vykon_p*_ckwp_r(_vykon_p) + _bat_p*15000
+
+if splatka_byt_std == 0 and cena_invest > 0:
+    _sc2 = _p.get("scenar","uver") if _p else "uver"
+    _sl2 = _p.get("splatnost",15) if _p else 15
+    _vp2 = _p.get("vlastni_pct",0) if _p else 0
+    _pb2 = _p.get("pocet_bytu",pocet_bytu) if _p else pocet_bytu
+    _uv2 = cena_invest*(1-_vp2/100)
+    splatka_byt_std = _uv2/max(_sl2,1)/_pb2/12 if _sc2!="vlastni" else 0.0
 
 stat_nav=float(cena_invest)/rok1["uspora_celkem"] if rok1["uspora_celkem"]>0 else 999
 
@@ -1535,7 +1573,8 @@ with r2: st.metric("Využití výroby v domě",f"{util_pct:.1f} %",
                    help="Klíčová metrika: kolik % výroby FVE se spotřebuje přímo v domě nebo přes baterii. Zbytek jde za nízkou výkupní cenu.")
 with r3: st.metric("Soběstačnost",f"{mira_sob_real*100:.1f} %",help="% celkové spotřeby domu (vč. bytů) pokryté FVE")
 with r4: st.metric("Roční úspora (rok 1)",f"{rok1['uspora_celkem']:,.0f} Kč")
-with r5: st.metric("Orientační návratnost",f"{stat_nav:.1f} let",
+with r5: st.metric("Orientační návratnost",
+                   f"{stat_nav:.1f} let" if stat_nav > 0.1 else "—",
                    help="Investice ÷ roční úspora — pouze orientačně, bez vlivu růstu cen")
 with r6: st.metric("Cashflow návratnost",f"{nav} let" if nav else ">25 let",
                    help="Realistická návratnost: kdy kumulativní cashflow přejde do kladných čísel")
@@ -1590,7 +1629,8 @@ for col,mk in zip([sc1,sc2,sc3],["spolecne","jom","edc"]):
         st.metric("Roční úspora",f"{sv['rok1']['uspora_celkem']:,.0f} Kč")
         st.metric("Vlastní spotřeba",f"{sv['sim']['mira_vs']*100:.1f} %")
         # Pro "spolecne" počítáme soběstačnost vůči celé spotřebě domu
-        _sob = min(1.0, sv["sim"]["vlastni_kwh"] / float(sp_cel)) if sp_cel>0 else 0.0
+        _sp_cel_srov = sp_cel if sp_cel>0 else float(sim.get("spotreba_kwh",1))
+        _sob = min(1.0, sv["sim"]["vlastni_kwh"] / _sp_cel_srov) if _sp_cel_srov>0 else 0.0
         st.metric("Soběstačnost",f"{_sob*100:.1f} %",
                   help="% celkové spotřeby domu pokryté FVE" if mk!="spolecne" else "% celkové spotřeby domu — FVE kryje jen společné prostory")
         st.metric("Statická návratnost",f"{sv['stat']:.1f} let")
@@ -1920,7 +1960,8 @@ for col,rust_sc,nazev in zip(
     ["😐 Pesimistický (+1%/rok)","📊 Realistický (+{}%/rok)".format(rust_cen),"🔥 Krizový (+6%/rok)"]
 ):
     # Náklady bez FVE
-    naklad_bez=sum(sp_cel*cena_vt*(1+rust_sc/100)**(r-1) for r in range(1,26))
+    _sp_cel_sc = sp_cel if sp_cel>0 else float(sim.get("spotreba_kwh",0))
+    naklad_bez=sum(_sp_cel_sc*cena_vt*(1+rust_sc/100)**(r-1) for r in range(1,26))
     # Úspory s FVE (degradace + růst cen)
     uspora_sc=sum(
         rok1["uspora_celkem"]*(1+rust_sc/100)**(r-1)*(1-float(deg_pan)/100)**(r-1)
