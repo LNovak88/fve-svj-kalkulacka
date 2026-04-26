@@ -1357,6 +1357,19 @@ else:
         cena_mericu += _vchod_extra if model!="spolecne" else 0
         cena_invest  = cena_fve+cena_bat+cena_mericu
         vlastni_cast = float(cena_invest)*float(vlastni_pct)/100
+        uver_cast    = max(0.0, float(cena_invest)-vlastni_cast)
+        rocni_spl    = uver_cast/float(max(splatnost,1)) if scenar!="vlastni" else 0.0
+        # Ceny elektřiny
+        cena_vt  = float(CENY_VT.get(dist,CENY_VT["ČEZ Distribuce"]).get(sazba,7493))/1000
+        cena_nt  = float(CENY_NT.get(dist,{}).get(sazba,7493))/1000
+        jistic   = float(JISTIC_3x25.get(dist,JISTIC_3x25["ČEZ Distribuce"]).get(sazba,298))
+        uspora_jist = jistic*(int(pocet_bytu)-1)*12.0 if model=="jom" else 0.0
+        # Splátky
+        podil_bytu_uver = uver_cast/float(pocet_bytu) if pocet_bytu>0 else 0
+        bonus_efekt_byt = min(float(bonus_byt), podil_bytu_uver)
+        zbytek_super    = max(0.0, podil_bytu_uver-bonus_efekt_byt)
+        splatka_byt_std  = podil_bytu_uver/float(max(splatnost,1))/12 if scenar!="vlastni" else 0.0
+        splatka_byt_super= zbytek_super/float(max(splatnost,1))/12 if scenar!="vlastni" else 0.0
 
         # Spustit simulaci
         with st.spinner("Simuluji..."):
