@@ -152,18 +152,43 @@ def _doporucena_sazba(zarizeni):
     return "D02d"
 
 def _doporuceny_jistic(pocet_bytu, zarizeni):
-    """Doporučí velikost jističe dle počtu bytů a zařízení."""
-    vykon_kw = float(pocet_bytu) * 6.0
-    if "tc"      in zarizeni: vykon_kw += float(pocet_bytu) * 3.0
-    if "primotop"in zarizeni: vykon_kw += float(pocet_bytu) * 4.0
-    proud = vykon_kw * 1000 / (3 * 230) * 0.3
-    if proud <= 16: return "3×16A", 0
-    elif proud <= 20: return "3×20A", 1
-    elif proud <= 25: return "3×25A", 2
-    elif proud <= 32: return "3×32A", 3
-    elif proud <= 40: return "3×40A", 4
-    elif proud <= 50: return "3×50A", 5
-    else:             return "3×63A", 6
+    """Doporučí velikost jističe dle počtu bytů a zařízení.
+    Základní pravidla:
+    - Jen svícení/spotřebiče (D02d): 1×25A pro malé domy, 3×25A od 4 bytů
+    - S indukcí (sporak): 3×25A
+    - S TČ/přímotopy: 3×32A až 3×63A
+    """
+    has_tc = "tc" in zarizeni
+    has_primo = "primotop" in zarizeni or "akum" in zarizeni
+    has_sporak = "sporak" in zarizeni
+    has_bojler = "bojler" in zarizeni
+    has_ev = "ev" in zarizeni
+    pb = int(pocet_bytu)
+
+    # TČ nebo přímotopy — velký příkon
+    if has_tc:
+        if pb <= 8:  return "3×32A", 3
+        elif pb <= 16: return "3×40A", 4
+        elif pb <= 24: return "3×50A", 5
+        else:          return "3×63A", 6
+    if has_primo:
+        if pb <= 6:  return "3×32A", 3
+        elif pb <= 12: return "3×40A", 4
+        elif pb <= 20: return "3×50A", 5
+        else:          return "3×63A", 6
+    # Indukce — 3-fázové
+    if has_sporak or has_bojler or has_ev:
+        if pb <= 4:  return "3×16A", 0
+        elif pb <= 8:  return "3×25A", 2
+        elif pb <= 16: return "3×32A", 3
+        elif pb <= 24: return "3×40A", 4
+        else:          return "3×50A", 5
+    # Základní — jen svícení/spotřebiče
+    if pb <= 3:  return "1×25A", 0
+    elif pb <= 8:  return "3×25A", 2
+    elif pb <= 16: return "3×32A", 3
+    elif pb <= 24: return "3×40A", 4
+    else:          return "3×50A", 5
 
 def _sp_z_zarizeni(zarizeni, pocet_bytu):
     """Vypočítá celkovou VT a NT spotřebu domu dle výběru zařízení."""
@@ -881,13 +906,15 @@ if expert_mod:
             sp_vt_celkem = sp_sp15 + sp_by_vt15  # celý dům VT
             sp_nt_celkem = sp_by_nt15              # celý dům NT
             srovnani={}
+            _vchod_extra_srov = max(0,int(pocet_vchodu)-1)*30000
             for mk in ["spolecne","jom","edc"]:
-                # Každý model má své náklady na investici
-                _mericu_mk = int(pocet_bytu)*10000 if mk=="jom" else 0
+                # Každý model má své náklady na investici (shodné s cena_invest)
+                _mericu_mk = (int(pocet_bytu)*10000+75000) if mk=="jom" else 0
+                _mericu_mk += _vchod_extra_srov if mk!="spolecne" else 0
                 _jist_mk   = jistic*(int(pocet_bytu)-1)*12.0 if mk=="jom" else 0.0
                 _invest_mk = cena_fve + cena_bat + _mericu_mk
                 _vlast_mk  = float(_invest_mk)*float(vlastni_pct)/100.0
-                _uver_mk   = max(0.0, float(_invest_mk) - _vlast_mk - float(bonus))
+                _uver_mk   = max(0.0, float(_invest_mk) - _vlast_mk)
                 _spl_mk    = _uver_mk/float(splatnost) if (scenar!="vlastni" and splatnost>0) else 0.0
 
                 if mk=="spolecne":
@@ -1746,9 +1773,9 @@ tab1,tab2,tab3,tab4=st.tabs(["📅 Denní graf","📈 Roční přehled","💰 Ca
 with tab1:
     st.markdown("**Průměrný den — výroba vs spotřeba**")
     gc1,gc2=st.columns(2)
-    with gc1: sezona_g=st.radio("Sezóna",["zima","prechodne","leto"],horizontal=True,key="r_sezona",
+    with gc1: sezona_g=st.radio("Sezóna",["zima","prechodne","leto"],index=2,horizontal=True,key="r_sezona",
                                  format_func=lambda x:{"zima":"❄️ Zima","prechodne":"🌤️ Jaro/Podzim","leto":"☀️ Léto"}[x])
-    with gc2: pocasi_g=st.radio("Počasí",["jasno","polojasno","zatazeno"],horizontal=True,key="r_pocasi",
+    with gc2: pocasi_g=st.radio("Počasí",["jasno","polojasno","zatazeno"],index=0,horizontal=True,key="r_pocasi",
                                  format_func=lambda x:{"jasno":"☀️ Jasno","polojasno":"⛅ Polojasno","zatazeno":"☁️ Zataženo"}[x])
 
     kwp_eff=float(vykon)*float(koef_str)
