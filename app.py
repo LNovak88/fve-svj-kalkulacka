@@ -83,33 +83,48 @@ def _cena_jistice_dum(dist, sazba, ampery=63):
     return round(tab[63] + (ampery - 63) * amp_a)
 
 def _jistic_dum_ampery(pocet_bytu, zarizeni):
-    """Odhadne velikost hlavního jističe SVJ (patka domu) v ampérech."""
-    has_tc    = "tc"       in zarizeni
-    has_primo = "primotop" in zarizeni or "akum" in zarizeni
-    has_sp    = "sporak"   in zarizeni
-    has_boj   = "bojler"   in zarizeni or "ev" in zarizeni
+    """Odhadne velikost hlavního jističe JOM (patka domu) v ampérech.
+
+    Empirická tabulka dle praxe distributorů — odpovídá typickým
+    rezervovaným příkonům SVJ. Sloupce: základní / sporák / bojler / TČ.
+    Přímotopy se dnes téměř neprojektují → spadají do sloupce TČ.
+
+    Byty  | Základní | Sporák | Bojler | TČ
+    ------+----------+--------+--------+------
+    ≤10   |  3×32A   | 3×40A  | 3×40A  | 3×63A
+    ≤20   |  3×40A   | 3×50A  | 3×63A  | 3×80A
+    ≤30   |  3×50A   | 3×63A  | 3×80A  | 3×100A
+    ≤50   |  3×63A   | 3×80A  | 3×100A | 3×125A
+    ≤100  |  3×80A   | 3×100A | 3×125A | 3×160A
+    ≤150  |  3×100A  | 3×125A | 3×160A | 3×200A
+    ≤200  |  3×125A  | 3×160A | 3×200A | 3×250A
+    >200  |  3×160A  | 3×200A | 3×250A | 3×315A
+    """
     pb = int(pocet_bytu)
-    if has_tc:
-        return 63  # TČ vždy max
-    if has_primo:
-        if pb <= 8: return 50
-        else: return 63
-    if has_sp and has_boj:
-        if pb <= 10: return 32
-        elif pb <= 20: return 40
-        elif pb <= 40: return 50
-        else: return 63
-    if has_sp or has_boj:
-        if pb <= 15: return 32
-        elif pb <= 30: return 40
-        elif pb <= 50: return 50
-        else: return 63
-    # Základní — jen svícení
-    if pb <= 10: return 25
-    elif pb <= 20: return 32
-    elif pb <= 40: return 40
-    elif pb <= 70: return 50
-    else: return 63
+    has_tc  = "tc"       in zarizeni or "primotop" in zarizeni or "akum" in zarizeni
+    has_boj = "bojler"   in zarizeni
+    has_sp  = "sporak"   in zarizeni
+
+    # Tabulka: (max_bytu, zaklad, sporak, bojler, tc)
+    _TAB = [
+        ( 10,  32,  40,  40,  63),
+        ( 20,  40,  50,  63,  80),
+        ( 30,  50,  63,  80, 100),
+        ( 50,  63,  80, 100, 125),
+        (100,  80, 100, 125, 160),
+        (150, 100, 125, 160, 200),
+        (200, 125, 160, 200, 250),
+        (999, 160, 200, 250, 315),
+    ]
+
+    for max_b, z, sp, boj, tc in _TAB:
+        if pb <= max_b:
+            if has_tc:  return tc
+            if has_boj: return boj
+            if has_sp:  return sp
+            return z
+
+    return 160  # fallback
 
 def _jistic_byt_typ(zarizeni):
     """Odhadne typický jistič bytu."""
