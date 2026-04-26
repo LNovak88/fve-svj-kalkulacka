@@ -325,7 +325,10 @@ def _sp_sp_vypocet(pocet_bytu, pocet_pater, ma_vytah, pocet_vytahu,
     pp = int(pocet_pater)
 
     # --- VT spotřeba ---
-    sp_osvetleni = pp * pb * 50 + 200          # kWh/rok
+    # Osvětlení chodeb: každá chodba (= 1 patro) spotřebuje cca 150-200 kWh/rok
+    # Záleží na počtu vchodů, délce chodby — odhadujeme 200 kWh/patro fixně
+    # + 2 kWh/byt/rok jako korekce na délku chodby (více bytů = delší chodba)
+    sp_osvetleni = pp * 200 + pb * 2 + 100   # kWh/rok (základ 100 = sklep/vstup)
     sp_vytah     = (1500 * int(pocet_vytahu) * (1 + pp / 20.0)
                     if ma_vytah else 0.0)       # kWh/rok
     sp_vt = sp_osvetleni + sp_vytah
@@ -906,14 +909,23 @@ if expert_mod:
     # Náklady na rozvod dle počtu vchodů (každý vchod = extra rozvaděč + kabeláž)
     _vchod_extra = max(0, int(pocet_vchodu)-1) * 30000  # každý další vchod +30k
     cena_mericu += _vchod_extra if model!="spolecne" else 0
-    # Úspora JOM = zrušení N individuálních ODM → 1 společné ODM
-    # (N byty × stálé+jistič_bytu) - (1× stálé+jistič_domu)
+    # Úspora JOM = (N bytů × platby_byt) + platby_SP - platby_JOM_dům
+    # Stávající stav: N ODM bytů + 1 ODM SP = (N+1) stálých plateb + N×jistič_byt + jistič_SP
+    # JOM stav:       1 ODM dům = 1 stálá platba + 1 velký jistič_domu
     if model=="jom":
-        _jbyt_typ = _jistic_byt_typ(zarizeni_sel if "zarizeni_sel" in dir() else ["zaklad"])
+        _jbyt_typ  = _jistic_byt_typ(zarizeni_sel if "zarizeni_sel" in dir() else ["zaklad"])
         _jbyt_cena = JISTIC_BYT.get(dist, JISTIC_BYT["ČEZ Distribuce"]).get(_jbyt_typ, jistic)
+        # Jistič SP (stávající stav — samostatné ODM SP)
+        _jsp_a     = int(st.session_state.get("wizard_data", {}).get("jistic_sp_a", 25))
+        _jsp_cena  = _cena_jistice_dum(dist, sazba, _jsp_a)
+        # JOM — jeden velký jistič pro celý dům (byty + SP)
         _jdum_amp  = _jistic_dum_ampery(pocet_bytu, zarizeni_sel if "zarizeni_sel" in dir() else ["zaklad"])
         _jdum_cena = _cena_jistice_dum(dist, sazba, _jdum_amp)
-        uspora_jist = (int(pocet_bytu)*(stay+_jbyt_cena) - (stay+_jdum_cena)) * 12.0
+        # Stávající platby: (N bytů + SP) × stálé + N×jistič_byt + jistič_SP
+        _platby_ted_r = (int(pocet_bytu) + 1) * stay + int(pocet_bytu) * _jbyt_cena + _jsp_cena
+        # JOM platby: 1 stálá + 1 velký jistič
+        _platby_jom_r = stay + _jdum_cena
+        uspora_jist = (_platby_ted_r - _platby_jom_r) * 12.0
     else:
         uspora_jist = 0.0
     if model=="spolecne":
@@ -1105,10 +1117,16 @@ if expert_mod:
                 _mericu_mk = (int(pocet_bytu)*10000+75000) if mk=="jom" else 0
                 _mericu_mk += _vchod_extra_srov if mk!="spolecne" else 0
                 if mk=="jom":
-                    _jbyt_c3 = JISTIC_BYT.get(dist,JISTIC_BYT["ČEZ Distribuce"]).get("1×25A",132)
-                    _jdum_a3  = _jistic_dum_ampery(pocet_bytu, [])
-                    _jdum_c3  = _cena_jistice_dum(dist, sazba, _jdum_a3)
-                    _jist_mk  = (int(pocet_bytu)*(stay+_jbyt_c3) - (stay+_jdum_c3)) * 12.0
+                    _jbyt_c3   = JISTIC_BYT.get(dist,JISTIC_BYT["ČEZ Distribuce"]).get(
+                                     _jistic_byt_typ(zarizeni_sel), 132)
+                    _jsp_a3    = int(st.session_state.get("wizard_data", {}).get("jistic_sp_a", 25))
+                    _jsp_c3    = _cena_jistice_dum(dist, sazba, _jsp_a3)
+                    _jdum_a3   = _jistic_dum_ampery(pocet_bytu, zarizeni_sel)
+                    _jdum_c3   = _cena_jistice_dum(dist, sazba, _jdum_a3)
+                    # (N+1 ODM stávající) vs (1 ODM JOM)
+                    _platby_ted3 = (int(pocet_bytu)+1)*stay + int(pocet_bytu)*_jbyt_c3 + _jsp_c3
+                    _platby_jom3 = stay + _jdum_c3
+                    _jist_mk   = (_platby_ted3 - _platby_jom3) * 12.0
                 else:
                     _jist_mk  = 0.0
                 _invest_mk = cena_fve + cena_bat + _mericu_mk
@@ -1798,13 +1816,18 @@ else:
         cena_nt  = float(CENY_NT.get(dist,{}).get(sazba,7493))/1000
         jistic   = float(JISTIC_3x25.get(dist,JISTIC_3x25["ČEZ Distribuce"]).get(sazba,298))
         stay     = float(STAY_PLAT.get(dist, 163))
-        # Úspora JOM — N bytů × (stálý+jistič_bytu) minus 1 dům × (stálý+jistič_domu)
-        # Jistič bytu = individuální (1×25A typicky), jistič domu = velký (3×63A+)
+        # Úspora JOM — stávající: (N bytů + SP) × stálé + N×jistič_byt + jistič_SP
+        #              JOM:      1× stálé + 1× velký jistič domu
         if model=="jom":
-            _jbyt_cena2 = JISTIC_BYT.get(dist,JISTIC_BYT["ČEZ Distribuce"]).get("1×25A", 132)
+            _jbyt_cena2 = JISTIC_BYT.get(dist,JISTIC_BYT["ČEZ Distribuce"]).get(
+                              _jistic_byt_typ(zarizeni_sel), 132)
+            _jsp_a2     = int(wd.get("jistic_sp_a", 25))
+            _jsp_cena2  = _cena_jistice_dum(dist, sazba, _jsp_a2)
             _jdum_amp2  = _jistic_dum_ampery(pocet_bytu, zarizeni_sel)
             _jdum_cena2 = _cena_jistice_dum(dist, sazba, _jdum_amp2)
-            uspora_jist = (int(pocet_bytu)*(stay+_jbyt_cena2) - (stay+_jdum_cena2)) * 12.0
+            _platby_ted2 = (int(pocet_bytu)+1)*stay + int(pocet_bytu)*_jbyt_cena2 + _jsp_cena2
+            _platby_jom2 = stay + _jdum_cena2
+            uspora_jist = (_platby_ted2 - _platby_jom2) * 12.0
         else:
             uspora_jist = 0.0
         # Splátky
@@ -1948,12 +1971,19 @@ cena_vt   = float(CENY_VT.get(dist, CENY_VT["ČEZ Distribuce"]).get(sazba, 7493)
 cena_nt   = float(CENY_NT.get(dist, {}).get(sazba, 7493)) / 1000
 stay      = float(STAY_PLAT.get(dist, 163))
 jistic    = float(JISTIC_3x25.get(dist, JISTIC_3x25["ČEZ Distribuce"]).get(sazba, 298))
-# Úspora JOM — správný výpočet
+# Úspora JOM — stávající: (N+1) ODM × stálé + N×jistič_byt + jistič_SP
+#              JOM:      1 ODM × stálé + 1× velký jistič domu
 if model=="jom":
-    _jbyt_cena_r = JISTIC_BYT.get(dist,JISTIC_BYT["ČEZ Distribuce"]).get("1×25A", 132)
-    _jdum_amp_r  = _jistic_dum_ampery(pocet_bytu, [])
+    _zar_r       = _pg("zarizeni_sel", ["zaklad"])
+    _jbyt_typ_r  = _jistic_byt_typ(_zar_r) if isinstance(_zar_r, list) else "1×25A"
+    _jbyt_cena_r = JISTIC_BYT.get(dist,JISTIC_BYT["ČEZ Distribuce"]).get(_jbyt_typ_r, 132)
+    _jsp_a_r     = int(_pg("jistic_sp_a", 25))
+    _jsp_cena_r  = _cena_jistice_dum(dist, sazba, _jsp_a_r)
+    _jdum_amp_r  = _jistic_dum_ampery(pocet_bytu, _zar_r if isinstance(_zar_r, list) else [])
     _jdum_cena_r = _cena_jistice_dum(dist, sazba, _jdum_amp_r)
-    uspora_jist = (int(pocet_bytu)*(stay+_jbyt_cena_r) - (stay+_jdum_cena_r)) * 12.0
+    _platby_ted_res = (int(pocet_bytu)+1)*stay + int(pocet_bytu)*_jbyt_cena_r + _jsp_cena_r
+    _platby_jom_res = stay + _jdum_cena_r
+    uspora_jist = (_platby_ted_res - _platby_jom_res) * 12.0
 else:
     uspora_jist = 0.0
 # Investice
