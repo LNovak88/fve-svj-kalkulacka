@@ -152,43 +152,57 @@ def _doporucena_sazba(zarizeni):
     return "D02d"
 
 def _doporuceny_jistic(pocet_bytu, zarizeni):
-    """Doporučí velikost jističe dle počtu bytů a zařízení.
-    Základní pravidla:
-    - Jen svícení/spotřebiče (D02d): 1×25A pro malé domy, 3×25A od 4 bytů
-    - S indukcí (sporak): 3×25A
-    - S TČ/přímotopy: 3×32A až 3×63A
+    """Doporučí velikost hlavního jističe SVJ (patka domu).
+    Individuální jistič bytu (1×25A) se nemění — to si řeší každý byt zvlášť.
+    Hlavní jistič SVJ = pro společné prostory nebo JOM (celý dům).
+    Pro JOM závisí na celkové spotřebě domu.
     """
-    has_tc = "tc" in zarizeni
-    has_primo = "primotop" in zarizeni or "akum" in zarizeni
-    has_sporak = "sporak" in zarizeni
-    has_bojler = "bojler" in zarizeni
-    has_ev = "ev" in zarizeni
+    has_tc     = "tc"       in zarizeni
+    has_primo  = "primotop" in zarizeni
+    has_akum   = "akum"     in zarizeni
+    has_sporak = "sporak"   in zarizeni
+    has_bojler = "bojler"   in zarizeni
+    has_ev     = "ev"       in zarizeni
     pb = int(pocet_bytu)
 
-    # TČ nebo přímotopy — velký příkon
+    # TČ pro celý dům — velký příkon
     if has_tc:
-        if pb <= 8:  return "3×32A", 3
+        if pb <= 8:    return "3×50A", 5
+        elif pb <= 16: return "3×63A", 6
+        else:          return "3×63A", 6
+
+    # Přímotopy nebo akumulační kamna
+    if has_primo or has_akum:
+        if pb <= 6:    return "3×40A", 4
+        elif pb <= 12: return "3×50A", 5
+        else:          return "3×63A", 6
+
+    # Indukce + bojler (typická plně elektrická domácnost)
+    if has_sporak and has_bojler:
+        if pb <= 8:    return "3×32A", 3
         elif pb <= 16: return "3×40A", 4
         elif pb <= 24: return "3×50A", 5
         else:          return "3×63A", 6
-    if has_primo:
-        if pb <= 6:  return "3×32A", 3
-        elif pb <= 12: return "3×40A", 4
-        elif pb <= 20: return "3×50A", 5
-        else:          return "3×63A", 6
-    # Indukce — 3-fázové
+
+    # Jen indukce nebo jen bojler/EV
     if has_sporak or has_bojler or has_ev:
-        if pb <= 4:  return "3×16A", 0
-        elif pb <= 8:  return "3×25A", 2
-        elif pb <= 16: return "3×32A", 3
+        if pb <= 12:   return "3×32A", 3
         elif pb <= 24: return "3×40A", 4
         else:          return "3×50A", 5
-    # Základní — jen svícení/spotřebiče
-    if pb <= 3:  return "1×25A", 0
-    elif pb <= 8:  return "3×25A", 2
-    elif pb <= 16: return "3×32A", 3
-    elif pb <= 24: return "3×40A", 4
-    else:          return "3×50A", 5
+
+    # Základní — svícení, spotřebiče, pračka (bez vaření elektřinou)
+    # Většina panelových domů — plynové vaření, dálkové teplo
+    if pb <= 10:   return "3×25A", 2
+    elif pb <= 20: return "3×32A", 3
+    elif pb <= 40: return "3×40A", 4
+    elif pb <= 60: return "3×50A", 5
+    else:          return "3×63A", 6
+
+    # Základní — jen svícení, spotřebiče, pračka, sušička
+    # 1×25A pro malé domy, 3×25A pro větší
+    if pb <= 3:   return "1×25A", 0
+    elif pb <= 20: return "3×25A", 2
+    else:          return "3×32A", 3
 
 def _sp_z_zarizeni(zarizeni, pocet_bytu):
     """Vypočítá celkovou VT a NT spotřebu domu dle výběru zařízení."""
@@ -621,6 +635,7 @@ if expert_mod:
         else:
             _jistic_vyber = _jistic_auto
             st.success(f"✅ Jistič dle výkonu: **{_jistic_auto}**")
+            st.caption("Hlavní jistič SVJ na patce domu. Jistič bytu (typicky 1×25A) se SVJ netýká.")
         profil=st.selectbox("Profil obyvatel",list(PROFILY.keys()),index=list(PROFILY.keys()).index(_wg("profil","mix")) if _wg("profil","mix") in PROFILY else 0,key="e_profil",format_func=lambda x:PROFILY[x]["nazev"])
         st.caption(PROFILY[profil]["popis"])
 
