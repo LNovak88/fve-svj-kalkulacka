@@ -86,39 +86,47 @@ def _jistic_dum_ampery(pocet_bytu, zarizeni):
     """Odhadne velikost hlavního jističe JOM (patka domu) v ampérech.
 
     Empirická tabulka dle praxe distributorů — odpovídá typickým
-    rezervovaným příkonům SVJ. Sloupce: základní / sporák / bojler / TČ.
-    Přímotopy se dnes téměř neprojektují → spadají do sloupce TČ.
+    rezervovaným příkonům SVJ.
 
-    Byty  | Základní | Sporák | Bojler | TČ
-    ------+----------+--------+--------+------
-    ≤10   |  3×32A   | 3×40A  | 3×40A  | 3×63A
-    ≤20   |  3×40A   | 3×50A  | 3×63A  | 3×80A
-    ≤30   |  3×50A   | 3×63A  | 3×80A  | 3×100A
-    ≤50   |  3×63A   | 3×80A  | 3×100A | 3×125A
-    ≤100  |  3×80A   | 3×100A | 3×125A | 3×160A
-    ≤150  |  3×100A  | 3×125A | 3×160A | 3×200A
-    ≤200  |  3×125A  | 3×160A | 3×200A | 3×250A
-    >200  |  3×160A  | 3×200A | 3×250A | 3×315A
+    Sloupce (priorita shora dolů):
+      elektrokotel/akum — přímotopy, akumulační kamna, elektrokotel
+      TČ                — tepelné čerpadlo jako hlavní zdroj tepla
+      bojler            — elektrický ohřev TUV (D25d)
+      sporák            — indukce / elektrický sporák
+      základní          — jen svícení, spotřebiče, plyn/dálkové teplo
+
+    Byty  | Základní | Sporák | Bojler | TČ     | Elektrokotel/akum
+    ------+----------+--------+--------+--------+------------------
+    ≤10   |  3×32A   | 3×40A  | 3×40A  | 3×63A  | 3×80A
+    ≤20   |  3×40A   | 3×50A  | 3×63A  | 3×80A  | 3×100A
+    ≤30   |  3×50A   | 3×63A  | 3×80A  | 3×100A | 3×125A
+    ≤50   |  3×63A   | 3×80A  | 3×100A | 3×125A | 3×160A
+    ≤100  |  3×80A   | 3×100A | 3×125A | 3×160A | 3×200A
+    ≤150  |  3×100A  | 3×125A | 3×160A | 3×200A | 3×250A
+    ≤200  |  3×125A  | 3×160A | 3×200A | 3×250A | 3×315A
+    >200  |  3×160A  | 3×200A | 3×250A | 3×315A | 3×400A
     """
     pb = int(pocet_bytu)
-    has_tc  = "tc"       in zarizeni or "primotop" in zarizeni or "akum" in zarizeni
+    has_ek  = "primotop" in zarizeni or "akum" in zarizeni  # elektrokotel/akumulák
+    has_tc  = "tc"       in zarizeni
     has_boj = "bojler"   in zarizeni
     has_sp  = "sporak"   in zarizeni
 
-    # Tabulka: (max_bytu, zaklad, sporak, bojler, tc)
+    # Tabulka: (max_bytu, zaklad, sporak, bojler, tc, elektrokotel)
     _TAB = [
-        ( 10,  32,  40,  40,  63),
-        ( 20,  40,  50,  63,  80),
-        ( 30,  50,  63,  80, 100),
-        ( 50,  63,  80, 100, 125),
-        (100,  80, 100, 125, 160),
-        (150, 100, 125, 160, 200),
-        (200, 125, 160, 200, 250),
-        (999, 160, 200, 250, 315),
+        ( 10,  32,  40,  40,  63,  80),
+        ( 20,  40,  50,  63,  80, 100),
+        ( 30,  50,  63,  80, 100, 125),
+        ( 50,  63,  80, 100, 125, 160),
+        (100,  80, 100, 125, 160, 200),
+        (150, 100, 125, 160, 200, 250),
+        (200, 125, 160, 200, 250, 315),
+        (999, 160, 200, 250, 315, 400),
     ]
 
-    for max_b, z, sp, boj, tc in _TAB:
+    for max_b, z, sp, boj, tc, ek in _TAB:
         if pb <= max_b:
+            if has_ek:  return ek
             if has_tc:  return tc
             if has_boj: return boj
             if has_sp:  return sp
@@ -316,37 +324,34 @@ def _sp_z_zarizeni(zarizeni, pocet_bytu):
 
 
 def _sp_sp_vypocet(pocet_bytu, pocet_pater, ma_vytah, pocet_vytahu,
-                   ma_tuv_central, ma_tc_dum, pocet_ev_nabijec):
+                   ma_tuv_central, ma_tc_dum, pocet_ev_nabijec,
+                   pocet_cerpadel=0):
     """
     Vypočítá roční spotřebu a parametry společných prostor (SP).
 
-    Vzorce dle briefingu:
-      Osvětlení:  pocet_pater × pocet_bytu × 50 kWh/rok + 200 kWh fixně
-      Výtah:      1500 kWh/výtah × (1 + pocet_pater/20)
-      TUV central: 800 kWh/byt/rok (jako bojler, ale NT)
-      TČ domu:    3000 kWh/byt/rok (jako TC v bytech)
-      EV nabíječky: 1500 kWh/nabíječka/rok (NT)
+    Vzorce:
+      Osvětlení:   patra × 200 + byty × 2 + 100 kWh/rok
+      Výtah:       3000 kWh/výtah × (1 + patra/20)   [základ 3000 kWh]
+      Čerpadla:    800 kWh/čerpadlo × (1 + patra/30)  [oběhová čerpadla]
+      TUV central: 800 kWh/byt/rok (NT)
+      TČ domu:     3000 kWh/byt/rok (NT)
+      EV nabíječky:1500 kWh/nabíječka/rok (NT)
 
-    Returns dict:
-      sp_mwh      — celková spotřeba SP v MWh/rok
-      sp_vt_mwh   — VT část (osvětlení, výtah)
-      sp_nt_mwh   — NT část (TUV, TČ, EV)
-      sazba_sp    — doporučená sazba SP
-      jistic_sp   — velikost jističe SP (string, např. "3×25A")
-      jistic_sp_a — ampéry (int)
-      popis       — seznam položek pro zobrazení
+    Jistič SP — dle příkonu zařízení:
+      Výtah 7.5 kW + čerpadla 0.25 kW × N + osvětlení → odpovídá ampérům
     """
     pb = int(pocet_bytu)
     pp = int(pocet_pater)
+    pv = int(pocet_vytahu)
+    pc = int(pocet_cerpadel)
 
     # --- VT spotřeba ---
-    # Osvětlení chodeb: každá chodba (= 1 patro) spotřebuje cca 150-200 kWh/rok
-    # Záleží na počtu vchodů, délce chodby — odhadujeme 200 kWh/patro fixně
-    # + 2 kWh/byt/rok jako korekce na délku chodby (více bytů = delší chodba)
-    sp_osvetleni = pp * 200 + pb * 2 + 100   # kWh/rok (základ 100 = sklep/vstup)
-    sp_vytah     = (1500 * int(pocet_vytahu) * (1 + pp / 20.0)
-                    if ma_vytah else 0.0)       # kWh/rok
-    sp_vt = sp_osvetleni + sp_vytah
+    sp_osvetleni = pp * 200 + pb * 2 + 100          # kWh/rok
+    sp_vytah     = (3000 * pv * (1 + pp / 20.0)
+                    if ma_vytah else 0.0)             # kWh/rok
+    sp_cerpadla  = (800 * pc * (1 + pp / 30.0)
+                    if pc > 0 else 0.0)               # kWh/rok (VT — běží přes den)
+    sp_vt = sp_osvetleni + sp_vytah + sp_cerpadla
 
     # --- NT spotřeba ---
     sp_tuv = 800  * pb if ma_tuv_central else 0.0   # kWh/rok
@@ -364,22 +369,30 @@ def _sp_sp_vypocet(pocet_bytu, pocet_pater, ma_vytah, pocet_vytahu,
     else:
         sazba_sp = "D02d"
 
-    # --- Jistič SP ---
-    if ma_tc_dum or pocet_ev_nabijec >= 2:
-        jistic_sp_a = 63
-        jistic_sp   = "3×63A"
-    elif ma_tuv_central or pocet_ev_nabijec == 1:
-        jistic_sp_a = 32
-        jistic_sp   = "3×32A"
-    else:
-        jistic_sp_a = 25
-        jistic_sp   = "3×25A"
+    # --- Jistič SP — dle součtu příkonů zařízení ---
+    # Výtah: 7.5 kW/výtah, čerpadlo: 0.25 kW, osvětlení: ~1 kW, TUV/TČ: velký příkon
+    P_sp_kw = (pv * 7.5 if ma_vytah else 0.0) + pc * 0.25 + 1.0
+    if ma_tc_dum:
+        P_sp_kw += pb * 3.0   # TČ domu — velký příkon
+    elif ma_tuv_central:
+        P_sp_kw += pb * 0.5   # bojler přes NT — menší soudobý příkon
+    if pocet_ev_nabijec > 0:
+        P_sp_kw += pocet_ev_nabijec * 7.4  # 7.4 kW / nabíječka (wallbox)
+
+    # Proud SP: P / (√3 × 0.4 kV)
+    import math
+    I_sp = P_sp_kw * 1000 / (math.sqrt(3) * 400)
+    _std = [25, 32, 40, 50, 63, 80, 100]
+    jistic_sp_a = next((j for j in _std if j >= I_sp), 100)
+    jistic_sp   = f"3×{jistic_sp_a}A"
 
     # --- Přehled položek ---
     popis = []
     popis.append(f"Osvětlení chodeb: {sp_osvetleni:.0f} kWh/rok")
     if ma_vytah:
-        popis.append(f"Výtah ({pocet_vytahu}×): {sp_vytah:.0f} kWh/rok")
+        popis.append(f"Výtah ({pv}×): {sp_vytah:.0f} kWh/rok")
+    if pc > 0:
+        popis.append(f"Oběhová čerpadla ({pc}×): {sp_cerpadla:.0f} kWh/rok")
     if ma_tuv_central:
         popis.append(f"Centrální TUV: {sp_tuv:.0f} kWh/rok (NT)")
     if ma_tc_dum:
@@ -395,6 +408,8 @@ def _sp_sp_vypocet(pocet_bytu, pocet_pater, ma_vytah, pocet_vytahu,
         "jistic_sp":   jistic_sp,
         "jistic_sp_a": jistic_sp_a,
         "popis":       popis,
+        "P_sp_kw":     P_sp_kw,   # pro debug/zobrazení
+        "I_sp_a":      round(I_sp, 1),
     }
 
 
@@ -1343,6 +1358,7 @@ else:
             w_ma_tuv = bool(_wd.get("sp_ma_tuv", False))
             w_ma_tc = bool(_wd.get("sp_ma_tc", False))
             w_pocet_ev = int(_wd.get("sp_pocet_ev", 0))
+            w_pocet_cerpadel = int(_wd.get("sp_pocet_cerpadel", 0))
         else:
             # ── Odhadnout SP dle vybavení ────────────────────────────
             st.caption("Výtah, osvětlení chodeb, centrální kotelna — spotřeba se počítá automaticky.")
@@ -1379,12 +1395,18 @@ else:
                     int(_wd.get("sp_pocet_ev", 0)), 1,
                     key="w_sp_pocet_ev",
                     help="Počet nabíjecích stanic pro elektromobily ve společných garážích")
+                w_pocet_cerpadel = st.number_input(
+                    "🔄 Oběhová čerpadla (počet)", 0, 20,
+                    int(_wd.get("sp_pocet_cerpadel", 0)), 1,
+                    key="w_sp_pocet_cerpadel",
+                    help="Čerpadla ústředního topení, cirkulace TUV — spotřeba závisí na počtu pater")
 
             _sp_res = _sp_sp_vypocet(
                 pocet_bytu=pocet_bytu, pocet_pater=w_pocet_pater,
                 ma_vytah=w_ma_vytah, pocet_vytahu=w_pocet_vytahu,
                 ma_tuv_central=w_ma_tuv, ma_tc_dum=w_ma_tc,
                 pocet_ev_nabijec=w_pocet_ev,
+                pocet_cerpadel=w_pocet_cerpadel,
             )
 
         # ── Výsledek SP ─────────────────────────────────────────────
@@ -1392,39 +1414,10 @@ else:
         st.success(
             f"🏢 **Společné prostory:** {_sp_res['sp_mwh']:.2f} MWh/rok "
             f"(VT {_sp_res['sp_vt_mwh']:.2f} + NT {_sp_res['sp_nt_mwh']:.2f}) · "
-            f"Sazba: **{_sp_res['sazba_sp']}** · Jistič SP: **{_sp_res['jistic_sp']}**\n\n"
+            f"Sazba: **{_sp_res['sazba_sp']}** · Jistič SP: **{_sp_res['jistic_sp']}** "
+            f"(příkon SP ≈ {_sp_res['P_sp_kw']:.1f} kW → {_sp_res['I_sp_a']} A)\n\n"
             f"📋 {_sp_radky}"
         )
-
-        # ── BOX 3: Informace o jističích a JOM úspoře ────────────────
-        # (vypočítáme předběžně pro zobrazení — dist ještě není vybrán, použijeme default)
-        _dist_prev = _wd.get("dist", "ČEZ Distribuce")
-        _sazba_prev_jom = _wd.get("sazba", "D02d")
-        # Jistič každého bytu
-        _jbyt_cena_prev = JISTIC_BYT.get(_dist_prev, JISTIC_BYT["ČEZ Distribuce"]).get(_jbyt_w, 132)
-        # Stávající stav: N bytů + SP = (N+1) odběrných míst
-        _stay_prev = STAY_PLAT.get(_dist_prev, 163)
-        _platby_ted = (int(pocet_bytu) * (_stay_prev + _jbyt_cena_prev)
-                       + (_stay_prev + _cena_jistice_dum(_dist_prev, _sazba_prev_jom, _sp_res["jistic_sp_a"])))
-        # JOM: jeden velký jistič pro celý dům
-        _jdom_amp = _jistic_dum_ampery(pocet_bytu, zarizeni_sel)
-        _jdom_cena = _cena_jistice_dum(_dist_prev, _sazba_prev_jom, _jdom_amp)
-        _platby_jom = _stay_prev + _jdom_cena
-        _uspora_jom_mes = _platby_ted - _platby_jom
-        with st.expander("⚡ Co je JOM a kolik ušetří? (klikněte pro info)", expanded=False):
-            st.markdown(
-                f"**JOM = Jedno Odběrné Místo** — celý dům má jeden velký jistič místo "
-                f"{int(pocet_bytu)+1} individuálních.\n\n"
-                f"| | Stávající stav | Po přechodu na JOM |\n"
-                f"|---|---|---|\n"
-                f"| Odběrná místa | {int(pocet_bytu)+1}× (byty + SP) | 1× (dům) |\n"
-                f"| Jistič | {int(pocet_bytu)}× **{_jbyt_w}** ({_jbyt_cena_prev} Kč/měs) + SP **{_sp_res['jistic_sp']}** | 1× **3×{_jdom_amp}A** ({_jdom_cena} Kč/měs) |\n"
-                f"| Stálé platby | {int(pocet_bytu)+1}× {_stay_prev} = {(int(pocet_bytu)+1)*_stay_prev:,} Kč/měs | 1× {_stay_prev} Kč/měs |\n"
-                f"| **Celkem za jistič+stálé** | **{_platby_ted:,} Kč/měs** | **{_platby_jom:,} Kč/měs** |\n"
-                f"| **Odhadovaná úspora JOM** | | **{_uspora_jom_mes:,} Kč/měs · {_uspora_jom_mes*12:,} Kč/rok** |\n\n"
-                f"*Orientační výpočet dle distributora {_dist_prev}, sazba {_sazba_prev_jom}. "
-                f"Přesná čísla po výběru distributora níže.*"
-            )
 
         # ── DISTRIBUTOR + PROFIL ──────────────────────────────────────
         st.divider()
@@ -1440,6 +1433,34 @@ else:
                                index=_profil_idx,
                                key="w_profil",
                                format_func=lambda x: PROFILY[x]["nazev"])
+
+        # ── JOM info box — až po výběru distributora (přesná čísla) ──
+        _stay_d   = STAY_PLAT.get(dist, 163)
+        _jbyt_cena_d = JISTIC_BYT.get(dist, JISTIC_BYT["ČEZ Distribuce"]).get(_jbyt_w, 132)
+        _sazba_d  = _sazba_auto  # sazba bytů
+        _jdom_amp = _jistic_dum_ampery(pocet_bytu, zarizeni_sel)
+        _jdom_cena = _cena_jistice_dum(dist, _sazba_d, _jdom_amp)
+        _platby_ted = (int(pocet_bytu) * (_stay_d + _jbyt_cena_d)
+                       + (_stay_d + _cena_jistice_dum(dist, _sazba_d, _sp_res["jistic_sp_a"])))
+        _platby_jom = _stay_d + _jdom_cena
+        _uspora_jom_mes = _platby_ted - _platby_jom
+
+        with st.expander("⚡ Co je JOM a kolik ušetří?", expanded=False):
+            st.markdown(
+                f"**JOM = Jedno Odběrné Místo** — celý dům má jeden jistič místo "
+                f"{int(pocet_bytu)+1} individuálních.\n\n"
+                f"| | Stávající stav | Po přechodu na JOM |\n"
+                f"|---|---|---|\n"
+                f"| Odběrná místa | {int(pocet_bytu)+1}× (byty + SP) | 1× (dům) |\n"
+                f"| Jistič bytů | {int(pocet_bytu)}× **{_jbyt_w}** = {int(pocet_bytu)*_jbyt_cena_d:,} Kč/měs | — |\n"
+                f"| Jistič SP | **{_sp_res['jistic_sp']}** = {_cena_jistice_dum(dist,_sazba_d,_sp_res['jistic_sp_a']):,} Kč/měs | — |\n"
+                f"| Jistič JOM | — | **3×{_jdom_amp}A** = **{_jdom_cena:,} Kč/měs** |\n"
+                f"| Stálé platby | {int(pocet_bytu)+1}× {_stay_d} = {(int(pocet_bytu)+1)*_stay_d:,} Kč/měs | 1× {_stay_d} Kč/měs |\n"
+                f"| **Celkem** | **{_platby_ted:,} Kč/měs** | **{_platby_jom:,} Kč/měs** |\n"
+                f"| **Úspora JOM** | | **{_uspora_jom_mes:,} Kč/měs · {_uspora_jom_mes*12:,} Kč/rok** |\n\n"
+                f"*Distributor: {dist} · Sazba: {_sazba_d} · "
+                f"Jistič JOM odhadnut dle počtu bytů a vybavení.*"
+            )
 
         if st.button("Další →", type="primary", use_container_width=True):
             st.session_state.wizard_data.update({
@@ -1468,6 +1489,7 @@ else:
                 "sp_ma_tuv":            w_ma_tuv,
                 "sp_ma_tc":             w_ma_tc,
                 "sp_pocet_ev":          w_pocet_ev,
+                "sp_pocet_cerpadel":    w_pocet_cerpadel,
             })
             st.session_state.wizard_krok = 2
             st.rerun()
