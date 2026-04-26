@@ -1340,7 +1340,6 @@ else:
         sp_by_vt_mwh = wd["vt_mwh"]
         sp_by_nt_mwh = wd["nt_mwh"]
         ma_nt    = sazba in SAZBY_NT
-# Další chybějící proměnné z params
         cena_mericu += _vchod_extra if model!="spolecne" else 0
         cena_invest  = cena_fve+cena_bat+cena_mericu
         vlastni_cast = float(cena_invest)*float(vlastni_pct)/100
