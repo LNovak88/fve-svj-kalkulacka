@@ -263,6 +263,86 @@ def _sp_z_zarizeni(zarizeni, pocet_bytu):
     return vt/1000.0, nt/1000.0  # MWh/rok
 
 
+def _sp_sp_vypocet(pocet_bytu, pocet_pater, ma_vytah, pocet_vytahu,
+                   ma_tuv_central, ma_tc_dum, pocet_ev_nabijec):
+    """
+    Vypočítá roční spotřebu a parametry společných prostor (SP).
+
+    Vzorce dle briefingu:
+      Osvětlení:  pocet_pater × pocet_bytu × 50 kWh/rok + 200 kWh fixně
+      Výtah:      1500 kWh/výtah × (1 + pocet_pater/20)
+      TUV central: 800 kWh/byt/rok (jako bojler, ale NT)
+      TČ domu:    3000 kWh/byt/rok (jako TC v bytech)
+      EV nabíječky: 1500 kWh/nabíječka/rok (NT)
+
+    Returns dict:
+      sp_mwh      — celková spotřeba SP v MWh/rok
+      sp_vt_mwh   — VT část (osvětlení, výtah)
+      sp_nt_mwh   — NT část (TUV, TČ, EV)
+      sazba_sp    — doporučená sazba SP
+      jistic_sp   — velikost jističe SP (string, např. "3×25A")
+      jistic_sp_a — ampéry (int)
+      popis       — seznam položek pro zobrazení
+    """
+    pb = int(pocet_bytu)
+    pp = int(pocet_pater)
+
+    # --- VT spotřeba ---
+    sp_osvetleni = pp * pb * 50 + 200          # kWh/rok
+    sp_vytah     = (1500 * int(pocet_vytahu) * (1 + pp / 20.0)
+                    if ma_vytah else 0.0)       # kWh/rok
+    sp_vt = sp_osvetleni + sp_vytah
+
+    # --- NT spotřeba ---
+    sp_tuv = 800  * pb if ma_tuv_central else 0.0   # kWh/rok
+    sp_tc  = 3000 * pb if ma_tc_dum      else 0.0   # kWh/rok
+    sp_ev  = 1500 * int(pocet_ev_nabijec)            # kWh/rok
+    sp_nt  = sp_tuv + sp_tc + sp_ev
+
+    sp_celkem = sp_vt + sp_nt  # kWh/rok
+
+    # --- Sazba SP ---
+    if ma_tc_dum:
+        sazba_sp = "D57d"
+    elif ma_tuv_central:
+        sazba_sp = "D25d"
+    else:
+        sazba_sp = "D02d"
+
+    # --- Jistič SP ---
+    if ma_tc_dum or pocet_ev_nabijec >= 2:
+        jistic_sp_a = 63
+        jistic_sp   = "3×63A"
+    elif ma_tuv_central or pocet_ev_nabijec == 1:
+        jistic_sp_a = 32
+        jistic_sp   = "3×32A"
+    else:
+        jistic_sp_a = 25
+        jistic_sp   = "3×25A"
+
+    # --- Přehled položek ---
+    popis = []
+    popis.append(f"Osvětlení chodeb: {sp_osvetleni:.0f} kWh/rok")
+    if ma_vytah:
+        popis.append(f"Výtah ({pocet_vytahu}×): {sp_vytah:.0f} kWh/rok")
+    if ma_tuv_central:
+        popis.append(f"Centrální TUV: {sp_tuv:.0f} kWh/rok (NT)")
+    if ma_tc_dum:
+        popis.append(f"TČ domu: {sp_tc:.0f} kWh/rok (NT)")
+    if pocet_ev_nabijec > 0:
+        popis.append(f"EV nabíječky ({pocet_ev_nabijec}×): {sp_ev:.0f} kWh/rok (NT)")
+
+    return {
+        "sp_mwh":      sp_celkem / 1000.0,
+        "sp_vt_mwh":   sp_vt     / 1000.0,
+        "sp_nt_mwh":   sp_nt     / 1000.0,
+        "sazba_sp":    sazba_sp,
+        "jistic_sp":   jistic_sp,
+        "jistic_sp_a": jistic_sp_a,
+        "popis":       popis,
+    }
+
+
 def _sezona(m):
     if m in [11,12,1,2]: return "zima"
     if m in [5,6,7,8]: return "leto"
@@ -1065,11 +1145,6 @@ else:
             pocet_bytu = st.number_input("Počet bytů", 2, 200, _def_bytu, 1, key="w_pocet_bytu")
             _def_vchodu = st.session_state.wizard_data.get("pocet_vchodu", 1)
             pocet_vchodu = st.number_input("Počet vchodů", 1, 10, _def_vchodu, 1, key="w_pocet_vchodu")
-            _def_sp = st.session_state.wizard_data.get("sp_sp_mwh", 3.5)
-            sp_sp_mwh = st.number_input("Spotřeba společných prostor (MWh/rok)",
-                                             0.1, 50.0, _def_sp, 0.1, format="%.1f",
-                                             key="w_sp_sp_mwh",
-                                             help="Výtah, osvětlení chodeb, čerpadla")
 
         with w1c2:
             st.markdown("**Co v domě používáte na elektřinu?**")
@@ -1090,18 +1165,85 @@ else:
         _jbyt_w = _jistic_byt_typ(zarizeni_sel)  # jistič bytu
         _jdum_amp_w = _jistic_dum_ampery(pocet_bytu, zarizeni_sel)
         st.info(
-            f"📊 Odhadovaná spotřeba: **{_vt_auto:.1f} MWh VT** + **{_nt_auto:.1f} MWh NT** · "
+            f"📊 Odhadovaná spotřeba bytů: **{_vt_auto:.1f} MWh VT** + **{_nt_auto:.1f} MWh NT** · "
             f"Odhadovaná sazba: **{_sazba_auto}** · "
             f"Jistič bytu: **{_jbyt_w}** · Hlavní jistič domu: **3×{_jdum_amp_w}A**"
         )
 
-        _prev_dist = st.session_state.wizard_data.get("dist", list(CENY_VT.keys())[0])
+        # ── SPOLEČNÉ PROSTORY ────────────────────────────────────────
+        st.divider()
+        st.markdown("### 🏢 Společné prostory")
+        st.caption("Výtah, osvětlení chodeb, centrální kotelna — spotřeba a jistič se počítají automaticky.")
+
+        _wd = st.session_state.wizard_data
+        sp_c1, sp_c2 = st.columns(2)
+        with sp_c1:
+            w_pocet_pater = st.number_input(
+                "Počet nadzemních pater", 1, 30,
+                int(_wd.get("sp_pocet_pater", 4)), 1,
+                key="w_sp_pocet_pater",
+                help="Ovlivňuje spotřebu výtahu a osvětlení chodeb")
+
+            w_ma_vytah = st.checkbox(
+                "🛗 Výtah", value=bool(_wd.get("sp_ma_vytah", False)),
+                key="w_sp_ma_vytah")
+            if w_ma_vytah:
+                w_pocet_vytahu = st.number_input(
+                    "Počet výtahů", 1, 10,
+                    int(_wd.get("sp_pocet_vytahu", 1)), 1,
+                    key="w_sp_pocet_vytahu")
+            else:
+                w_pocet_vytahu = 0
+
+            w_ma_tuv = st.checkbox(
+                "🚿 Centrální ohřev TUV (bojler/teplovod)",
+                value=bool(_wd.get("sp_ma_tuv", False)),
+                key="w_sp_ma_tuv",
+                help="Společný elektrický ohřev teplé vody pro celý dům")
+
+        with sp_c2:
+            w_ma_tc = st.checkbox(
+                "♨️ Tepelné čerpadlo pro dům",
+                value=bool(_wd.get("sp_ma_tc", False)),
+                key="w_sp_ma_tc",
+                help="TČ jako hlavní zdroj tepla pro celý dům (ne bytová TČ)")
+
+            w_pocet_ev = st.number_input(
+                "🔌 Nabíječky EV v garážích (počet)", 0, 50,
+                int(_wd.get("sp_pocet_ev", 0)), 1,
+                key="w_sp_pocet_ev",
+                help="Počet nabíjecích stanic pro elektromobily ve společných garážích")
+
+        # Výpočet SP
+        _sp_res = _sp_sp_vypocet(
+            pocet_bytu      = pocet_bytu,
+            pocet_pater     = w_pocet_pater,
+            ma_vytah        = w_ma_vytah,
+            pocet_vytahu    = w_pocet_vytahu,
+            ma_tuv_central  = w_ma_tuv,
+            ma_tc_dum       = w_ma_tc,
+            pocet_ev_nabijec= w_pocet_ev,
+        )
+
+        # Výsledek SP — přehledný box
+        _sp_radky = " · ".join(_sp_res["popis"]) if _sp_res["popis"] else "pouze osvětlení"
+        st.success(
+            f"🏢 **Společné prostory:** {_sp_res['sp_mwh']:.2f} MWh/rok "
+            f"(VT {_sp_res['sp_vt_mwh']:.2f} + NT {_sp_res['sp_nt_mwh']:.2f}) · "
+            f"Sazba: **{_sp_res['sazba_sp']}** · "
+            f"Jistič SP: **{_sp_res['jistic_sp']}**\n\n"
+            f"📋 {_sp_radky}"
+        )
+
+        # ── DISTRIBUTOR + PROFIL ──────────────────────────────────────
+        st.divider()
+        _prev_dist = _wd.get("dist", list(CENY_VT.keys())[0])
         _dist_idx = list(CENY_VT.keys()).index(_prev_dist) if _prev_dist in CENY_VT else 0
         dist = st.selectbox("Distributor", list(CENY_VT.keys()),
                              index=_dist_idx,
                              key="w_dist",
                              help="ČEZ = většina ČR | EG.D = Morava/jih Čech | PRE = Praha")
-        _prev_profil = st.session_state.wizard_data.get("profil", "mix")
+        _prev_profil = _wd.get("profil", "mix")
         _profil_idx = list(PROFILY.keys()).index(_prev_profil) if _prev_profil in PROFILY else 0
         profil = st.selectbox("Profil obyvatel", list(PROFILY.keys()),
                                index=_profil_idx,
@@ -1110,11 +1252,28 @@ else:
 
         if st.button("Další →", type="primary", use_container_width=True):
             st.session_state.wizard_data.update({
-                "pocet_bytu": pocet_bytu, "pocet_vchodu": pocet_vchodu,
-                "sp_sp_mwh": sp_sp_mwh, "zarizeni_sel": zarizeni_sel,
-                "vt_mwh": _vt_auto, "nt_mwh": _nt_auto,
-                "sazba": _sazba_auto, "dist": dist, "profil": profil,
-                "jistic": _jistic_auto,
+                "pocet_bytu":       pocet_bytu,
+                "pocet_vchodu":     pocet_vchodu,
+                "sp_sp_mwh":        _sp_res["sp_mwh"],
+                "sp_sp_vt_mwh":     _sp_res["sp_vt_mwh"],
+                "sp_sp_nt_mwh":     _sp_res["sp_nt_mwh"],
+                "sazba_sp":         _sp_res["sazba_sp"],
+                "jistic_sp":        _sp_res["jistic_sp"],
+                "jistic_sp_a":      _sp_res["jistic_sp_a"],
+                "zarizeni_sel":     zarizeni_sel,
+                "vt_mwh":           _vt_auto,
+                "nt_mwh":           _nt_auto,
+                "sazba":            _sazba_auto,
+                "dist":             dist,
+                "profil":           profil,
+                "jistic":           _jistic_auto,
+                # SP vstupy — pro navigaci zpět
+                "sp_pocet_pater":   w_pocet_pater,
+                "sp_ma_vytah":      w_ma_vytah,
+                "sp_pocet_vytahu":  w_pocet_vytahu,
+                "sp_ma_tuv":        w_ma_tuv,
+                "sp_ma_tc":         w_ma_tc,
+                "sp_pocet_ev":      w_pocet_ev,
             })
             st.session_state.wizard_krok = 2
             st.rerun()
