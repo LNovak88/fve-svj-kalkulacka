@@ -1524,6 +1524,16 @@ if splatka_byt_std == 0 and cena_invest > 0:
 
 stat_nav=float(cena_invest)/rok1["uspora_celkem"] if rok1["uspora_celkem"]>0 else 999
 bonus = int(pocet_nizko) * int(bonus_byt)
+# Splátky a bonus — bezpečný výpočet
+_uver_res = cena_invest * (1 - float(_p.get("vlastni_pct",0)/100)) if _p else cena_invest
+podil_bytu_uver = _uver_res / float(pocet_bytu) if pocet_bytu > 0 else 0
+bonus_efekt_byt = min(float(bonus_byt), podil_bytu_uver)
+zbytek_super = max(0.0, podil_bytu_uver - bonus_efekt_byt)
+if splatka_byt_std == 0 and podil_bytu_uver > 0:
+    _sl_r = _p.get("splatnost",15) if _p else 15
+    _sc_r = _p.get("scenar","uver") if _p else "uver"
+    splatka_byt_std = podil_bytu_uver/max(_sl_r,1)/12 if _sc_r!="vlastni" else 0.0
+    splatka_byt_super = zbytek_super/max(_sl_r,1)/12 if _sc_r!="vlastni" else 0.0
 # Proměnné pro grafy
 vykon      = float(_p.get('vykon', 20.0)) if _p else 20.0
 koef_str   = float(_p.get('koef_str', 1.0)) if _p else 1.0
@@ -1675,8 +1685,7 @@ with ba1:
         st.metric("Čistý měsíční přínos",f"+{cisty_std:.0f} Kč/měs",delta="kladný od roku 1")
     else:
         st.metric("Čistý měsíční náklad",f"{cisty_std:.0f} Kč/měs")
-    if bonus>0 and uspora_diky_bonusu>0:
-        st.info(f"💡 Díky bonusu ušetří každý byt **{uspora_diky_bonusu:.0f} Kč/měs** na splátce.")
+    # Bonus pomáhá jen bytu se superdávkou — nezobrazujeme pro standardní byt
 with ba2:
     if pocet_nizko>0:
         st.markdown(f"**Byt se superdávkou** ({pocet_nizko}× v domě)")
