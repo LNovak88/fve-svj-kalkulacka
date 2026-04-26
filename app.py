@@ -1220,10 +1220,13 @@ else:
             _sv = sp_vt15 if model_v!="spolecne" else sp_sp15
             _sn = sp_by_nt15 if model_v!="spolecne" else np.zeros(_CD,dtype=float)
             _sm_v = _simuluj(_vyr_v,_sv,_sn,float(bat_v),model_v,_ez)
+            # Úspora za jistič pro JOM — klíčový benefit!
+            _jist_v = float(JISTIC_3x25.get(dist_w,JISTIC_3x25["ČEZ Distribuce"]).get(sazba,298))
+            _uspora_jist_v = _jist_v*(int(pocet_bytu)-1)*12.0 if model_v=="jom" else 0.0
             _cf_v = _cashflow(vl_vt=_sm_v["vlastni_vt_kwh"],vl_nt=_sm_v["vlastni_nt_kwh"],
                               pr=_sm_v["pretoky_kwh"],cvt=cena_vt_w,cnt=cena_nt_w,
                               cpr=0.95,vlast=0.0,uver=_inv,spl=_inv/15,splat=15,
-                              rust=3.0,deg=0.5,leta=25,deg_bat=2.0)
+                              rust=3.0,deg=0.5,leta=25,jist=_uspora_jist_v,deg_bat=2.0)
             _nav_v = next((r["rok"] for r in _cf_v if r["kumulativni"]>=0),None)
             _us25 = sum(_cf_v[r-1]["uspora_celkem"] for r in range(1,26))
             with col:
@@ -1513,9 +1516,14 @@ def _ckwp_res(kw):
     elif kw<40: return 28000
     elif kw<80: return 24000
     else: return 21000
+cena_kwp    = _ckwp_res(float(vykon))
+cena_fve    = int(float(vykon)*cena_kwp)
+cena_bat    = int(float(bat)*15000)
+_jom_m      = int(pocet_bytu)*10000+75000
+_vchod_e    = max(0,int(pocet_vchodu)-1)*30000
+cena_mericu = (_jom_m if model=="jom" else 0) + (_vchod_e if model!="spolecne" else 0)
 if cena_invest == 0:
-    cena_invest = vykon*_ckwp_res(vykon) + bat*15000
-    if model=="jom": cena_invest += pocet_bytu*10000+75000+max(0,pocet_vchodu-1)*30000
+    cena_invest = cena_fve + cena_bat + cena_mericu
 # Splátky
 vlastni_cast = float(cena_invest)*float(vlastni_pct)/100
 uver_cast    = max(0.0, float(cena_invest)-vlastni_cast)
@@ -1606,7 +1614,11 @@ st.divider()
 
 # ── POROVNÁNÍ MODELŮ ──────────────────────────────────────────────
 st.subheader("📊 Porovnání modelů sdílení")
-st.caption("Stejná FVE a investice pro všechny modely — mění se jen co FVE pokrývá.")
+st.caption("Stejná FVE a baterie pro všechny modely — mění se jen model sdílení, investice a úspory. "
+           "⚡ JOM: vyšší investice (měřiče +{:,} Kč) ale ušetří {:,.0f} Kč/rok na distribuci → proto může vycházet lépe než EDC.".format(
+               int(pocet_bytu)*10000+75000,
+               float(JISTIC_3x25.get(dist,JISTIC_3x25["ČEZ Distribuce"]).get(sazba,298))*(int(pocet_bytu)-1)*12
+           ))
 nazvy={"spolecne":"🏢 Jen společné","jom":"⚡ JOM","edc":"🔗 EDC"}
 # Najdi nejlepší model dle cashflow návratnosti
 best_mk = min(["spolecne","jom","edc"],
