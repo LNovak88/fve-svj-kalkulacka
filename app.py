@@ -923,6 +923,9 @@ if expert_mod:
                 "cena_pretoky":cena_pretoky,"splatka_byt_std":splatka_byt_std,
                 "splatka_byt_super":splatka_byt_super,"sp_cel":sp_cel,
                 "model":model,"vykon":float(vykon),
+                "koef_str":float(koef_str),"typ_str":typ_str,
+                "sklon":sklon,"azimut":azimut,"profil":profil,"sazba":sazba,
+                "sp_sp_mwh":sp_sp_mwh,"sp_by_nt_mwh":float(sp_by_nt_mwh),
             }}
         st.success(f"✅ Hotovo — {mesto} ({lat:.2f}°N, {lon:.2f}°E) {'· PVGIS data' if pvgis_ok else '· záložní model'}")
 
@@ -1432,6 +1435,9 @@ else:
                     "cena_pretoky":0.95,"splatka_byt_std":splatka_byt_std,
                     "splatka_byt_super":splatka_byt_super,"sp_cel":float(sp_sp+sp_by_vt+sp_by_nt),
                     "model":model,"vykon":float(vykon),
+                    "koef_str":float(koef_str),"typ_str":typ_str,
+                    "sklon":sklon,"azimut":azimut,"profil":profil,"sazba":sazba,
+                    "sp_sp_mwh":sp_sp_mwh,"sp_by_nt_mwh":float(sp_by_nt_mwh),
                 }}
 
         st.button("← Upravit parametry", on_click=lambda: st.session_state.update({"wizard_krok":1}))
@@ -1518,6 +1524,17 @@ if splatka_byt_std == 0 and cena_invest > 0:
 
 stat_nav=float(cena_invest)/rok1["uspora_celkem"] if rok1["uspora_celkem"]>0 else 999
 bonus = int(pocet_nizko) * int(bonus_byt)
+# Proměnné pro grafy
+vykon      = float(_p.get('vykon', 20.0)) if _p else 20.0
+koef_str   = float(_p.get('koef_str', 1.0)) if _p else 1.0
+profil     = _p.get('profil', 'mix') if _p else 'mix'
+sazba      = _p.get('sazba', 'D02d') if _p else 'D02d'
+sp_by_nt   = float(_p.get('sp_by_nt_mwh', 0)) * 1000 if _p else 0.0
+sp_sp      = float(_p.get('sp_sp_mwh', 3.5)) * 1000 if _p else 3500.0
+sp_by_vt   = float(_p.get('sp_by_vt_mwh', 0)) * 1000 if _p else 0.0
+typ_str    = _p.get('typ_str', 'sikma') if _p else 'sikma'
+sklon      = int(_p.get('sklon', 35)) if _p else 35
+azimut     = int(_p.get('azimut', 0)) if _p else 0
 
 # Splátky — bezpečný výpočet z session_state
 _wd2 = st.session_state.get("wizard_data", {})
