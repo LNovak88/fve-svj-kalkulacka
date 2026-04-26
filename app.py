@@ -1340,6 +1340,20 @@ else:
         sp_by_vt_mwh = wd["vt_mwh"]
         sp_by_nt_mwh = wd["nt_mwh"]
         ma_nt    = sazba in SAZBY_NT
+        # Investice
+        def _ckwp_w5(kw):
+            if kw<10: return 38000
+            elif kw<20: return 33000
+            elif kw<40: return 28000
+            elif kw<80: return 24000
+            else: return 21000
+        cena_kwp     = _ckwp_w5(float(vykon))
+        cena_fve     = int(float(vykon)*cena_kwp)
+        cena_bat     = int(float(bat)*15000)
+        _jom_merici  = int(pocet_bytu)*10000
+        _jom_projekt = 75000
+        cena_mericu  = (_jom_merici+_jom_projekt) if model=="jom" else 0
+        _vchod_extra = max(0,int(pocet_vchodu)-1)*30000
         cena_mericu += _vchod_extra if model!="spolecne" else 0
         cena_invest  = cena_fve+cena_bat+cena_mericu
         vlastni_cast = float(cena_invest)*float(vlastni_pct)/100
