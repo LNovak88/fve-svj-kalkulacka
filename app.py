@@ -1517,6 +1517,7 @@ if splatka_byt_std == 0 and cena_invest > 0:
     splatka_byt_std = _uv2/max(_sl2,1)/_pb2/12 if _sc2!="vlastni" else 0.0
 
 stat_nav=float(cena_invest)/rok1["uspora_celkem"] if rok1["uspora_celkem"]>0 else 999
+bonus = int(pocet_nizko) * int(bonus_byt)
 
 # Splátky — bezpečný výpočet z session_state
 _wd2 = st.session_state.get("wizard_data", {})
