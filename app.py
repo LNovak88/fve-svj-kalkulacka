@@ -1340,38 +1340,10 @@ else:
         sp_by_vt_mwh = wd["vt_mwh"]
         sp_by_nt_mwh = wd["nt_mwh"]
         ma_nt    = sazba in SAZBY_NT
-        cena_vt  = float(CENY_VT[dist][sazba])/1000
-        cena_nt  = float(CENY_NT[dist].get(sazba,CENY_VT[dist][sazba]))/1000
-        stay     = float(STAY_PLAT[dist])
-        jistic   = float(JISTIC_3x25[dist][sazba])
-
-        def _ckwp_w(kw):
-            if kw<10: return 38000
-            elif kw<20: return 33000
-            elif kw<40: return 28000
-            elif kw<80: return 24000
-            else: return 21000
-        cena_kwp   = _ckwp_w(float(vykon))
-        cena_fve   = int(float(vykon)*cena_kwp)
-        cena_bat   = int(float(bat)*15000)
-        _jom_merici  = int(pocet_bytu)*10000
-        _jom_projekt = 75000
-        cena_mericu  = (_jom_merici+_jom_projekt) if model=="jom" else 0
-        _vchod_extra = max(0,int(pocet_vchodu)-1)*30000
+# Další chybějící proměnné z params
         cena_mericu += _vchod_extra if model!="spolecne" else 0
         cena_invest  = cena_fve+cena_bat+cena_mericu
         vlastni_cast = float(cena_invest)*float(vlastni_pct)/100
-        uver_cast    = max(0.0,float(cena_invest)-vlastni_cast)
-        rocni_spl    = uver_cast/float(splatnost) if (scenar!="vlastni" and splatnost>0) else 0.0
-        uspora_jist  = jistic*(int(pocet_bytu)-1)*12.0 if model=="jom" else 0.0
-        bonus        = int(pocet_nizko)*int(bonus_byt)
-        podil_bytu_uver = uver_cast/float(pocet_bytu)
-        bonus_efekt_byt = min(float(bonus_byt),podil_bytu_uver)
-        zbytek_super = max(0.0,podil_bytu_uver-bonus_efekt_byt)
-        splatka_byt_std  = podil_bytu_uver/float(splatnost)/12 if (scenar!="vlastni" and splatnost>0) else 0
-        splatka_byt_super= zbytek_super/float(splatnost)/12 if (scenar!="vlastni" and splatnost>0) else 0
-        splatka_vsichni  = splatka_byt_std
-        uspora_diky_bonusu = splatka_byt_std-splatka_byt_super
 
         # Spustit simulaci
         with st.spinner("Simuluji..."):
@@ -1457,70 +1429,84 @@ sim=d["sim"]; cf=d["cf"]; srovnani=d["srovnani"]
 rok1=cf[0]
 nav=next((r["rok"] for r in cf if r["kumulativni"]>=0),None)
 
-# Načteme proměnné z res["params"] — uloženy při simulaci
+# === Načtení všech parametrů z session_state ===
 cena_invest = d.get("cena_invest", 0)
 _p = d.get("params", {})
-if _p:
-    pocet_bytu      = _p.get("pocet_bytu", 12)
-    scenar          = _p.get("scenar", "uver")
-    splatnost       = _p.get("splatnost", 15)
-    vlastni_pct     = _p.get("vlastni_pct", 0)
-    bonus_byt       = _p.get("bonus_byt", 100000)
-    pocet_nizko     = _p.get("pocet_nizko", 0)
-    bat             = _p.get("bat", 0)
-    ma_nt           = _p.get("ma_nt", False)
-    sp_by_vt_mwh    = _p.get("sp_by_vt_mwh", 0)
-    sp_by_nt_mwh    = _p.get("sp_by_nt_mwh", 0)
-    rust_cen        = _p.get("rust_cen", 3.0)
-    model           = _p.get("model", "edc")
-    deg_pan         = _p.get("deg_pan", 0.5)
-    cena_pretoky    = _p.get("cena_pretoky", 0.95)
-    sp_cel          = _p.get("sp_cel", 0)
-    splatka_byt_std = _p.get("splatka_byt_std", 0)
-    splatka_byt_super = _p.get("splatka_byt_super", 0)
-    deg_bat_val     = 2.0
-else:
-    # Fallback — wizard data
-    _wd = st.session_state.get("wizard_data", {})
-    pocet_bytu = _wd.get("pocet_bytu", 12)
-    pocet_nizko = _wd.get("pocet_nizko", 0)
-    bonus_byt = _wd.get("bonus_byt", 100000)
-    splatnost = _wd.get("splatnost", 15)
-    scenar = _wd.get("scenar", "uver")
-    vlastni_pct = _wd.get("vlastni_pct", 0)
-    bat = _wd.get("bat", 0)
-    ma_nt = False
-    sp_by_vt_mwh = _wd.get("vt_mwh", 0)
-    sp_by_nt_mwh = _wd.get("nt_mwh", 0)
-    rust_cen = 3.0; deg_pan = 0.5; cena_pretoky = 0.95; deg_bat_val = 2.0
-    sp_cel = 0; splatka_byt_std = 0; splatka_byt_super = 0
+_wd_fb = st.session_state.get("wizard_data", {})
 
-# Bezpečný výpočet odvozených hodnot ze sim pokud params chybí
-if sp_cel == 0:
-    sp_cel = float(sim.get("spotreba_kwh",0) or
-                   sim["vlastni_kwh"]+sim["odber_vt_kwh"]+sim.get("odber_nt_kwh",0))
+def _pg(key, default):
+    if _p and key in _p: return _p[key]
+    _map = {"vt_mwh":"sp_by_vt_mwh","nt_mwh":"sp_by_nt_mwh"}
+    k2 = _map.get(key,key)
+    if _p and k2 in _p: return _p[k2]
+    if key in _wd_fb: return _wd_fb[key]
+    if k2 in _wd_fb: return _wd_fb[k2]
+    return default
 
+pocet_bytu      = int(_pg("pocet_bytu", 12))
+pocet_nizko     = int(_pg("pocet_nizko", 0))
+bonus_byt       = int(_pg("bonus_byt", 100000))
+splatnost       = int(_pg("splatnost", 15))
+scenar          = str(_pg("scenar", "uver"))
+vlastni_pct     = float(_pg("vlastni_pct", 0))
+bat             = int(_pg("bat", 0))
+ma_nt           = bool(_pg("ma_nt", False))
+sp_by_vt_mwh    = float(_pg("sp_by_vt_mwh", 0))
+sp_by_nt_mwh    = float(_pg("sp_by_nt_mwh", 0))
+rust_cen        = float(_pg("rust_cen", 3.0))
+deg_pan         = float(_pg("deg_pan", 0.5))
+cena_pretoky    = float(_pg("cena_pretoky", 0.95))
+deg_bat_val     = 2.0
+model           = str(_pg("model", "edc"))
+sp_cel          = float(_pg("sp_cel", 0)) or float(sim.get("spotreba_kwh", 0))
+splatka_byt_std = float(_pg("splatka_byt_std", 0))
+splatka_byt_super = float(_pg("splatka_byt_super", 0))
+vykon           = float(_pg("vykon", 20.0))
+koef_str        = float(_pg("koef_str", 1.0))
+profil          = str(_pg("profil", "mix"))
+sazba           = str(_pg("sazba", "D02d"))
+dist            = str(_pg("dist", "ČEZ Distribuce"))
+pocet_vchodu    = int(_pg("pocet_vchodu", 1))
+sp_sp_mwh       = float(_pg("sp_sp_mwh", 3.5))
+sp_sp           = sp_sp_mwh * 1000
+sp_by_vt        = sp_by_vt_mwh * 1000
+sp_by_nt        = sp_by_nt_mwh * 1000
+typ_str         = str(_pg("typ_str", "sikma"))
+sklon           = int(_pg("sklon", 35))
+azimut          = int(_pg("azimut", 0))
+# Ceny
+cena_vt   = float(CENY_VT.get(dist, CENY_VT["ČEZ Distribuce"]).get(sazba, 7493)) / 1000
+cena_nt   = float(CENY_NT.get(dist, {}).get(sazba, 7493)) / 1000
+stay      = float(STAY_PLAT.get(dist, 163))
+jistic    = float(JISTIC_3x25.get(dist, JISTIC_3x25["ČEZ Distribuce"]).get(sazba, 298))
+uspora_jist = jistic*(int(pocet_bytu)-1)*12.0 if model=="jom" else 0.0
+# Investice
+def _ckwp_res(kw):
+    if kw<10: return 38000
+    elif kw<20: return 33000
+    elif kw<40: return 28000
+    elif kw<80: return 24000
+    else: return 21000
 if cena_invest == 0:
-    cena_invest = d.get("cena_invest",0)
-    # Pokud stále 0 — spočítáme z params
-    if cena_invest == 0 and _p:
-        _bat_p = _p.get("bat",0)
-        _vykon_p = _p.get("vykon", sp_cel/1000/1.05 if sp_cel>0 else 20)
-        def _ckwp_r(kw):
-            if kw<10: return 38000
-            elif kw<20: return 33000
-            elif kw<40: return 28000
-            elif kw<80: return 24000
-            else: return 21000
-        cena_invest = _vykon_p*_ckwp_r(_vykon_p) + _bat_p*15000
-
-if splatka_byt_std == 0 and cena_invest > 0:
-    _sc2 = _p.get("scenar","uver") if _p else "uver"
-    _sl2 = _p.get("splatnost",15) if _p else 15
-    _vp2 = _p.get("vlastni_pct",0) if _p else 0
-    _pb2 = _p.get("pocet_bytu",pocet_bytu) if _p else pocet_bytu
-    _uv2 = cena_invest*(1-_vp2/100)
-    splatka_byt_std = _uv2/max(_sl2,1)/_pb2/12 if _sc2!="vlastni" else 0.0
+    cena_invest = vykon*_ckwp_res(vykon) + bat*15000
+    if model=="jom": cena_invest += pocet_bytu*10000+75000+max(0,pocet_vchodu-1)*30000
+# Splátky
+vlastni_cast = float(cena_invest)*float(vlastni_pct)/100
+uver_cast    = max(0.0, float(cena_invest)-vlastni_cast)
+rocni_spl    = uver_cast/float(max(splatnost,1)) if scenar!="vlastni" else 0.0
+podil_bytu_uver = uver_cast/float(pocet_bytu) if pocet_bytu>0 else 0
+bonus_efekt_byt = min(float(bonus_byt), podil_bytu_uver)
+zbytek_super = max(0.0, podil_bytu_uver-bonus_efekt_byt)
+if splatka_byt_std == 0:
+    splatka_byt_std = podil_bytu_uver/float(max(splatnost,1))/12 if scenar!="vlastni" else 0.0
+    splatka_byt_super = zbytek_super/float(max(splatnost,1))/12 if scenar!="vlastni" else 0.0
+splatka_vsichni = splatka_byt_std
+uspora_diky_bonusu = splatka_byt_std - splatka_byt_super
+bonus = int(pocet_nizko) * int(bonus_byt)
+# Korekce sp_cel
+if sp_cel == 0:
+    sp_cel = float(sim.get("spotreba_kwh", sp_sp+sp_by_vt+sp_by_nt))
+_sp_cel_res = sp_cel if sp_cel>0 else 1.0
 
 stat_nav=float(cena_invest)/rok1["uspora_celkem"] if rok1["uspora_celkem"]>0 else 999
 bonus = int(pocet_nizko) * int(bonus_byt)
@@ -1534,49 +1520,10 @@ if splatka_byt_std == 0 and podil_bytu_uver > 0:
     _sc_r = _p.get("scenar","uver") if _p else "uver"
     splatka_byt_std = podil_bytu_uver/max(_sl_r,1)/12 if _sc_r!="vlastni" else 0.0
     splatka_byt_super = zbytek_super/max(_sl_r,1)/12 if _sc_r!="vlastni" else 0.0
-# Proměnné pro grafy
-vykon      = float(_p.get('vykon', 20.0)) if _p else 20.0
-koef_str   = float(_p.get('koef_str', 1.0)) if _p else 1.0
-profil     = _p.get('profil', 'mix') if _p else 'mix'
-sazba      = _p.get('sazba', 'D02d') if _p else 'D02d'
-sp_by_nt   = float(_p.get('sp_by_nt_mwh', 0)) * 1000 if _p else 0.0
-sp_sp      = float(_p.get('sp_sp_mwh', 3.5)) * 1000 if _p else 3500.0
-sp_by_vt   = float(_p.get('sp_by_vt_mwh', 0)) * 1000 if _p else 0.0
-typ_str    = _p.get('typ_str', 'sikma') if _p else 'sikma'
-sklon      = int(_p.get('sklon', 35)) if _p else 35
-azimut     = int(_p.get('azimut', 0)) if _p else 0
-
-# Splátky — bezpečný výpočet z session_state
-_wd2 = st.session_state.get("wizard_data", {})
-_scenar    = locals().get("scenar",    _wd2.get("scenar",    "uver"))
-_splatnost = locals().get("splatnost", _wd2.get("splatnost", 15))
-_pocet_bytu= locals().get("pocet_bytu",_wd2.get("pocet_bytu", 12))
-_bonus_byt2= locals().get("bonus_byt", _wd2.get("bonus_byt", 100000))
-
-try:
-    _uver_v = uver_cast
-except NameError:
-    _uver_v = float(cena_invest) * (1 - float(_wd2.get("vlastni_pct", 0))/100)
-
-if _scenar != "vlastni" and _splatnost > 0:
-    splatka_vsichni = _uver_v / float(max(_splatnost,1)) / float(_pocet_bytu) / 12
-else:
-    splatka_vsichni = 0.0
-
-try:
-    splatka_vsichni = splatka_byt_std  # přepíše pokud je k dispozici
-except NameError:
-    pass
-
-try:
-    cista_splatka_super = splatka_byt_super
-except NameError:
-    _bonus_ef = min(float(_bonus_byt2), _uver_v/float(max(_pocet_bytu,1)))
-    _zbytek = max(0, _uver_v/float(max(_pocet_bytu,1)) - _bonus_ef)
-    cista_splatka_super = _zbytek/float(max(_splatnost,1))/12 if _scenar!="vlastni" else 0.0
-
-uspora_byt_mesic = rok1["uspora_celkem"] / float(_pocet_bytu) / 12.0
-uspora_diky_bonusu = splatka_vsichni - cista_splatka_super
+splatka_vsichni = splatka_byt_std
+cista_splatka_super = splatka_byt_super
+uspora_byt_mesic = rok1["uspora_celkem"] / float(pocet_bytu) / 12.0
+uspora_diky_bonusu = splatka_byt_std - splatka_byt_super
 
 st.divider()
 st.subheader("📊 Výsledky simulace")
