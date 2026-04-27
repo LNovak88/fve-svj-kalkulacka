@@ -369,8 +369,11 @@ def _sp_sp_vypocet(pocet_bytu, pocet_pater, ma_vytah, pocet_vytahu,
     sp_osvetleni = pp * 200 + pb * 2 + 100          # kWh/rok
     sp_vytah     = (3000 * pv * (1 + pp / 20.0)
                     if ma_vytah else 0.0)             # kWh/rok
-    sp_cerpadla  = (800 * pc * (1 + pp / 30.0)
-                    if pc > 0 else 0.0)               # kWh/rok (VT — běží přes den)
+    # Oběhová čerpadla — topná sezóna září–květen = 8 měsíců = 67 % roku
+    # Základ 800 kWh/čerpadlo/rok při celoroční práci → 800×0.67 = 536 kWh/rok
+    # Korekce na počet pater (delší rozvody = vyšší příkon)
+    sp_cerpadla  = (536 * pc * (1 + pp / 30.0)
+                    if pc > 0 else 0.0)               # kWh/rok (VT)
     sp_vt = sp_osvetleni + sp_vytah + sp_cerpadla
 
     # --- NT spotřeba ---
@@ -655,6 +658,10 @@ def _cashflow(vl_vt, vl_nt, pr, cvt, cnt, cpr,
                     "uspora_vt":round(float(vl_vt)*d*float(cvt)*c),
                     "uspora_nt":round(float(vl_nt)*d*float(cnt)*c),
                     "uspora_pretoky":round(float(pr)*d*float(cpr)*c),
+                    "uspora_jom":round(float(jist)*c),
+                    "uspora_fve":round(float(vl_vt)*d*float(cvt)*c +
+                                       float(vl_nt)*d*float(cnt)*c +
+                                       float(pr)*d*float(cpr)*c),
                     "uspora_celkem":round(u),
                     "splatka":round(s),
                     "cisty_prinos":round(u-s),
@@ -887,16 +894,26 @@ if expert_mod:
 
     cena_vt  = float(CENY_VT[dist][sazba])/1000.0
     cena_nt  = float(CENY_NT[dist].get(sazba, CENY_VT[dist][sazba]))/1000.0
+    # SP má vlastní sazbu (D02d, D25d nebo D57d) — cena kWh SP se liší od bytů
+    _sazba_sp  = st.session_state.wizard_data.get("sazba_sp", "D02d")
+    cena_vt_sp = float(CENY_VT[dist].get(_sazba_sp, CENY_VT[dist][sazba]))/1000.0
+    cena_nt_sp = float(CENY_NT[dist].get(_sazba_sp, CENY_VT[dist].get(_sazba_sp, CENY_VT[dist][sazba])))/1000.0
     stay     = float(STAY_PLAT[dist])
     jistic   = float(JISTIC_3x25[dist][sazba])
-    naklad   = sp_cel*cena_vt + (stay+jistic)*12.0  # zjednodušení pro info
-    if ma_nt:
-        naklad = sp_by_vt*cena_vt + sp_by_nt*cena_nt + sp_sp*cena_vt + (stay+jistic)*12.0
+    # Náklady: byty (VT+NT) + SP (VT+NT dle sazby SP)
+    _sp_sp_vt = float(st.session_state.wizard_data.get("sp_sp_vt_mwh", sp_sp/1000.0))
+    _sp_sp_nt = float(st.session_state.wizard_data.get("sp_sp_nt_mwh", 0.0))
+    naklad   = (sp_by_vt*cena_vt + sp_by_nt*cena_nt
+                + _sp_sp_vt*1000*cena_vt_sp + _sp_sp_nt*1000*cena_nt_sp
+                + (stay+jistic)*12.0)
 
     st.info(
         f"💡 **{dist}** · **{sazba}** · s DPH · POZE=0 Kč od 2026 | "
-        f"VT: **{cena_vt:.2f} Kč/kWh**"
+        f"Byty VT: **{cena_vt:.2f} Kč/kWh**"
         + (f" · NT: **{cena_nt:.2f} Kč/kWh**" if ma_nt else "")
+        + (f" | SP sazba: **{_sazba_sp}** · VT: **{cena_vt_sp:.2f} Kč/kWh**"
+           + (f" · NT: **{cena_nt_sp:.2f} Kč/kWh**" if _sazba_sp in CENY_NT[dist] else "")
+           if _sazba_sp != sazba else "")
         + f" · Stálé platy: **{stay+jistic:.0f} Kč/měs** · Roční náklad: **{naklad:,.0f} Kč**"
     )
 
@@ -2109,17 +2126,22 @@ else:
 _sp_cel_res = float(sp_cel) if sp_cel > 0 else float(sim.get("spotreba_kwh", sim["vlastni_kwh"]+sim["odber_vt_kwh"]+sim.get("odber_nt_kwh",0)))
 mira_sob_real = min(1.0, sim["vlastni_kwh"] / _sp_cel_res) if _sp_cel_res > 0 else 0.0
 
-r1,r2,r3,r4,r5,r6=st.columns(6)
+r1,r2,r3,r4,r5,r6,r7=st.columns(7)
 with r1: st.metric("Roční výroba FVE",f"{sim['vyroba_kwh']/1000:.1f} MWh")
 with r2: st.metric("Využití výroby v domě",f"{util_pct:.1f} %",
                    delta=util_delta,
                    help="Klíčová metrika: kolik % výroby FVE se spotřebuje přímo v domě nebo přes baterii. Zbytek jde za nízkou výkupní cenu.")
 with r3: st.metric("Soběstačnost",f"{mira_sob_real*100:.1f} %",help="% celkové spotřeby domu (vč. bytů) pokryté FVE")
-with r4: st.metric("Roční úspora (rok 1)",f"{rok1['uspora_celkem']:,.0f} Kč")
-with r5: st.metric("Orientační návratnost",
+with r4: st.metric("Úspora FVE (rok 1)",
+                   f"{rok1.get('uspora_fve', rok1['uspora_celkem']-rok1.get('uspora_jom',0)):,.0f} Kč",
+                   help="Úspora z vyrobené elektřiny (přímá spotřeba VT, baterie NT, přetoky)")
+with r5: st.metric("Úspora JOM (rok 1)",
+                   f"{rok1.get('uspora_jom', 0):,.0f} Kč" if rok1.get('uspora_jom', 0) > 0 else "—",
+                   help="Úspora ze zrušení individuálních odběrných míst (jističe + stálé platby)")
+with r6: st.metric("Orientační návratnost",
                    f"{stat_nav:.1f} let" if stat_nav > 0.1 else "—",
                    help="Investice ÷ roční úspora — pouze orientačně, bez vlivu růstu cen")
-with r6: st.metric("Cashflow návratnost",f"{nav} let" if nav else ">25 let",
+with r7: st.metric("Cashflow návratnost",f"{nav} let" if nav else ">25 let",
                    help="Realistická návratnost: kdy kumulativní cashflow přejde do kladných čísel")
 
 # EDC efektivita
@@ -2135,14 +2157,19 @@ st.info(f"⏱️ **Míra časového sladění výroby a spotřeby: {prekryv:.1f}
         f"{prekryv_hod}. "
         f"Závisí na profilu: senioři = vyšší, pracující = nižší.")
 
-# VT/NT rozpad úspory
-if ma_nt and sim["vlastni_nt_kwh"]>0:
-    st.info(
-        f"🔋 **Rozpad úspory:** "
-        f"VT přímá spotřeba: **{rok1['uspora_vt']:,.0f} Kč** · "
-        f"NT z baterie: **{rok1['uspora_nt']:,.0f} Kč** · "
-        f"Přetoky: **{rok1['uspora_pretoky']:,.0f} Kč**"
-    )
+# Rozpad úspory — FVE vs JOM zvlášť
+_uspora_fve1  = rok1.get("uspora_fve",  rok1["uspora_vt"] + rok1["uspora_nt"] + rok1["uspora_pretoky"])
+_uspora_jom1  = rok1.get("uspora_jom", 0)
+
+_radky = []
+if _uspora_fve1 > 0:
+    _detail = f"(VT {rok1['uspora_vt']:,.0f} + NT {rok1['uspora_nt']:,.0f} + přetoky {rok1['uspora_pretoky']:,.0f} Kč)"
+    _radky.append(f"☀️ **Úspora z FVE: {_uspora_fve1:,.0f} Kč/rok** {_detail}")
+if _uspora_jom1 > 0:
+    _radky.append(f"⚡ **Úspora z JOM: {_uspora_jom1:,.0f} Kč/rok** "
+                  f"(zrušení {int(pocet_bytu)+1} ODM → 1 ODM, ušetřené jističe + stálé platby)")
+if _radky:
+    st.info("🔍 **Rozpad roční úspory (rok 1):**\n\n" + "\n\n".join(_radky))
 
 st.divider()
 
@@ -2151,7 +2178,7 @@ st.subheader("📊 Porovnání modelů sdílení")
 st.caption("Stejná FVE a baterie pro všechny modely — mění se jen model sdílení, investice a úspory. "
            "⚡ JOM: vyšší investice (měřiče +{:,} Kč) ale ušetří {:,.0f} Kč/rok na distribuci → proto může vycházet lépe než EDC.".format(
                int(pocet_bytu)*10000+75000,
-               float(JISTIC_3x25.get(dist,JISTIC_3x25["ČEZ Distribuce"]).get(sazba,298))*(int(pocet_bytu)-1)*12
+               float(uspora_jist)
            ))
 nazvy={"spolecne":"🏢 Jen společné","jom":"⚡ JOM","edc":"🔗 EDC"}
 # Najdi nejlepší model dle cashflow návratnosti
