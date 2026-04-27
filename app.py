@@ -939,20 +939,32 @@ if expert_mod:
             st.caption("Hlavní jistič SVJ na patce domu. Jistič bytu (typicky 1×25A) se SVJ netýká.")
 
         st.markdown("**Složení domácností**")
-        st.caption("Ovlivňuje tvar spotřeby — kdy lidé jsou doma a kdy ne. Součet nemusí být 100 %, zbytek = smíšený profil.")
+        st.caption("Součet tří skupin musí být max 100 % — zbytek do 100 % = smíšený/neznámý profil.")
         _prac_def = int(_wg("pct_pracujici", 50))
         _sen_def  = int(_wg("pct_seniori",   20))
         _rod_def  = int(_wg("pct_rodiny",    20))
         sl1, sl2, sl3 = st.columns(3)
         with sl1: pct_pracujici = st.slider("💼 Pracující", 0, 100, _prac_def, 5, key="e_pct_prac",
                                              help="Pryč 8–17h, večerní špička")
-        with sl2: pct_seniori   = st.slider("🏠 Důchodci/home office", 0, 100, _sen_def, 5, key="e_pct_sen",
+        with sl2: pct_seniori   = st.slider("🏠 Důchodci/HO", 0, 100, _sen_def, 5, key="e_pct_sen",
                                              help="Doma celý den, dopolední plateau")
         with sl3: pct_rodiny    = st.slider("👨‍👩‍👧 Rodiny", 0, 100, _rod_def, 5, key="e_pct_rod",
                                              help="Ráno spěch, večer všichni doma")
-        _pct_mix = max(0, 100 - pct_pracujici - pct_seniori - pct_rodiny)
-        st.caption(f"Smíšený/ostatní: **{_pct_mix} %** · "
-                   f"Pracující: {pct_pracujici} % · Důchodci: {pct_seniori} % · Rodiny: {pct_rodiny} %")
+        _pct_celkem = pct_pracujici + pct_seniori + pct_rodiny
+        _pct_mix = max(0, 100 - _pct_celkem)
+        if _pct_celkem > 100:
+            st.error(f"⚠️ Součet překračuje 100 % ({_pct_celkem} %) — hodnoty se normalizují pro výpočet.")
+            # normalizace pro výpočet
+            _f = 100.0 / _pct_celkem
+            pct_pracujici = int(pct_pracujici * _f)
+            pct_seniori   = int(pct_seniori   * _f)
+            pct_rodiny    = int(pct_rodiny    * _f)
+            _pct_mix = 0
+        else:
+            _bar = "█" * (_pct_celkem // 5) + "░" * ((100 - _pct_celkem) // 5)
+            st.caption(f"{_bar} {_pct_celkem}/100 % · "
+                       f"Pracující {pct_pracujici} % · Důchodci {pct_seniori} % · "
+                       f"Rodiny {pct_rodiny} % · Ostatní {_pct_mix} %")
         profil = "mix"  # zpětná kompatibilita — uprava se počítá zvlášť
 
     # NT spotřeba — jen pro sazby s NT tarifem
@@ -1579,16 +1591,31 @@ else:
                              key="w_dist",
                              help="ČEZ = většina ČR | EG.D = Morava/jih Čech | PRE = Praha")
         st.markdown("**Složení domácností**")
-        st.caption("Ovlivňuje tvar spotřeby přes den — kdy lidé jsou doma. Zbytek do 100 % = smíšený profil.")
+        st.caption("Součet tří skupin musí být max 100 % — zbytek = smíšený/neznámý profil.")
         wsl1, wsl2, wsl3 = st.columns(3)
         with wsl1: w_pct_prac = st.slider("💼 Pracující", 0, 100,
-                                           int(_wd.get("pct_pracujici", 50)), 5, key="w_pct_prac")
+                                           int(_wd.get("pct_pracujici", 50)), 5, key="w_pct_prac",
+                                           help="Pryč 8–17h, večerní špička")
         with wsl2: w_pct_sen  = st.slider("🏠 Důchodci/HO", 0, 100,
-                                           int(_wd.get("pct_seniori", 20)), 5, key="w_pct_sen")
+                                           int(_wd.get("pct_seniori", 20)), 5, key="w_pct_sen",
+                                           help="Doma celý den, dopolední plateau")
         with wsl3: w_pct_rod  = st.slider("👨‍👩‍👧 Rodiny", 0, 100,
-                                           int(_wd.get("pct_rodiny", 20)), 5, key="w_pct_rod")
-        _w_mix = max(0, 100 - w_pct_prac - w_pct_sen - w_pct_rod)
-        st.caption(f"Smíšený/ostatní: **{_w_mix} %**")
+                                           int(_wd.get("pct_rodiny", 20)), 5, key="w_pct_rod",
+                                           help="Ráno spěch, večer všichni doma")
+        _w_celkem = w_pct_prac + w_pct_sen + w_pct_rod
+        _w_mix = max(0, 100 - _w_celkem)
+        if _w_celkem > 100:
+            st.error(f"⚠️ Součet překračuje 100 % ({_w_celkem} %) — normalizuji pro výpočet.")
+            _wf = 100.0 / _w_celkem
+            w_pct_prac = int(w_pct_prac * _wf)
+            w_pct_sen  = int(w_pct_sen  * _wf)
+            w_pct_rod  = int(w_pct_rod  * _wf)
+            _w_mix = 0
+        else:
+            _wbar = "█" * (_w_celkem // 5) + "░" * ((100 - _w_celkem) // 5)
+            st.caption(f"{_wbar} {_w_celkem}/100 % · "
+                       f"Pracující {w_pct_prac} % · Důchodci {w_pct_sen} % · "
+                       f"Rodiny {w_pct_rod} % · Ostatní {_w_mix} %")
         profil = "mix"  # zpětná kompatibilita
 
         # ── JOM info box — až po výběru distributora (přesná čísla) ──
