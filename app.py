@@ -512,12 +512,19 @@ def _gen_vyroba_fallback(kwp, sklon=35, azimut=0):
 
 
 def _interpoluj(hod):
-    h=np.array(hod,dtype=float); n=len(h)
-    res=np.zeros(n*4,dtype=float)
-    for i in range(n):
-        ni=(i+1)%n
-        for j in range(4):
-            t=j/4.0; res[i*4+j]=(h[i]*(1.0-t)+h[ni]*t)/4.0
+    """
+    Převede hodinová data (8760 hodnot) na 15minutová (35040 hodnot).
+
+    Pro výrobu FVE: každou hodinovou hodnotu rozdělíme na 4 stejné 15min díly
+    (každý = 1/4 hodinové hodnoty). To zachovává energii přesně.
+
+    Lineární interpolace mezi hodinami by byla nepřesná pro FVE — způsobuje
+    záporné hodnoty při přechodu noc→ráno a ráno→noc.
+    Numpy repeat je rychlejší a energeticky konzervativní.
+    """
+    h = np.array(hod, dtype=float)
+    # Každou hodinovou hodnotu rozděl na 4 čtvrthodinové díly (energie = h/4 kWh per 15min)
+    res = np.repeat(h, 4) / 4.0
     return res[:_CD]
 
 
@@ -716,22 +723,47 @@ def _geocode(dotaz):
 
 
 @st.cache_data(ttl=86400)
-def _pvgis(lat,lon,kwp,sklon,azimut):
+@st.cache_data(ttl=86400, show_spinner=False)
+def _pvgis(lat, lon, kwp, sklon, azimut):
+    """
+    Stáhne hodinová data výroby FVE z PVGIS API (EU JRC).
+    Používá TMY — Typical Meteorological Year složený z nejreprezentativnějších
+    měsíců za období 2005–2020. Výrazně přesnější než matematický fallback.
+
+    Cache: 24 hodin (data se nemění, šetří API volání při překreslení Streamlitu).
+
+    Returns: (array 8760 hodnot v kWh/h, error_string nebo None)
+    """
     try:
-        r=requests.get("https://re.jrc.ec.europa.eu/api/v5_2/seriescalc",
-                       params={"lat":float(lat),"lon":float(lon),
-                               "peakpower":float(kwp),"loss":14,
-                               "angle":int(sklon),"aspect":int(azimut),
-                               "outputformat":"json","browser":0,
-                               "startyear":2020,"endyear":2020,
-                               "pvcalculation":1,"pvtechchoice":"crystSi",
-                               "mountingplace":"building","trackingtype":0},
-                       timeout=30)
+        r = requests.get(
+            "https://re.jrc.ec.europa.eu/api/v5_2/seriescalc",
+            params={
+                "lat":          float(lat),
+                "lon":          float(lon),
+                "peakpower":    float(kwp),
+                "loss":         14,           # systémové ztráty 14 % (kabeláž, střídač, znečištění)
+                "angle":        int(sklon),
+                "aspect":       int(azimut),  # 0 = jih, -90 = východ, 90 = západ
+                "outputformat": "json",
+                "browser":      0,
+                "pvcalculation": 1,
+                "pvtechchoice": "crystSi",    # krystalický křemík — nejběžnější
+                "mountingplace": "building",  # na střeše budovy (ne volné pole)
+                "trackingtype": 0,            # pevná montáž
+                "usehorizon":   1,            # zohledni okolní horizont
+                "tmy":          1,            # TMY — Typical Meteorological Year!
+            },
+            timeout=30
+        )
         r.raise_for_status()
-        arr=np.array([float(h["P"])/1000.0 for h in r.json()["outputs"]["hourly"]],dtype=float)
-        return arr[:8760],None
+        data = r.json()
+        arr = np.array(
+            [float(h["P"]) / 1000.0 for h in data["outputs"]["hourly"]],
+            dtype=float
+        )
+        return arr[:8760], None
     except Exception as e:
-        return None,str(e)
+        return None, str(e)
 
 
 def _gen_vyroba_den(kwp, sezona, pocasi):
@@ -1137,12 +1169,28 @@ if expert_mod:
         if geo_err: st.error(f"Lokalita nenalezena: {geo_err}"); st.stop()
 
         kwp_eff=float(vykon)*float(koef_str)
-        with st.spinner(f"Stahuji solární data pro {mesto} z PVGIS..."):
+        with st.spinner(f"Stahuji solární TMY data pro {mesto} z PVGIS (EU JRC)..."):
             vyroba_hod,pvgis_err=_pvgis(lat,lon,kwp_eff,sklon,azimut)
         if pvgis_err:
-            st.warning("⚠️ PVGIS nedostupné — používám kalibrovaný záložní model.")
+            st.warning(
+                f"⚠️ PVGIS nedostupné ({pvgis_err[:80]}) — používám záložní matematický model. "
+                f"Výsledky mohou být méně přesné, zejména v zimních měsících."
+            )
             vyroba_hod=_gen_vyroba_fallback(kwp_eff,sklon,azimut); pvgis_ok=False
-        else: pvgis_ok=True
+        else:
+            pvgis_ok=True
+            # Zobraz měsíční výrobu z PVGIS jako kontrolu
+            _mes_kwh=[]; _h=0
+            for _d in [31,28,31,30,31,30,31,31,30,31,30,31]:
+                _mes_kwh.append(round(float(vyroba_hod[_h:_h+_d*24].sum())))
+                _h+=_d*24
+            _rocni=sum(_mes_kwh)
+            st.success(
+                f"☀️ **PVGIS TMY data načtena** — {mesto} · {kwp_eff:.1f} kWp · "
+                f"sklon {sklon}° · azimut {azimut}° | "
+                f"Roční výroba: **{_rocni:,} kWh** ({_rocni/kwp_eff:.0f} kWh/kWp) · "
+                f"Měsíce: {' '.join(f'{m}:{v}' for m,v in zip(_MESICE,_mes_kwh))}"
+            )
 
         with st.spinner("Simuluji v 15minutových intervalech..."):
             vyroba_15=_interpoluj(vyroba_hod)
