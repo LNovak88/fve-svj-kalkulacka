@@ -19,36 +19,31 @@ import plotly.graph_objects as go
 # = silová elektřina + distribuce + systémové služby + daň z elektřiny
 # POZE = 0 Kč/MWh od 1.1.2026 (hradí stát)
 #
-# Zdroj: ČEZ "Elektřina na dobu neurčitou" platná 1.1.2026
-#         EG.D "Elektřina Klid na 3 roky" platná 1.1.2026
-#         PRE "PRE PROUD KLASIK" platná 1.11.2025 + distribuce 1.1.2026
-#
-# Složky (bez DPH, Kč/MWh):
-#   ČEZ: silová VT 3190 + distribuce dle sazby + sys 171 + daň 28
-#   EGD: silová VT 2390 + distribuce dle sazby + sys 164 + daň 28
-#   PRE: silová VT 2560 + distribuce dle sazby + sys 164 + daň 28
+# Zdroj: TZB-info srovnání cen 2026 (publikováno 29.12.2025)
+#   ČEZ Prodej — standardní produkt (ne "na dobu neurčitou"!)
+#   E.ON Energie — produktová řada Elektřina platná 1.1.2026
+#   PRE — PRE PROUD KLASIK platný 1.11.2025
 # ================================================================
 CENY_VT = {
-    #  Kč/MWh s DPH (×1.21 ze součtu bez DPH)
-    "ČEZ Distribuce": {"D01d":11594,"D02d":10742,"D25d":11145,"D26d": 9668,"D27d":11145,
-                       "D35d": 9634,"D45d": 9634,"D56d": 9634,"D57d": 9634,"D61d":12174},
-    "EG.D (E.ON)":    {"D01d": 6405,"D02d": 5901,"D25d": 5839,"D26d": 4622,"D27d": 5839,
-                       "D35d": 4032,"D45d": 4032,"D56d": 4032,"D57d": 4032,"D61d": 7198},
-    "PREdistribuce":  {"D01d": 7433,"D02d": 6405,"D25d": 6649,"D26d": 4862,"D27d": 6649,
-                       "D35d": 4386,"D45d": 4386,"D56d": 4386,"D57d": 4386,"D61d": 8136},
+    #  Kč/MWh s DPH — VT (vysoký tarif)
+    "ČEZ Distribuce": {"D01d": 7320,"D02d": 6610,"D25d": 6920,"D26d": 5650,"D27d": 6920,
+                       "D35d": 5410,"D45d": 5410,"D56d": 5410,"D57d": 5410,"D61d": 8050},
+    "EG.D (E.ON)":    {"D01d": 7050,"D02d": 6550,"D25d": 6650,"D26d": 5430,"D27d": 6650,
+                       "D35d": 4270,"D45d": 4270,"D56d": 4270,"D57d": 4270,"D61d": 7720},
+    "PREdistribuce":  {"D01d": 5980,"D02d": 5570,"D25d": 5620,"D26d": 4840,"D27d": 5620,
+                       "D35d": 3910,"D45d": 3910,"D56d": 3910,"D57d": 3910,"D61d": 6770},
 }
 CENY_NT = {
-    #  Kč/MWh s DPH — NT tarif (silová NT + distribuce NT + sys + daň)
-    "ČEZ Distribuce": {"D25d":8131,"D26d":8131,"D27d":8032,"D35d":8771,
-                       "D45d":8771,"D56d":8771,"D57d":8771,"D61d":8451},
-    "EG.D (E.ON)":    {"D25d":3395,"D26d":3395,"D27d":3395,"D35d":3395,
-                       "D45d":3395,"D56d":3395,"D57d":3395,"D61d":3395},
-    "PREdistribuce":  {"D25d":3644,"D26d":3644,"D27d":3644,"D35d":3644,
-                       "D45d":3644,"D56d":3644,"D57d":3644,"D61d":3644},
+    #  Kč/MWh s DPH — NT (nízký tarif)
+    "ČEZ Distribuce": {"D25d":4070,"D26d":4070,"D27d":4020,"D35d":4390,
+                       "D45d":4390,"D56d":4390,"D57d":4390,"D61d":4200},
+    "EG.D (E.ON)":    {"D25d":3830,"D26d":3830,"D27d":3830,"D35d":3830,
+                       "D45d":3830,"D56d":3830,"D57d":3830,"D61d":3830},
+    "PREdistribuce":  {"D25d":3590,"D26d":3590,"D27d":3590,"D35d":3590,
+                       "D45d":3590,"D56d":3590,"D57d":3590,"D61d":3590},
 }
 # Stálý plat za odběrné místo (Kč/měs s DPH) — obchodní + nesíťová infrastruktura
-# ČEZ: obch 163 Kč + nesíťová 15 Kč = 178 Kč; EGD: 144+15=159; PRE: 157+16=173
-STAY_PLAT={"ČEZ Distribuce":178,"EG.D (E.ON)":159,"PREdistribuce":173}
+STAY_PLAT={"ČEZ Distribuce":179,"EG.D (E.ON)":160,"PREdistribuce":157}
 # ================================================================
 # CENÍKY JISTIČŮ 2026 — skutečné fixní ceny dle rozsahů (s DPH)
 # Zdroj: oficiální ceníky ČEZ, EG.D a PREdistribuce platné 1.1.2026
