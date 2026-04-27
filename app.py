@@ -886,8 +886,49 @@ if expert_mod:
         pocet_bytu=st.number_input("Počet bytů",2,200,int(_wg("pocet_bytu",12)),1,key="e_pocet_bytu")
         pocet_vchodu=st.number_input("Počet vchodů",1,10,int(_wg("pocet_vchodu",1)),1,key="e_pocet_vchodu",
                                       help="Ovlivňuje náklady na rozvod instalace — každý vchod má svůj rozvaděč")
-        sp_sp_mwh=st.number_input("Spotřeba společných prostor (MWh/rok)",0.1,50.0,float(_wg("sp_sp_mwh",3.5)),0.1,format="%.1f",key="e_sp_sp",
-                                   help="Výtah, osvětlení chodeb, čerpadla")
+        # ── Společné prostory ─────────────────────────────────────
+        _sp_znam_e = st.toggle("📋 Spotřebu SP znám", value=bool(_wg("sp_znam_spotreba", False)),
+                                key="e_sp_znam", help="Zapněte pokud máte fakturu za SP")
+        if _sp_znam_e:
+            sp_sp_mwh = st.number_input("Spotřeba SP — VT (MWh/rok)", 0.1, 50.0,
+                                         float(_wg("sp_sp_mwh", 3.5)), 0.1, format="%.1f", key="e_sp_sp",
+                                         help="Z faktury SP: kWh VT ÷ 1000")
+            _sp_sazby_e = list(CENY_VT["ČEZ Distribuce"].keys())
+            _sp_sazba_e = st.selectbox("Sazba SP", _sp_sazby_e,
+                                        index=_sp_sazby_e.index(_wg("sazba_sp","D02d")) if _wg("sazba_sp","D02d") in _sp_sazby_e else 1,
+                                        key="e_sp_sazba", format_func=lambda x: f"{x} — {POPIS_SAZEB.get(x,'')}")
+            _sp_jistice_e = ["3×25A","3×32A","3×40A","3×50A","3×63A","3×80A","3×100A"]
+            _sp_jistic_e = st.selectbox("Jistič SP", _sp_jistice_e,
+                                         index=_sp_jistice_e.index(_wg("jistic_sp","3×25A")) if _wg("jistic_sp","3×25A") in _sp_jistice_e else 0,
+                                         key="e_sp_jistic")
+            _sp_jistic_a_map = {"3×25A":25,"3×32A":32,"3×40A":40,"3×50A":50,"3×63A":63,"3×80A":80,"3×100A":100}
+            _sp_jistic_a_e = _sp_jistic_a_map[_sp_jistic_e]
+        else:
+            with st.expander("🏢 Dopočítat spotřebu SP ze zařízení", expanded=False):
+                _sp_ep1, _sp_ep2 = st.columns(2)
+                with _sp_ep1:
+                    _e_pp = st.number_input("Počet pater", 1, 30, int(_wg("sp_pocet_pater",4)), 1, key="e_sp_pp")
+                    _e_mv = st.checkbox("🛗 Výtah", value=bool(_wg("sp_ma_vytah",False)), key="e_sp_mv")
+                    if _e_mv:
+                        _e_pv = st.number_input("Počet výtahů", 1, 10, int(_wg("sp_pocet_vytahu",1)), 1, key="e_sp_pv")
+                    else:
+                        _e_pv = 0
+                    _e_mt = st.checkbox("🚿 Centrální TUV", value=bool(_wg("sp_ma_tuv",False)), key="e_sp_mt")
+                with _sp_ep2:
+                    _e_tc = st.checkbox("♨️ TČ domu", value=bool(_wg("sp_ma_tc",False)), key="e_sp_tc")
+                    _e_ev = st.number_input("🔌 Nabíječky EV", 0, 50, int(_wg("sp_pocet_ev",0)), 1, key="e_sp_ev")
+                    _e_cp = st.number_input("🔄 Oběhová čerpadla", 0, 20, int(_wg("sp_pocet_cerpadel",0)), 1, key="e_sp_cp")
+            _sp_res_e = _sp_sp_vypocet(
+                pocet_bytu=pocet_bytu, pocet_pater=_wg("sp_pocet_pater",4),
+                ma_vytah=_wg("sp_ma_vytah",False), pocet_vytahu=_wg("sp_pocet_vytahu",1),
+                ma_tuv_central=_wg("sp_ma_tuv",False), ma_tc_dum=_wg("sp_ma_tc",False),
+                pocet_ev_nabijec=_wg("sp_pocet_ev",0), pocet_cerpadel=_wg("sp_pocet_cerpadel",0),
+            )
+            sp_sp_mwh   = _sp_res_e["sp_mwh"]
+            _sp_sazba_e = _sp_res_e["sazba_sp"]
+            _sp_jistic_e = _sp_res_e["jistic_sp"]
+            _sp_jistic_a_e = _sp_res_e["jistic_sp_a"]
+            st.caption(f"🏢 SP: **{sp_sp_mwh:.2f} MWh/rok** · Sazba: **{_sp_sazba_e}** · Jistič: **{_sp_jistic_e}**")
 
         # Checkboxy zařízení — automatická spotřeba
         st.markdown("**Co v domě používáte na elektřinu?**")
@@ -999,27 +1040,26 @@ if expert_mod:
 
     cena_vt  = float(CENY_VT[dist][sazba])/1000.0
     cena_nt  = float(CENY_NT[dist].get(sazba, CENY_VT[dist][sazba]))/1000.0
-    # SP má vlastní sazbu (D02d, D25d nebo D57d) — cena kWh SP se liší od bytů
-    _sazba_sp  = st.session_state.wizard_data.get("sazba_sp", "D02d")
-    cena_vt_sp = float(CENY_VT[dist].get(_sazba_sp, CENY_VT[dist][sazba]))/1000.0
-    cena_nt_sp = float(CENY_NT[dist].get(_sazba_sp, CENY_VT[dist].get(_sazba_sp, CENY_VT[dist][sazba])))/1000.0
+    # SP — sazba a jistič z nové SP sekce (ne z wizard_data)
+    cena_vt_sp = float(CENY_VT[dist].get(_sp_sazba_e, CENY_VT[dist][sazba]))/1000.0
+    cena_nt_sp = float(CENY_NT[dist].get(_sp_sazba_e, CENY_VT[dist].get(_sp_sazba_e, CENY_VT[dist][sazba])))/1000.0
     stay     = float(STAY_PLAT[dist])
     jistic   = float(JISTIC_3x25[dist][sazba])
-    # Náklady: byty (VT+NT) + SP (VT+NT dle sazby SP)
-    _sp_sp_vt = float(st.session_state.wizard_data.get("sp_sp_vt_mwh", sp_sp/1000.0))
-    _sp_sp_nt = float(st.session_state.wizard_data.get("sp_sp_nt_mwh", 0.0))
     naklad   = (sp_by_vt*cena_vt + sp_by_nt*cena_nt
-                + _sp_sp_vt*1000*cena_vt_sp + _sp_sp_nt*1000*cena_nt_sp
+                + sp_sp*cena_vt_sp
                 + (stay+jistic)*12.0)
 
+    # Průměrná vs. mezní cena kWh
+    _cena_prumerna = naklad / (sp_cel/1000.0) if sp_cel > 0 else cena_vt
     st.info(
         f"💡 **{dist}** · **{sazba}** · s DPH · POZE=0 Kč od 2026 | "
-        f"Byty VT: **{cena_vt:.2f} Kč/kWh**"
+        f"Byty VT: **{cena_vt:.2f} Kč/kWh** (mezní)"
         + (f" · NT: **{cena_nt:.2f} Kč/kWh**" if ma_nt else "")
-        + (f" | SP sazba: **{_sazba_sp}** · VT: **{cena_vt_sp:.2f} Kč/kWh**"
-           + (f" · NT: **{cena_nt_sp:.2f} Kč/kWh**" if _sazba_sp in CENY_NT[dist] else "")
-           if _sazba_sp != sazba else "")
-        + f" · Stálé platy: **{stay+jistic:.0f} Kč/měs** · Roční náklad: **{naklad:,.0f} Kč**"
+        + (f" | SP: **{_sp_sazba_e}** · **{cena_vt_sp:.2f} Kč/kWh** · jistič **{_sp_jistic_e}**"
+           if _sp_sazba_e != sazba else f" | SP jistič: **{_sp_jistic_e}**")
+        + f"\n\n📊 Stálé platy: **{stay+jistic:.0f} Kč/měs** · "
+        f"Roční náklad: **{naklad:,.0f} Kč** · "
+        f"Průměrná cena kWh: **{_cena_prumerna:.2f} Kč** (vč. fixních plateb)"
     )
 
     with st.expander("✏️ Upravit ceny ručně"):
@@ -2205,6 +2245,16 @@ cena_vt   = float(CENY_VT.get(dist, CENY_VT["ČEZ Distribuce"]).get(sazba, 7493)
 cena_nt   = float(CENY_NT.get(dist, {}).get(sazba, 7493)) / 1000
 stay      = float(STAY_PLAT.get(dist, 163))
 jistic    = float(JISTIC_3x25.get(dist, JISTIC_3x25["ČEZ Distribuce"]).get(sazba, 298))
+
+# Průměrná vs. mezní cena kWh
+_naklad_fixni = (stay + jistic) * 12.0          # Kč/rok — fixní (nemění se s spotřebou)
+_naklad_var   = (sp_by_vt * cena_vt             # variabilní (FVE šetří tuto část)
+               + sp_by_nt * cena_nt
+               + sp_sp    * cena_vt)
+_naklad_celk  = _naklad_fixni + _naklad_var
+_cena_mezni   = cena_vt                          # Kč/kWh — FVE šetří tuto cenu za každou kWh
+_sp_cel_kwh   = sp_by_vt + sp_by_nt + sp_sp
+_cena_prumerna = _naklad_celk / (_sp_cel_kwh / 1000.0) / 1000.0 if _sp_cel_kwh > 0 else cena_vt
 # Úspora JOM — stávající: (N+1) ODM × stálé + N×jistič_byt + jistič_SP
 #              JOM:      1 ODM × stálé + 1× velký jistič domu
 if model=="jom":
@@ -2304,7 +2354,16 @@ with r6: st.metric("Orientační návratnost",
 with r7: st.metric("Cashflow návratnost",f"{nav} let" if nav else ">25 let",
                    help="Realistická návratnost: kdy kumulativní cashflow přejde do kladných čísel")
 
-# EDC efektivita
+# JOM detail — zobrazit přímo (ne v expanderu) pokud je model JOM
+if model == "jom" and uspora_jist > 0:
+    st.info(
+        f"⚡ **JOM — Jedno odběrné místo** · "
+        f"Nový jistič: **3×{_jdum_amp_r}A** ({_jdum_cena_r:,} Kč/měs) · "
+        f"Sazba domu: **{sazba}** · "
+        f"Rušíte: {int(pocet_bytu)+1} ODM → 1 ODM · "
+        f"Úspora na jističích a stálých: **{uspora_jist/12:,.0f} Kč/měs · {uspora_jist:,.0f} Kč/rok**"
+    )
+
 # Míra časového překryvu — zobrazit vždy (pro všechny modely)
 prekryv = sim.get("edc_efektivita", 1.0) * 100
 if prekryv >= 70:
@@ -2330,6 +2389,15 @@ if _uspora_jom1 > 0:
                   f"(zrušení {int(pocet_bytu)+1} ODM → 1 ODM, ušetřené jističe + stálé platby)")
 if _radky:
     st.info("🔍 **Rozpad roční úspory (rok 1):**\n\n" + "\n\n".join(_radky))
+
+# Průměrná vs. mezní cena kWh
+st.info(
+    f"💰 **Cena elektřiny ({dist}, {sazba}):** "
+    f"Mezní cena: **{_cena_mezni:.2f} Kč/kWh** — tolik ušetří každá kWh vyrobená FVE. "
+    f"Průměrná cena: **{_cena_prumerna:.2f} Kč/kWh** — reálná cena po rozpuštění fixních plateb "
+    f"({_naklad_fixni:,.0f} Kč/rok) do celkové spotřeby {_sp_cel_kwh/1000:.1f} MWh. "
+    f"Rozdíl: **{_cena_prumerna - _cena_mezni:.2f} Kč/kWh** tvoří fixní složka (jistič + stálý plat)."
+)
 
 st.divider()
 
