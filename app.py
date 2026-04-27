@@ -939,32 +939,38 @@ if expert_mod:
             st.caption("Hlavní jistič SVJ na patce domu. Jistič bytu (typicky 1×25A) se SVJ netýká.")
 
         st.markdown("**Složení domácností**")
-        st.caption("Součet tří skupin musí být max 100 % — zbytek do 100 % = smíšený/neznámý profil.")
-        _prac_def = int(_wg("pct_pracujici", 50))
-        _sen_def  = int(_wg("pct_seniori",   20))
-        _rod_def  = int(_wg("pct_rodiny",    20))
-        sl1, sl2, sl3 = st.columns(3)
-        with sl1: pct_pracujici = st.slider("💼 Pracující", 0, 100, _prac_def, 5, key="e_pct_prac",
-                                             help="Pryč 8–17h, večerní špička")
-        with sl2: pct_seniori   = st.slider("🏠 Důchodci/HO", 0, 100, _sen_def, 5, key="e_pct_sen",
-                                             help="Doma celý den, dopolední plateau")
-        with sl3: pct_rodiny    = st.slider("👨‍👩‍👧 Rodiny", 0, 100, _rod_def, 5, key="e_pct_rod",
-                                             help="Ráno spěch, večer všichni doma")
-        _pct_celkem = pct_pracujici + pct_seniori + pct_rodiny
-        _pct_mix = max(0, 100 - _pct_celkem)
-        if _pct_celkem > 100:
-            st.error(f"⚠️ Součet překračuje 100 % ({_pct_celkem} %) — hodnoty se normalizují pro výpočet.")
-            # normalizace pro výpočet
-            _f = 100.0 / _pct_celkem
-            pct_pracujici = int(pct_pracujici * _f)
+        _profil_mix_def = int(_wg("profil_mix", 50))
+        profil_mix = st.slider(
+            "🏠 Doma přes den ◄──────────────► Pryč přes den 💼",
+            0, 100, _profil_mix_def, 5,
+            key="e_profil_mix",
+            help="Vlevo = důchodci/home office (doma přes den, překryv s FVE lepší). "
+                 "Vpravo = pracující (pryč 8–17h, FVE vyrábí do prázdného domu)."
+        )
+        # Převod slideru na složení pro _smiseny_profil
+        # 0 = 100% důchodci, 50 = mix, 100 = 100% pracující
+        pct_seniori   = max(0, 100 - 2 * profil_mix)      # 0→100, 50→0, 100→0
+        pct_pracujici = max(0, 2 * profil_mix - 100)       # 0→0, 50→0, 100→100
+        pct_rodiny    = max(0, 50 - abs(profil_mix - 50))  # 0→0, 50→50, 100→0 (rodiny = střed)
+        # Normalizace
+        _pct_sum = pct_seniori + pct_pracujici + pct_rodiny
+        if _pct_sum > 0:
+            _f = 100.0 / _pct_sum
             pct_seniori   = int(pct_seniori   * _f)
-            pct_rodiny    = int(pct_rodiny    * _f)
-            _pct_mix = 0
+            pct_pracujici = int(pct_pracujici * _f)
+            pct_rodiny    = max(0, 100 - pct_seniori - pct_pracujici)
+
+        if profil_mix <= 20:
+            _popis = f"🏠 Převaha důchodců/HO — spotřeba přes den → dobrý překryv s FVE"
+        elif profil_mix <= 40:
+            _popis = f"🏠 Spíše doma přes den (důchodci + rodiny)"
+        elif profil_mix <= 60:
+            _popis = f"⚖️ Smíšené složení — průměrný tvar spotřeby"
+        elif profil_mix <= 80:
+            _popis = f"💼 Spíše pracující — FVE vyrábí přes den do prázdného domu"
         else:
-            _bar = "█" * (_pct_celkem // 5) + "░" * ((100 - _pct_celkem) // 5)
-            st.caption(f"{_bar} {_pct_celkem}/100 % · "
-                       f"Pracující {pct_pracujici} % · Důchodci {pct_seniori} % · "
-                       f"Rodiny {pct_rodiny} % · Ostatní {_pct_mix} %")
+            _popis = f"💼 Převaha pracujících — baterie výrazně pomůže zachytit denní přebytky"
+        st.caption(_popis)
         profil = "mix"  # zpětná kompatibilita — uprava se počítá zvlášť
 
     # NT spotřeba — jen pro sazby s NT tarifem
@@ -1268,10 +1274,11 @@ if expert_mod:
 
         with st.spinner("Simuluji v 15minutových intervalech..."):
             vyroba_15=_interpoluj(vyroba_hod)
+            _pm = int(st.session_state.get("e_profil_mix", 50))
             uprava = _smiseny_profil(
-                pct_pracujici=int(st.session_state.get("e_pct_prac", 50)),
-                pct_seniori=int(st.session_state.get("e_pct_sen", 20)),
-                pct_rodiny=int(st.session_state.get("e_pct_rod", 20)),
+                pct_pracujici=max(0, int(2*_pm - 100)),
+                pct_seniori=max(0, int(100 - 2*_pm)),
+                pct_rodiny=max(0, int(50 - abs(_pm - 50))),
             )
 
             # Společné prostory — jen VT (žádný NT)
@@ -1591,32 +1598,32 @@ else:
                              key="w_dist",
                              help="ČEZ = většina ČR | EG.D = Morava/jih Čech | PRE = Praha")
         st.markdown("**Složení domácností**")
-        st.caption("Součet tří skupin musí být max 100 % — zbytek = smíšený/neznámý profil.")
-        wsl1, wsl2, wsl3 = st.columns(3)
-        with wsl1: w_pct_prac = st.slider("💼 Pracující", 0, 100,
-                                           int(_wd.get("pct_pracujici", 50)), 5, key="w_pct_prac",
-                                           help="Pryč 8–17h, večerní špička")
-        with wsl2: w_pct_sen  = st.slider("🏠 Důchodci/HO", 0, 100,
-                                           int(_wd.get("pct_seniori", 20)), 5, key="w_pct_sen",
-                                           help="Doma celý den, dopolední plateau")
-        with wsl3: w_pct_rod  = st.slider("👨‍👩‍👧 Rodiny", 0, 100,
-                                           int(_wd.get("pct_rodiny", 20)), 5, key="w_pct_rod",
-                                           help="Ráno spěch, večer všichni doma")
-        _w_celkem = w_pct_prac + w_pct_sen + w_pct_rod
-        _w_mix = max(0, 100 - _w_celkem)
-        if _w_celkem > 100:
-            st.error(f"⚠️ Součet překračuje 100 % ({_w_celkem} %) — normalizuji pro výpočet.")
-            _wf = 100.0 / _w_celkem
-            w_pct_prac = int(w_pct_prac * _wf)
+        _w_profil_mix_def = int(_wd.get("profil_mix", 50))
+        w_profil_mix = st.slider(
+            "🏠 Doma přes den ◄──────────────► Pryč přes den 💼",
+            0, 100, _w_profil_mix_def, 5, key="w_profil_mix",
+            help="Vlevo = důchodci/HO (překryv s FVE lepší). Vpravo = pracující (baterie pomůže)."
+        )
+        w_pct_sen  = max(0, 100 - 2 * w_profil_mix)
+        w_pct_prac = max(0, 2 * w_profil_mix - 100)
+        w_pct_rod  = max(0, 50 - abs(w_profil_mix - 50))
+        _ws = w_pct_sen + w_pct_prac + w_pct_rod
+        if _ws > 0:
+            _wf = 100.0 / _ws
             w_pct_sen  = int(w_pct_sen  * _wf)
-            w_pct_rod  = int(w_pct_rod  * _wf)
-            _w_mix = 0
+            w_pct_prac = int(w_pct_prac * _wf)
+            w_pct_rod  = max(0, 100 - w_pct_sen - w_pct_prac)
+        if w_profil_mix <= 20:
+            st.caption("🏠 Převaha důchodců/HO — dobrý přirozený překryv s FVE přes den")
+        elif w_profil_mix <= 40:
+            st.caption("🏠 Spíše doma přes den")
+        elif w_profil_mix <= 60:
+            st.caption("⚖️ Smíšené složení")
+        elif w_profil_mix <= 80:
+            st.caption("💼 Spíše pracující")
         else:
-            _wbar = "█" * (_w_celkem // 5) + "░" * ((100 - _w_celkem) // 5)
-            st.caption(f"{_wbar} {_w_celkem}/100 % · "
-                       f"Pracující {w_pct_prac} % · Důchodci {w_pct_sen} % · "
-                       f"Rodiny {w_pct_rod} % · Ostatní {_w_mix} %")
-        profil = "mix"  # zpětná kompatibilita
+            st.caption("💼 Převaha pracujících — baterie výrazně pomůže zachytit denní přebytky FVE")
+        profil = "mix"
 
         # ── JOM info box — až po výběru distributora (přesná čísla) ──
         _stay_d   = STAY_PLAT.get(dist, 163)
@@ -1662,6 +1669,7 @@ else:
                 "sazba":                _sazba_auto,
                 "dist":                 dist,
                 "profil":               profil,
+                "profil_mix":           w_profil_mix,
                 "pct_pracujici":        w_pct_prac,
                 "pct_seniori":          w_pct_sen,
                 "pct_rodiny":           w_pct_rod,
@@ -1801,9 +1809,9 @@ else:
             cena_nt_w = float(CENY_NT[dist_w].get(sazba,CENY_VT[dist_w][sazba]))/1000
             profil_w = wd["profil"]
             uprava_w = _smiseny_profil(
-                pct_pracujici=int(wd.get("pct_pracujici", 50)),
-                pct_seniori=int(wd.get("pct_seniori", 20)),
-                pct_rodiny=int(wd.get("pct_rodiny", 20)),
+                pct_pracujici=wd.get("pct_pracujici", max(0, int(2*wd.get("profil_mix",50)-100))),
+                pct_seniori=wd.get("pct_seniori",   max(0, int(100-2*wd.get("profil_mix",50)))),
+                pct_rodiny=wd.get("pct_rodiny",     max(0, int(50-abs(wd.get("profil_mix",50)-50)))),
             )
             sp_sp15 = _gen_profil_vt(wd["sp_sp_mwh"]*1000, _TDD_SP)
             sp_by_vt15 = _gen_profil_vt(wd["vt_mwh"]*1000, _TDD4, uprava_w)
@@ -1854,19 +1862,15 @@ else:
         st.success(f"✅ Solární data pro **{mesto}** stažena")
 
         # Insight o baterii dle složení
-        _pct_p = int(wd.get("pct_pracujici", 50))
-        _pct_s = int(wd.get("pct_seniori", 20))
-        _pct_r = int(wd.get("pct_rodiny", 20))
-        _pct_mix = max(0, 100 - _pct_p - _pct_s - _pct_r)
-        if _pct_p >= 50:
-            st.info(f"🔋 **Převaha pracujících ({_pct_p} %) → baterie výrazně pomůže** — "
+        _pm_w = int(wd.get("profil_mix", 50))
+        if _pm_w >= 70:
+            st.info("🔋 **Převaha pracujících → baterie výrazně pomůže** — "
                     "přes den FVE vyrábí do prázdného domu, baterie zachytí přebytky pro večerní špičku.")
-        elif _pct_s >= 40:
-            st.info(f"☀️ **Převaha důchodců/HO ({_pct_s} %) → přirozený překryv s FVE** — "
+        elif _pm_w <= 30:
+            st.info("☀️ **Převaha důchodců/HO → přirozený překryv s FVE** — "
                     "spotřeba přes den se kryje s výrobou. Větší FVE bez baterie může být výhodnější.")
         else:
-            st.info(f"⚡ **Smíšené složení** (pracující {_pct_p} % · důchodci {_pct_s} % · rodiny {_pct_r} %) — "
-                    "baterie pomůže zachytit polední přebytky pro večerní spotřebu.")
+            st.info("⚡ **Smíšené složení** — baterie pomůže zachytit polední přebytky pro večerní spotřebu.")
 
         st.markdown("### Doporučené varianty:")
 
@@ -2069,9 +2073,9 @@ else:
             kwp_eff = float(vykon)*float(koef_str)
             vyroba_15 = _interpoluj(vyroba_hod)
             uprava = _smiseny_profil(
-                pct_pracujici=int(wd.get("pct_pracujici", 50)),
-                pct_seniori=int(wd.get("pct_seniori", 20)),
-                pct_rodiny=int(wd.get("pct_rodiny", 20)),
+                pct_pracujici=wd.get("pct_pracujici", max(0, int(2*wd.get("profil_mix",50)-100))),
+                pct_seniori=wd.get("pct_seniori",   max(0, int(100-2*wd.get("profil_mix",50)))),
+                pct_rodiny=wd.get("pct_rodiny",     max(0, int(50-abs(wd.get("profil_mix",50)-50)))),
             )
             sp_sp15    = _gen_profil_vt(sp_sp,_TDD_SP)
             sp_by_vt15 = _gen_profil_vt(sp_by_vt,_TDD4,uprava)
