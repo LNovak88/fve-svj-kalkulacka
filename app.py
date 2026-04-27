@@ -722,46 +722,49 @@ def _geocode(dotaz):
     return None,None,None,"Nenalezeno — zkuste jiný formát adresy"
 
 
-@st.cache_data(ttl=86400)
 @st.cache_data(ttl=86400, show_spinner=False)
 def _pvgis(lat, lon, kwp, sklon, azimut):
     """
-    Stáhne hodinová data výroby FVE z PVGIS API (EU JRC).
-    Používá TMY — Typical Meteorological Year složený z nejreprezentativnějších
-    měsíců za období 2005–2020. Výrazně přesnější než matematický fallback.
+    Stáhne hodinová TMY data výroby FVE z PVGIS API (EU JRC).
 
-    Cache: 24 hodin (data se nemění, šetří API volání při překreslení Streamlitu).
+    Speciální hodnoty azimut:
+      999 = V+Z  → dvě volání: −90° (východ) + +90° (západ), každé s kwp/2
+      998 = JZ+JV → dvě volání: −45° (JV)   + +45° (JZ),    každé s kwp/2
+    Výsledky se sečtou → reálný tvar se dvěma ranními/večerními kopci.
 
+    Standardní hodnoty: 0=Jih, −90=Východ, +90=Západ (PVGIS konvence)
+    Cache: 24 hodin.
     Returns: (array 8760 hodnot v kWh/h, error_string nebo None)
     """
-    try:
+    def _jedno(az, vykon):
         r = requests.get(
             "https://re.jrc.ec.europa.eu/api/v5_2/seriescalc",
             params={
-                "lat":          float(lat),
-                "lon":          float(lon),
-                "peakpower":    float(kwp),
-                "loss":         14,           # systémové ztráty 14 % (kabeláž, střídač, znečištění)
-                "angle":        int(sklon),
-                "aspect":       int(azimut),  # 0 = jih, -90 = východ, 90 = západ
-                "outputformat": "json",
-                "browser":      0,
-                "pvcalculation": 1,
-                "pvtechchoice": "crystSi",    # krystalický křemík — nejběžnější
-                "mountingplace": "building",  # na střeše budovy (ne volné pole)
-                "trackingtype": 0,            # pevná montáž
-                "usehorizon":   1,            # zohledni okolní horizont
-                "tmy":          1,            # TMY — Typical Meteorological Year!
+                "lat": float(lat), "lon": float(lon),
+                "peakpower": float(vykon), "loss": 14,
+                "angle": int(sklon), "aspect": int(az),
+                "outputformat": "json", "browser": 0,
+                "pvcalculation": 1, "pvtechchoice": "crystSi",
+                "mountingplace": "building", "trackingtype": 0,
+                "usehorizon": 1, "tmy": 1,
             },
             timeout=30
         )
         r.raise_for_status()
-        data = r.json()
-        arr = np.array(
-            [float(h["P"]) / 1000.0 for h in data["outputs"]["hourly"]],
+        return np.array(
+            [float(h["P"]) / 1000.0 for h in r.json()["outputs"]["hourly"]],
             dtype=float
-        )
-        return arr[:8760], None
+        )[:8760]
+
+    try:
+        if azimut == 999:
+            # V+Z: polovina na východ, polovina na západ
+            return _jedno(-90, kwp / 2.0) + _jedno(90, kwp / 2.0), None
+        elif azimut == 998:
+            # JZ+JV: polovina na JV (−45°), polovina na JZ (+45°)
+            return _jedno(-45, kwp / 2.0) + _jedno(45, kwp / 2.0), None
+        else:
+            return _jedno(azimut, kwp), None
     except Exception as e:
         return None, str(e)
 
@@ -1085,17 +1088,13 @@ if expert_mod:
         with pc2: sys_pl=st.radio("Systém",["jih","jz_jv","vz"],key="e_sys_pl",
                         format_func=lambda x:{"jih":"⬆️ Jih","jz_jv":"↗️ JZ+JV","vz":"↔️ V+Z"}[x])
         # PVGIS konvence: 0=Jih, −90=Východ, +90=Západ
-        # JZ+JV: dvě plochy zrcadlově → PVGIS voláme s azimut=0 (jih) jako proxy,
-        #         koeficient 0.97 kompenzuje ztrátu oproti čistému jihu
-        # V+Z:   dvě plochy: východ (−90°) + západ (+90°) → průměrný výkon
-        #         odpovídá simulaci azimut=0 ale s koef. 0.88 (ztráta ~12 %)
-        #         Pro přesnost bychom museli simulovat dvě plochy zvlášť a sečíst.
-        azimut = 0   # vždy 0 pro ploché střechy — koef_str kompenzuje odchylku
-        koef_str={"jih":1.0,"jz_jv":0.97,"vz":0.88}[sys_pl]
+        # 999 = V+Z  → dvě volání PVGIS (−90° + +90°), výsledky sečteny
+        # 998 = JZ+JV → dvě volání PVGIS (−45° + +45°), výsledky sečteny
+        azimut = {"jih": 0, "jz_jv": 998, "vz": 999}[sys_pl]
+        koef_str = {"jih":1.0,"jz_jv":1.0,"vz":1.0}[sys_pl]  # korekce řeší PVGIS, ne koef
         if sys_pl != "jih":
-            st.caption(f"ℹ️ PVGIS simuluje jako jih s korekcí výkonu "
-                       f"({'−3 %' if sys_pl=='jz_jv' else '−12 %'}) — "
-                       f"přesná simulace V+Z/JZ+JV by vyžadovala dvě oddělená volání API.")
+            st.caption({"jz_jv": "↗️ PVGIS simuluje JV+JZ jako dvě plochy — ranní i odpolední slunce",
+                        "vz":    "↔️ PVGIS simuluje Východ+Západ jako dvě plochy — ranní i večerní slunce"}[sys_pl])
 
     st.divider()
 
@@ -1642,8 +1641,8 @@ else:
             with pc1: sklon = st.slider("Sklon panelů (°)", 5, 20, int(_prev_sklon_pl), key="w_sklon_plocha")
             with pc2: sys_pl = st.radio("Systém",["jih","jz_jv","vz"],index=_sys_pl_idx,key="w_sys_pl",
                         format_func=lambda x:{"jih":"⬆️ Jih","jz_jv":"↗️ JZ+JV","vz":"↔️ V+Z"}[x])
-            azimut = 0   # vždy 0 pro ploché střechy — koef_str kompenzuje odchylku
-            koef_str = {"jih":1.0,"jz_jv":0.97,"vz":0.88}[sys_pl]
+            azimut = {"jih": 0, "jz_jv": 998, "vz": 999}[sys_pl]
+            koef_str = {"jih":1.0,"jz_jv":1.0,"vz":1.0}[sys_pl]
 
         col_back, col_next = st.columns(2)
         with col_back:
