@@ -1082,9 +1082,20 @@ if expert_mod:
     else:
         pc1,pc2=st.columns(2)
         with pc1: sklon=st.slider("Sklon panelů (°)",5,20,10,key="e_sklon_pl")
-        with pc2: sys_pl=st.radio("Systém",["jih","jz_jv","vz"],key="e_sys_pl",format_func=lambda x:{"jih":"⬆️ Jih","jz_jv":"↗️ JZ+JV","vz":"↔️ V+Z"}[x])
-        azimut=90 if sys_pl=="vz" else 0
+        with pc2: sys_pl=st.radio("Systém",["jih","jz_jv","vz"],key="e_sys_pl",
+                        format_func=lambda x:{"jih":"⬆️ Jih","jz_jv":"↗️ JZ+JV","vz":"↔️ V+Z"}[x])
+        # PVGIS konvence: 0=Jih, −90=Východ, +90=Západ
+        # JZ+JV: dvě plochy zrcadlově → PVGIS voláme s azimut=0 (jih) jako proxy,
+        #         koeficient 0.97 kompenzuje ztrátu oproti čistému jihu
+        # V+Z:   dvě plochy: východ (−90°) + západ (+90°) → průměrný výkon
+        #         odpovídá simulaci azimut=0 ale s koef. 0.88 (ztráta ~12 %)
+        #         Pro přesnost bychom museli simulovat dvě plochy zvlášť a sečíst.
+        azimut = 0   # vždy 0 pro ploché střechy — koef_str kompenzuje odchylku
         koef_str={"jih":1.0,"jz_jv":0.97,"vz":0.88}[sys_pl]
+        if sys_pl != "jih":
+            st.caption(f"ℹ️ PVGIS simuluje jako jih s korekcí výkonu "
+                       f"({'−3 %' if sys_pl=='jz_jv' else '−12 %'}) — "
+                       f"přesná simulace V+Z/JZ+JV by vyžadovala dvě oddělená volání API.")
 
     st.divider()
 
@@ -1631,7 +1642,7 @@ else:
             with pc1: sklon = st.slider("Sklon panelů (°)", 5, 20, int(_prev_sklon_pl), key="w_sklon_plocha")
             with pc2: sys_pl = st.radio("Systém",["jih","jz_jv","vz"],index=_sys_pl_idx,key="w_sys_pl",
                         format_func=lambda x:{"jih":"⬆️ Jih","jz_jv":"↗️ JZ+JV","vz":"↔️ V+Z"}[x])
-            azimut = 90 if sys_pl=="vz" else 0
+            azimut = 0   # vždy 0 pro ploché střechy — koef_str kompenzuje odchylku
             koef_str = {"jih":1.0,"jz_jv":0.97,"vz":0.88}[sys_pl]
 
         col_back, col_next = st.columns(2)
