@@ -70,20 +70,23 @@ JISTIC_BYT = {
     "PREdistribuce":  {"1×25A":132, "3×16A":190, "3×20A":230, "3×25A":287, "3×32A":360},
 }
 
-# Skutečné fixní ceny jističů pro dům/SVJ (sazba D02d, trojfázové) — Kč/měs s DPH 2026
-# Zdroj: ceník ČEZ domácnosti, EG.D domácnosti, PRE C02d podnikatelé
-# Klíč = jmenovitá hodnota jističe v ampérech (horní mez rozsahu)
+# Skutečné fixní ceny jističů pro dům/SVJ (trojfázové) — Kč/měs s DPH 2026
+# Zdroj: usetreno.cz regulované ceny 2026 (dle ceníků ČEZ, EGD, PRE k 10.2.2026)
+# Platí stejně pro D i C tarif — jistič (rezervovaný příkon) je regulován ERÚ
+# Klíč = horní mez rozsahu v ampérech
 JISTIC_DUM = {
-    "ČEZ Distribuce": {25:298, 32:381, 40:477, 50:595, 63:750, 80:751, 100:1429},
-    "EG.D (E.ON)":    {25:303, 32:387, 40:484, 50:605, 63:761, 80:762, 100:1447},
-    "PREdistribuce":  {25:359, 32:460, 40:575, 50:719, 63:905, 80:1150, 100:1437},
+    "ČEZ Distribuce": {10:121,  16:191,  20:240,  25:309,  32:383,
+                       40:479,  50:600,  63:751,  80:869, 100:989},
+    "EG.D (E.ON)":    {10:116,  16:186,  20:232,  25:290,  32:373,
+                       40:465,  50:581,  63:729,  80:845, 100:961},
+    "PREdistribuce":  {10:106,  16:169,  20:213,  25:266,  32:339,
+                       40:424,  50:530,  63:667,  80:773, 100:879},
 }
-# Přírůstek Kč/A nad hodnotu 3×63A (pro jističe 3×80A a větší)
-# Zdroj: řádek 19 ceníku ČEZ "nad 3×63A za každý 1A"
+# Přírůstek Kč/A nad hodnotu 3×63A (dle ceníku ERÚ 2026)
 JISTIC_DUM_A = {
-    "ČEZ Distribuce": 11.91,   # Kč/A/měs s DPH
-    "EG.D (E.ON)":    12.09,
-    "PREdistribuce":  14.37,
+    "ČEZ Distribuce": 5.99,   # Kč/A/měs s DPH
+    "EG.D (E.ON)":    5.81,
+    "PREdistribuce":  5.30,
 }
 
 def _cena_jistice_dum(dist, sazba, ampery=63):
