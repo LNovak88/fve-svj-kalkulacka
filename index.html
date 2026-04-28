@@ -8,693 +8,298 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <style>
 :root {
-  --ink:       #0f1923;
-  --ink-soft:  #3d4f5e;
-  --ink-muted: #7a8f9e;
-  --paper:     #f8f5f0;
-  --white:     #ffffff;
-  --sun:       #f5a623;
-  --sun-light: #fef3dc;
-  --green:     #1a6b4a;
-  --green-mid: #2d9068;
-  --green-light: #e6f5ef;
-  --border:    #e2ddd6;
-  --shadow:    rgba(15,25,35,0.08);
+  --ink:        #0f1923;
+  --ink-soft:   #3d4f5e;
+  --ink-muted:  #7a8f9e;
+  --paper:      #f8f5f0;
+  --white:      #ffffff;
+  --sun:        #f5a623;
+  --sun-light:  #fef3dc;
+  --green:      #1a6b4a;
+  --green-mid:  #2d9068;
+  --green-light:#e6f5ef;
+  --border:     #e2ddd6;
+  --shadow:     rgba(15,25,35,0.08);
+  --locked:     #f1f0ee;
 }
-
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
 html { scroll-behavior: smooth; }
-
-body {
-  font-family: 'DM Sans', sans-serif;
-  background: var(--paper);
-  color: var(--ink);
-  line-height: 1.6;
-  overflow-x: hidden;
-}
+body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); line-height: 1.6; overflow-x: hidden; }
 
 /* ── NAV ── */
 nav {
   position: fixed; top: 0; left: 0; right: 0; z-index: 100;
   display: flex; align-items: center; justify-content: space-between;
-  padding: 0 5vw;
-  height: 64px;
-  background: rgba(248,245,240,0.92);
-  backdrop-filter: blur(12px);
+  padding: 0 5vw; height: 64px;
+  background: rgba(248,245,240,0.92); backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
 }
-.nav-logo {
-  font-family: 'DM Serif Display', serif;
-  font-size: 1.25rem;
-  color: var(--green);
-  text-decoration: none;
-  display: flex; align-items: center; gap: 8px;
-}
+.nav-logo { font-family: 'DM Serif Display', serif; font-size: 1.25rem; color: var(--green); text-decoration: none; display: flex; align-items: center; gap: 8px; }
 .nav-logo svg { width: 28px; height: 28px; }
-.nav-cta {
-  background: var(--green);
-  color: var(--white);
-  border: none;
-  padding: 10px 22px;
-  border-radius: 6px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.9rem;
-  font-weight: 500;
-  cursor: pointer;
-  text-decoration: none;
-  transition: background 0.2s, transform 0.1s;
-}
+.nav-cta { background: var(--green); color: var(--white); border: none; padding: 10px 22px; border-radius: 6px; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; font-weight: 500; cursor: pointer; text-decoration: none; transition: background 0.2s, transform 0.1s; }
 .nav-cta:hover { background: var(--green-mid); transform: translateY(-1px); }
+.nav-user { display: none; align-items: center; gap: 12px; }
+.nav-user.visible { display: flex; }
+.nav-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--green); color: var(--white); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 600; }
+.nav-signout { background: none; border: 1px solid var(--border); color: var(--ink-soft); padding: 6px 14px; border-radius: 6px; font-size: 0.85rem; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.2s; }
+.nav-signout:hover { border-color: var(--ink-muted); color: var(--ink); }
 
-/* ── HERO ── */
-.hero {
-  min-height: 100vh;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0;
-  padding-top: 64px;
+/* ── HERO INTRO ── */
+.hero-intro {
+  padding: 120px 8vw 60px;
+  text-align: center;
+  max-width: 760px;
+  margin: 0 auto;
 }
-
-.hero-left {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 80px 5vw 80px 8vw;
-  position: relative;
-}
-
 .hero-eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--sun-light);
-  color: #c47d00;
-  font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  padding: 6px 14px;
-  border-radius: 100px;
-  margin-bottom: 28px;
-  width: fit-content;
-  animation: fadeUp 0.6s ease both;
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--sun-light); color: #c47d00;
+  font-size: 0.8rem; font-weight: 600; letter-spacing: 0.08em;
+  text-transform: uppercase; padding: 6px 14px; border-radius: 100px;
+  margin-bottom: 24px; animation: fadeUp 0.5s ease both;
 }
-.hero-eyebrow::before {
-  content: '';
-  width: 8px; height: 8px;
-  background: var(--sun);
-  border-radius: 50%;
-  animation: pulse 2s ease infinite;
+.hero-eyebrow::before { content: ''; width: 8px; height: 8px; background: var(--sun); border-radius: 50%; animation: pulse 2s ease infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.4)} }
+h1 { font-family: 'DM Serif Display', serif; font-size: clamp(2rem,4vw,3.2rem); line-height: 1.15; margin-bottom: 16px; animation: fadeUp 0.5s 0.1s ease both; }
+h1 em { font-style: italic; color: var(--green); }
+.hero-sub { font-size: 1.05rem; color: var(--ink-soft); margin-bottom: 0; animation: fadeUp 0.5s 0.2s ease both; }
+
+/* ── WIZARD ── */
+.wizard-wrap {
+  max-width: 860px; margin: 0 auto;
+  padding: 0 5vw 80px;
+}
+.wizard-card {
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: 20px; padding: 40px;
+  box-shadow: 0 12px 60px var(--shadow);
+  animation: fadeUp 0.5s 0.25s ease both;
 }
 
-@keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(1.4); }
+/* Progress */
+.wiz-progress { display: flex; gap: 8px; margin-bottom: 32px; align-items: center; }
+.wiz-step-dot {
+  flex: 1; height: 4px; border-radius: 2px;
+  background: var(--border); transition: background 0.3s;
+}
+.wiz-step-dot.done { background: var(--green); }
+.wiz-step-dot.active { background: var(--green-mid); }
+.wiz-step-label { font-size: 0.8rem; color: var(--ink-muted); white-space: nowrap; }
+
+/* Step title */
+.wiz-title { font-family: 'DM Serif Display', serif; font-size: 1.5rem; color: var(--ink); margin-bottom: 24px; }
+
+/* Grid inputs */
+.wiz-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.wiz-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+@media(max-width:600px){ .wiz-grid,.wiz-grid-3{ grid-template-columns:1fr; } }
+
+/* Field */
+.wiz-field { display: flex; flex-direction: column; gap: 6px; }
+.wiz-field label { font-size: 0.82rem; font-weight: 500; color: var(--ink-soft); }
+.wiz-field input, .wiz-field select {
+  padding: 11px 14px; border: 1px solid var(--border);
+  border-radius: 8px; font-family: 'DM Sans', sans-serif;
+  font-size: 0.92rem; color: var(--ink); background: var(--white);
+  outline: none; transition: border-color 0.2s;
+}
+.wiz-field input:focus, .wiz-field select:focus { border-color: var(--green); }
+.wiz-field select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237a8f9e' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; cursor: pointer; }
+
+/* Locked field */
+.wiz-field.locked input, .wiz-field.locked select {
+  background: var(--locked); color: var(--ink-muted);
+  cursor: not-allowed; border-color: transparent;
+}
+.wiz-lock-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 0.72rem; color: var(--ink-muted);
+  background: var(--locked); border-radius: 4px;
+  padding: 2px 7px; margin-top: 2px; width: fit-content;
 }
 
-h1 {
-  font-family: 'DM Serif Display', serif;
-  font-size: clamp(2.4rem, 4vw, 3.6rem);
-  line-height: 1.15;
-  color: var(--ink);
-  margin-bottom: 24px;
-  animation: fadeUp 0.6s 0.1s ease both;
-}
-h1 em {
-  font-style: italic;
-  color: var(--green);
-}
-
-.hero-sub {
-  font-size: 1.1rem;
-  color: var(--ink-soft);
-  max-width: 460px;
-  margin-bottom: 40px;
-  animation: fadeUp 0.6s 0.2s ease both;
-}
-
-.hero-stats {
-  display: flex;
-  gap: 32px;
-  animation: fadeUp 0.6s 0.3s ease both;
-}
-.stat { display: flex; flex-direction: column; }
-.stat-num {
-  font-family: 'DM Serif Display', serif;
-  font-size: 1.8rem;
-  color: var(--green);
-  line-height: 1;
-}
-.stat-label {
-  font-size: 0.78rem;
-  color: var(--ink-muted);
-  margin-top: 2px;
-}
-
-/* ── KALKULAČKA HERO ── */
-.hero-right {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 80px 8vw 80px 4vw;
-  background: var(--white);
-  border-left: 1px solid var(--border);
-}
-
-.kalk-card {
-  width: 100%;
-  max-width: 460px;
-  background: var(--white);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 36px;
-  box-shadow: 0 8px 40px var(--shadow);
-  animation: fadeUp 0.6s 0.15s ease both;
-}
-
-.kalk-title {
-  font-family: 'DM Serif Display', serif;
-  font-size: 1.4rem;
-  color: var(--ink);
-  margin-bottom: 6px;
-}
-.kalk-subtitle {
-  font-size: 0.85rem;
-  color: var(--ink-muted);
-  margin-bottom: 28px;
-}
-
-.form-group {
-  margin-bottom: 20px;
-}
-.form-label {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: var(--ink-soft);
-  margin-bottom: 8px;
-}
-.form-label span {
-  font-family: 'DM Serif Display', serif;
-  font-size: 1rem;
-  color: var(--green);
-}
-
-input[type=range] {
-  width: 100%;
-  height: 4px;
-  -webkit-appearance: none;
-  background: var(--border);
-  border-radius: 2px;
-  outline: none;
-  cursor: pointer;
-}
-input[type=range]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 20px; height: 20px;
-  background: var(--green);
-  border-radius: 50%;
-  border: 3px solid var(--white);
-  box-shadow: 0 2px 8px rgba(26,107,74,0.3);
-  transition: transform 0.15s;
-}
+/* Slider */
+.wiz-slider-wrap { display: flex; flex-direction: column; gap: 8px; }
+.wiz-slider-top { display: flex; justify-content: space-between; align-items: baseline; }
+.wiz-slider-val { font-family: 'DM Serif Display', serif; font-size: 1.1rem; color: var(--green); }
+input[type=range] { width: 100%; height: 4px; -webkit-appearance: none; background: var(--border); border-radius: 2px; outline: none; cursor: pointer; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; background: var(--green); border-radius: 50%; border: 3px solid var(--white); box-shadow: 0 2px 8px rgba(26,107,74,0.3); transition: transform 0.15s; }
 input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 
-.form-select {
-  width: 100%;
-  padding: 10px 14px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.9rem;
-  color: var(--ink);
-  background: var(--white);
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237a8f9e' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 14px center;
-  cursor: pointer;
-  outline: none;
-  transition: border-color 0.2s;
-}
-.form-select:focus { border-color: var(--green); }
+/* Toggle group */
+.wiz-toggle-group { display: flex; gap: 0; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.wiz-toggle-btn { flex: 1; padding: 10px 8px; background: none; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 0.88rem; color: var(--ink-muted); transition: all 0.2s; }
+.wiz-toggle-btn.active { background: var(--green); color: var(--white); font-weight: 500; }
 
-/* Výsledek */
-.kalk-result {
-  background: var(--green);
-  border-radius: 12px;
-  padding: 24px;
-  margin-top: 24px;
-  color: var(--white);
-  position: relative;
-  overflow: hidden;
-  transition: all 0.4s ease;
-}
-.kalk-result::before {
-  content: '';
-  position: absolute;
-  top: -30px; right: -30px;
-  width: 100px; height: 100px;
-  background: rgba(255,255,255,0.06);
-  border-radius: 50%;
-}
-.kalk-result::after {
-  content: '';
-  position: absolute;
-  bottom: -50px; right: 20px;
-  width: 160px; height: 160px;
-  background: rgba(255,255,255,0.04);
-  border-radius: 50%;
-}
-.result-label {
-  font-size: 0.8rem;
-  opacity: 0.75;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  margin-bottom: 4px;
-}
-.result-value {
-  font-family: 'DM Serif Display', serif;
-  font-size: 2.8rem;
-  line-height: 1;
-  margin-bottom: 4px;
-  transition: all 0.3s ease;
-}
-.result-sub {
-  font-size: 0.82rem;
-  opacity: 0.8;
-  margin-bottom: 16px;
-}
-.result-detail {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  position: relative; z-index: 1;
-}
-.result-detail-item {
-  background: rgba(255,255,255,0.12);
-  border-radius: 8px;
-  padding: 10px 12px;
-}
-.result-detail-item .rd-val {
-  font-family: 'DM Serif Display', serif;
-  font-size: 1.2rem;
-}
-.result-detail-item .rd-label {
-  font-size: 0.72rem;
-  opacity: 0.75;
-  margin-top: 1px;
-}
+/* Checkboxes pro spotřebiče */
+.wiz-checks { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px; }
+.wiz-check-item { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: border-color 0.2s, background 0.2s; font-size: 0.87rem; }
+.wiz-check-item:hover { border-color: var(--green-mid); }
+.wiz-check-item input[type=checkbox] { accent-color: var(--green); width: 15px; height: 15px; cursor: pointer; }
+.wiz-check-item.checked { border-color: var(--green); background: var(--green-light); }
 
-.kalk-cta {
-  display: block;
-  width: 100%;
-  margin-top: 20px;
-  padding: 14px;
-  background: var(--ink);
-  color: var(--white);
-  border: none;
-  border-radius: 8px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.95rem;
-  font-weight: 500;
-  cursor: pointer;
+/* Navigační tlačítka */
+.wiz-nav { display: flex; gap: 12px; margin-top: 32px; }
+.wiz-btn-back { flex: 0 0 auto; padding: 13px 24px; background: none; border: 1px solid var(--border); border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; color: var(--ink-soft); cursor: pointer; transition: all 0.2s; }
+.wiz-btn-back:hover { border-color: var(--ink-muted); color: var(--ink); }
+.wiz-btn-next { flex: 1; padding: 14px; background: var(--green); color: var(--white); border: none; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.95rem; font-weight: 500; cursor: pointer; transition: background 0.2s, transform 0.1s; }
+.wiz-btn-next:hover { background: var(--green-mid); transform: translateY(-1px); }
+.wiz-btn-next:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* Info box */
+.wiz-info { background: var(--green-light); border-left: 3px solid var(--green); border-radius: 0 8px 8px 0; padding: 12px 16px; font-size: 0.87rem; color: var(--green); margin-top: 16px; }
+.wiz-warn { background: var(--sun-light); border-left: 3px solid var(--sun); border-radius: 0 8px 8px 0; padding: 12px 16px; font-size: 0.87rem; color: #8a5f00; margin-top: 16px; }
+
+/* ── VÝSLEDEK ── */
+.result-hero {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px; margin-bottom: 28px;
+}
+@media(max-width:600px){ .result-hero{ grid-template-columns:1fr 1fr; } }
+.result-metric { background: var(--paper); border-radius: 12px; padding: 18px 20px; }
+.result-metric.highlight { background: var(--green); color: var(--white); }
+.rm-label { font-size: 0.75rem; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+.rm-val { font-family: 'DM Serif Display', serif; font-size: 1.8rem; line-height: 1; }
+.rm-sub { font-size: 0.78rem; opacity: 0.65; margin-top: 2px; }
+.rm-blur { filter: blur(6px); user-select: none; pointer-events: none; opacity: 0.5; }
+
+/* Graf */
+.chart-wrap { position: relative; margin-bottom: 20px; }
+.chart-blur-overlay {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  height: 62%; background: linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,0.97) 50%);
+  display: flex; align-items: flex-end; justify-content: center;
+  padding-bottom: 24px;
+  border-radius: 0 0 12px 12px;
+}
+.chart-blur-msg {
   text-align: center;
-  text-decoration: none;
-  transition: background 0.2s, transform 0.1s;
 }
-.kalk-cta:hover { background: #1d2f3e; transform: translateY(-1px); }
+.chart-blur-msg strong { display: block; font-size: 1rem; color: var(--ink); margin-bottom: 4px; }
+.chart-blur-msg span { font-size: 0.85rem; color: var(--ink-muted); }
 
-.kalk-note {
-  text-align: center;
-  font-size: 0.75rem;
-  color: var(--ink-muted);
-  margin-top: 12px;
+/* Lead form */
+.lead-box {
+  background: var(--ink); border-radius: 16px;
+  padding: 32px; margin-top: 28px; color: var(--white);
 }
+.lead-box-title { font-family: 'DM Serif Display', serif; font-size: 1.4rem; margin-bottom: 8px; }
+.lead-box-sub { font-size: 0.88rem; opacity: 0.7; margin-bottom: 20px; }
+.lead-perks { list-style: none; display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
+.lead-perks li { display: flex; align-items: flex-start; gap: 10px; font-size: 0.88rem; opacity: 0.9; }
+.lead-perks li::before { content: '✓'; color: var(--sun); font-weight: 700; flex-shrink: 0; }
+.lead-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media(max-width:600px){ .lead-grid{ grid-template-columns:1fr; } }
+.lead-field { display: flex; flex-direction: column; gap: 5px; }
+.lead-field label { font-size: 0.78rem; opacity: 0.65; font-weight: 500; }
+.lead-field input, .lead-field select {
+  padding: 11px 14px; border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px; background: rgba(255,255,255,0.08);
+  color: var(--white); font-family: 'DM Sans', sans-serif; font-size: 0.9rem;
+  outline: none; transition: border-color 0.2s;
+}
+.lead-field input::placeholder { opacity: 0.4; }
+.lead-field input:focus, .lead-field select:focus { border-color: var(--sun); }
+.lead-field select option { background: var(--ink); }
+.lead-field.full { grid-column: 1 / -1; }
+.lead-gdpr { display: flex; align-items: flex-start; gap: 10px; font-size: 0.8rem; opacity: 0.6; margin-top: 12px; grid-column: 1/-1; }
+.lead-gdpr input { accent-color: var(--sun); margin-top: 2px; flex-shrink: 0; }
+.lead-submit { width: 100%; padding: 15px; margin-top: 16px; background: var(--sun); color: var(--ink); border: none; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+.lead-submit:hover { background: #f0a020; transform: translateY(-1px); }
+.lead-submit:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.lead-note { text-align: center; font-size: 0.78rem; opacity: 0.5; margin-top: 10px; }
+.lead-msg { margin-top: 12px; padding: 12px 16px; border-radius: 8px; font-size: 0.87rem; display: none; }
+.lead-msg.error { background: #fef2f2; color: #b91c1c; display: block; }
+.lead-msg.success { background: var(--green-light); color: var(--green); display: block; }
+
+/* Limit warning */
+.limit-box { background: var(--sun-light); border: 1px solid var(--sun); border-radius: 12px; padding: 20px 24px; text-align: center; margin-top: 24px; }
+.limit-box strong { display: block; font-size: 1rem; color: #8a5f00; margin-bottom: 6px; }
+.limit-box p { font-size: 0.87rem; color: #a07020; }
 
 /* ── JAK TO FUNGUJE ── */
-.section {
-  padding: 100px 8vw;
-}
-.section-label {
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--green);
-  margin-bottom: 12px;
-}
-.section-title {
-  font-family: 'DM Serif Display', serif;
-  font-size: clamp(1.8rem, 3vw, 2.6rem);
-  color: var(--ink);
-  margin-bottom: 16px;
-  max-width: 560px;
-}
-.section-sub {
-  font-size: 1rem;
-  color: var(--ink-soft);
-  max-width: 520px;
-  margin-bottom: 60px;
-}
-
-.steps {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 32px;
-}
-.step {
-  position: relative;
-  padding: 32px;
-  background: var(--white);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  transition: box-shadow 0.3s, transform 0.3s;
-}
-.step:hover {
-  box-shadow: 0 12px 40px var(--shadow);
-  transform: translateY(-4px);
-}
-.step-num {
-  font-family: 'DM Serif Display', serif;
-  font-size: 3rem;
-  color: var(--border);
-  line-height: 1;
-  margin-bottom: 16px;
-}
-.step-title {
-  font-family: 'DM Serif Display', serif;
-  font-size: 1.2rem;
-  color: var(--ink);
-  margin-bottom: 8px;
-}
-.step-text {
-  font-size: 0.9rem;
-  color: var(--ink-soft);
-  line-height: 1.65;
-}
+.section { padding: 100px 8vw; }
+.section-label { font-size: 0.78rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--green); margin-bottom: 12px; }
+.section-title { font-family: 'DM Serif Display', serif; font-size: clamp(1.8rem,3vw,2.6rem); color: var(--ink); margin-bottom: 16px; max-width: 560px; }
+.section-sub { font-size: 1rem; color: var(--ink-soft); max-width: 520px; margin-bottom: 60px; }
+.steps { display: grid; grid-template-columns: repeat(3,1fr); gap: 32px; }
+.step { position: relative; padding: 32px; background: var(--white); border: 1px solid var(--border); border-radius: 12px; transition: box-shadow 0.3s, transform 0.3s; }
+.step:hover { box-shadow: 0 12px 40px var(--shadow); transform: translateY(-4px); }
+.step-num { font-family: 'DM Serif Display', serif; font-size: 3rem; color: var(--border); line-height: 1; margin-bottom: 16px; }
+.step-title { font-family: 'DM Serif Display', serif; font-size: 1.2rem; color: var(--ink); margin-bottom: 8px; }
+.step-text { font-size: 0.9rem; color: var(--ink-soft); line-height: 1.65; }
 
 /* ── CENY ── */
-.pricing-section {
-  padding: 100px 8vw;
-  background: var(--ink);
-  color: var(--white);
-}
+.pricing-section { padding: 100px 8vw; background: var(--ink); color: var(--white); }
 .pricing-section .section-label { color: var(--sun); }
 .pricing-section .section-title { color: var(--white); }
 .pricing-section .section-sub { color: rgba(255,255,255,0.6); }
-
-.plans {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
-  max-width: 900px;
-}
-.plan {
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 12px;
-  padding: 32px;
-  position: relative;
-  transition: background 0.3s;
-}
+.plans { display: grid; grid-template-columns: repeat(3,1fr); gap: 24px; max-width: 900px; }
+.plan { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 32px; position: relative; transition: background 0.3s; }
 .plan:hover { background: rgba(255,255,255,0.09); }
-.plan.featured {
-  background: var(--green);
-  border-color: var(--green-mid);
-}
-.plan-badge {
-  position: absolute;
-  top: -12px; left: 50%; transform: translateX(-50%);
-  background: var(--sun);
-  color: var(--ink);
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  padding: 4px 12px;
-  border-radius: 100px;
-  white-space: nowrap;
-}
-.plan-name {
-  font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  opacity: 0.7;
-  margin-bottom: 8px;
-}
-.plan-price {
-  font-family: 'DM Serif Display', serif;
-  font-size: 2.4rem;
-  line-height: 1;
-  margin-bottom: 4px;
-}
-.plan-period {
-  font-size: 0.82rem;
-  opacity: 0.6;
-  margin-bottom: 24px;
-}
-.plan-features {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.plan-features li {
-  font-size: 0.88rem;
-  opacity: 0.85;
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-}
-.plan-features li::before {
-  content: '✓';
-  color: var(--sun);
-  font-weight: 700;
-  flex-shrink: 0;
-  margin-top: 1px;
-}
+.plan.featured { background: var(--green); border-color: var(--green-mid); }
+.plan-badge { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--sun); color: var(--ink); font-size: 0.72rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; padding: 4px 12px; border-radius: 100px; white-space: nowrap; }
+.plan-name { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.7; margin-bottom: 8px; }
+.plan-price { font-family: 'DM Serif Display', serif; font-size: 2.4rem; line-height: 1; margin-bottom: 4px; }
+.plan-period { font-size: 0.82rem; opacity: 0.6; margin-bottom: 24px; }
+.plan-features { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.plan-features li { font-size: 0.88rem; opacity: 0.85; display: flex; align-items: flex-start; gap: 8px; }
+.plan-features li::before { content: '✓'; color: var(--sun); font-weight: 700; flex-shrink: 0; margin-top: 1px; }
 .plan-features li.muted { opacity: 0.4; }
 .plan-features li.muted::before { content: '–'; color: inherit; }
-
-.plan-btn {
-  display: block;
-  width: 100%;
-  margin-top: 28px;
-  padding: 12px;
-  border-radius: 7px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.9rem;
-  font-weight: 500;
-  cursor: pointer;
-  text-align: center;
-  text-decoration: none;
-  transition: all 0.2s;
-  border: 1px solid rgba(255,255,255,0.25);
-  background: transparent;
-  color: var(--white);
-}
-.plan.featured .plan-btn {
-  background: var(--white);
-  color: var(--green);
-  border-color: var(--white);
-}
+.plan-btn { display: block; width: 100%; margin-top: 28px; padding: 12px; border-radius: 7px; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; font-weight: 500; cursor: pointer; text-align: center; text-decoration: none; transition: all 0.2s; border: 1px solid rgba(255,255,255,0.25); background: transparent; color: var(--white); }
+.plan.featured .plan-btn { background: var(--white); color: var(--green); border-color: var(--white); }
 .plan-btn:hover { opacity: 0.85; transform: translateY(-1px); }
 
 /* ── FOOTER ── */
-footer {
-  padding: 48px 8vw;
-  border-top: 1px solid var(--border);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.footer-logo {
-  font-family: 'DM Serif Display', serif;
-  font-size: 1.1rem;
-  color: var(--green);
-}
-.footer-copy {
-  font-size: 0.82rem;
-  color: var(--ink-muted);
-}
-
-/* ── ANIMACE ── */
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(24px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-.reveal {
-  opacity: 0;
-  transform: translateY(30px);
-  transition: opacity 0.6s ease, transform 0.6s ease;
-}
-.reveal.visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-/* ── RESPONSIVE ── */
-@media (max-width: 900px) {
-  .hero { grid-template-columns: 1fr; min-height: auto; }
-  .hero-left { padding: 60px 6vw 40px; }
-  .hero-right { padding: 40px 6vw 60px; border-left: none; border-top: 1px solid var(--border); }
-  .steps { grid-template-columns: 1fr; }
-  .plans { grid-template-columns: 1fr; max-width: 400px; }
-  .hero-stats { gap: 20px; }
-  footer { flex-direction: column; gap: 12px; text-align: center; }
-}
+footer { padding: 48px 8vw; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+.footer-logo { font-family: 'DM Serif Display', serif; font-size: 1.1rem; color: var(--green); }
+.footer-copy { font-size: 0.82rem; color: var(--ink-muted); }
 
 /* ── AUTH MODAL ── */
-.modal-overlay {
-  display: none;
-  position: fixed; inset: 0; z-index: 1000;
-  background: rgba(15,25,35,0.6);
-  backdrop-filter: blur(6px);
-  align-items: center;
-  justify-content: center;
-}
+.modal-overlay { display: none; position: fixed; inset: 0; z-index: 1000; background: rgba(15,25,35,0.6); backdrop-filter: blur(6px); align-items: center; justify-content: center; }
 .modal-overlay.open { display: flex; }
-
-.modal {
-  background: var(--white);
-  border-radius: 16px;
-  padding: 40px;
-  width: 100%;
-  max-width: 420px;
-  margin: 16px;
-  box-shadow: 0 24px 80px rgba(15,25,35,0.2);
-  animation: fadeUp 0.3s ease both;
-  position: relative;
-}
-
-.modal-close {
-  position: absolute; top: 16px; right: 16px;
-  background: none; border: none; cursor: pointer;
-  color: var(--ink-muted); font-size: 1.2rem; line-height: 1;
-  padding: 4px 8px;
-  border-radius: 4px;
-  transition: background 0.2s;
-}
+.modal { background: var(--white); border-radius: 16px; padding: 40px; width: 100%; max-width: 420px; margin: 16px; box-shadow: 0 24px 80px rgba(15,25,35,0.2); animation: fadeUp 0.3s ease both; position: relative; }
+.modal-close { position: absolute; top: 16px; right: 16px; background: none; border: none; cursor: pointer; color: var(--ink-muted); font-size: 1.2rem; padding: 4px 8px; border-radius: 4px; transition: background 0.2s; }
 .modal-close:hover { background: var(--border); }
-
-.modal-logo {
-  display: flex; align-items: center; gap: 8px;
-  font-family: 'DM Serif Display', serif;
-  font-size: 1.1rem; color: var(--green);
-  margin-bottom: 24px;
-}
-
-.modal-title {
-  font-family: 'DM Serif Display', serif;
-  font-size: 1.6rem; color: var(--ink);
-  margin-bottom: 6px;
-}
-.modal-sub {
-  font-size: 0.88rem; color: var(--ink-muted);
-  margin-bottom: 28px;
-}
-
-.modal-tabs {
-  display: flex; gap: 0;
-  border: 1px solid var(--border);
-  border-radius: 8px; overflow: hidden;
-  margin-bottom: 24px;
-}
-.modal-tab {
-  flex: 1; padding: 10px;
-  background: none; border: none; cursor: pointer;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.88rem; font-weight: 500;
-  color: var(--ink-muted);
-  transition: all 0.2s;
-}
-.modal-tab.active {
-  background: var(--green); color: var(--white);
-}
-
-.auth-field {
-  margin-bottom: 16px;
-}
-.auth-field label {
-  display: block; font-size: 0.82rem; font-weight: 500;
-  color: var(--ink-soft); margin-bottom: 6px;
-}
-.auth-field input {
-  width: 100%; padding: 11px 14px;
-  border: 1px solid var(--border); border-radius: 8px;
-  font-family: 'DM Sans', sans-serif; font-size: 0.9rem;
-  color: var(--ink); background: var(--white);
-  outline: none; transition: border-color 0.2s;
-}
-.auth-field input:focus { border-color: var(--green); }
-
-.auth-btn {
-  width: 100%; padding: 13px;
-  background: var(--green); color: var(--white);
-  border: none; border-radius: 8px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.95rem; font-weight: 500;
-  cursor: pointer; margin-top: 8px;
-  transition: background 0.2s, transform 0.1s;
-}
+.modal-logo { display: flex; align-items: center; gap: 8px; font-family: 'DM Serif Display', serif; font-size: 1.1rem; color: var(--green); margin-bottom: 24px; }
+.modal-title { font-family: 'DM Serif Display', serif; font-size: 1.6rem; color: var(--ink); margin-bottom: 6px; }
+.modal-sub { font-size: 0.88rem; color: var(--ink-muted); margin-bottom: 28px; }
+.modal-tabs { display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 24px; }
+.modal-tab { flex: 1; padding: 10px; background: none; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 0.88rem; font-weight: 500; color: var(--ink-muted); transition: all 0.2s; }
+.modal-tab.active { background: var(--green); color: var(--white); }
+.auth-field { margin-bottom: 16px; }
+.auth-field label { display: block; font-size: 0.82rem; font-weight: 500; color: var(--ink-soft); margin-bottom: 6px; }
+.auth-field .pw-wrap { position: relative; }
+.auth-field .pw-wrap input { width: 100%; padding: 11px 40px 11px 14px; border: 1px solid var(--border); border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; color: var(--ink); background: var(--white); outline: none; transition: border-color 0.2s; }
+.auth-field .pw-wrap input:focus { border-color: var(--green); }
+.auth-field input[type=email] { width: 100%; padding: 11px 14px; border: 1px solid var(--border); border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; color: var(--ink); background: var(--white); outline: none; transition: border-color 0.2s; }
+.auth-field input[type=email]:focus { border-color: var(--green); }
+.pw-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--ink-muted); font-size: 0.85rem; padding: 2px; }
+.auth-btn { width: 100%; padding: 13px; background: var(--green); color: var(--white); border: none; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.95rem; font-weight: 500; cursor: pointer; margin-top: 8px; transition: background 0.2s, transform 0.1s; }
 .auth-btn:hover { background: var(--green-mid); transform: translateY(-1px); }
 .auth-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
-
-.auth-msg {
-  margin-top: 14px; padding: 10px 14px;
-  border-radius: 8px; font-size: 0.85rem;
-  display: none;
-}
+.auth-msg { margin-top: 14px; padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; display: none; }
 .auth-msg.error { background: #fef2f2; color: #b91c1c; display: block; }
 .auth-msg.success { background: var(--green-light); color: var(--green); display: block; }
 
-.auth-divider {
-  text-align: center; font-size: 0.8rem; color: var(--ink-muted);
-  margin: 20px 0; position: relative;
-}
-.auth-divider::before, .auth-divider::after {
-  content: ''; position: absolute; top: 50%;
-  width: 42%; height: 1px; background: var(--border);
-}
-.auth-divider::before { left: 0; }
-.auth-divider::after { right: 0; }
+/* ── ANIMACE ── */
+@keyframes fadeUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+.reveal { opacity: 0; transform: translateY(30px); transition: opacity 0.6s ease, transform 0.6s ease; }
+.reveal.visible { opacity: 1; transform: translateY(0); }
 
-/* Nav přihlášen */
-.nav-user {
-  display: none;
-  align-items: center; gap: 12px;
+/* ── RESPONSIVE ── */
+@media(max-width:900px){
+  .steps { grid-template-columns: 1fr; }
+  .plans { grid-template-columns: 1fr; max-width: 400px; }
+  footer { flex-direction: column; gap: 12px; text-align: center; }
 }
-.nav-user.visible { display: flex; }
-.nav-avatar {
-  width: 32px; height: 32px; border-radius: 50%;
-  background: var(--green); color: var(--white);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 0.8rem; font-weight: 600;
-}
-.nav-signout {
-  background: none; border: 1px solid var(--border);
-  color: var(--ink-soft); padding: 6px 14px;
-  border-radius: 6px; font-size: 0.85rem; cursor: pointer;
-  font-family: 'DM Sans', sans-serif;
-  transition: all 0.2s;
-}
-.nav-signout:hover { border-color: var(--ink-muted); color: var(--ink); }
-
-/* Free tier badge */
-.free-badge {
-  display: inline-flex; align-items: center; gap: 6px;
-  background: var(--sun-light); color: #c47d00;
-  font-size: 0.78rem; font-weight: 600;
-  padding: 4px 10px; border-radius: 100px;
-  margin-left: 8px;
+@media(max-width:600px){
+  .wizard-card { padding: 24px; }
+  .hero-intro { padding: 100px 5vw 40px; }
 }
 </style>
 </head>
@@ -703,155 +308,278 @@ footer {
 <!-- NAV -->
 <nav>
   <a href="/" class="nav-logo">
-    <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="28" height="28" rx="7" fill="#1a6b4a"/>
-      <path d="M14 5l-7 10h6l-2 8 9-12h-6l2-6h-2z" fill="#f5a623"/>
-    </svg>
+    <svg viewBox="0 0 28 28" fill="none"><rect width="28" height="28" rx="7" fill="#1a6b4a"/><path d="M14 5l-7 10h6l-2 8 9-12h-6l2-6h-2z" fill="#f5a623"/></svg>
     SVJ Energie
   </a>
-  <!-- Nepřihlášen -->
   <button class="nav-cta" id="nav-login-btn" onclick="openModal()">Přihlásit se</button>
-  <!-- Přihlášen -->
   <div class="nav-user" id="nav-user">
     <div class="nav-avatar" id="nav-avatar">?</div>
-    <a href="#kalkulator" class="nav-cta">Otevřít kalkulačku →</a>
     <button class="nav-signout" onclick="signOut()">Odhlásit</button>
   </div>
 </nav>
 
-<!-- AUTH MODAL -->
-<div class="modal-overlay" id="modal-overlay" onclick="overlayClick(event)">
-  <div class="modal">
-    <button class="modal-close" onclick="closeModal()">✕</button>
-    <div class="modal-logo">
-      <svg viewBox="0 0 28 28" width="22" fill="none"><rect width="28" height="28" rx="7" fill="#1a6b4a"/><path d="M14 5l-7 10h6l-2 8 9-12h-6l2-6h-2z" fill="#f5a623"/></svg>
-      SVJ Energie
-    </div>
-    <div class="modal-title" id="modal-title">Vítejte zpět</div>
-    <div class="modal-sub" id="modal-sub">Přihlaste se ke svému účtu</div>
-
-    <div class="modal-tabs">
-      <button class="modal-tab active" id="tab-login" onclick="switchTab('login')">Přihlásit se</button>
-      <button class="modal-tab" id="tab-register" onclick="switchTab('register')">Registrovat</button>
-    </div>
-
-    <!-- Přihlášení -->
-    <div id="form-login">
-      <div class="auth-field">
-        <label for="login-email">E-mail</label>
-        <input type="email" id="login-email" placeholder="vas@email.cz" autocomplete="email">
-      </div>
-      <div class="auth-field">
-        <label for="login-password">Heslo</label>
-        <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password">
-      </div>
-      <button class="auth-btn" id="login-btn" onclick="signIn()">Přihlásit se</button>
-      <div class="auth-msg" id="login-msg"></div>
-    </div>
-
-    <!-- Registrace -->
-    <div id="form-register" style="display:none">
-      <div class="auth-field">
-        <label for="reg-email">E-mail</label>
-        <input type="email" id="reg-email" placeholder="vas@email.cz" autocomplete="email">
-      </div>
-      <div class="auth-field">
-        <label for="reg-password">Heslo <span style="font-weight:400;color:var(--ink-muted)">(min. 8 znaků)</span></label>
-        <input type="password" id="reg-password" placeholder="••••••••" autocomplete="new-password">
-      </div>
-      <div class="auth-field">
-        <label for="reg-password2">Heslo znovu</label>
-        <input type="password" id="reg-password2" placeholder="••••••••" autocomplete="new-password">
-      </div>
-      <button class="auth-btn" id="register-btn" onclick="signUp()">Vytvořit účet zdarma</button>
-      <div class="auth-msg" id="register-msg"></div>
-    </div>
-  </div>
+<!-- HERO INTRO -->
+<div class="hero-intro">
+  <div class="hero-eyebrow">Fotovoltaika pro bytové domy</div>
+  <h1>Kolik ušetří <em>vaše SVJ</em> na energiích?</h1>
+  <p class="hero-sub">Zadejte parametry domu a za 30 sekund uvidíte orientační cashflow na 25 let. Přesná analýza, změření střechy a cenová nabídka jsou zdarma.</p>
 </div>
 
-<!-- HERO -->
-<section class="hero">
-  <div class="hero-left">
-    <div class="hero-eyebrow">Fotovoltaika pro bytové domy</div>
-    <h1>Kolik ušetří<br><em>vaše SVJ</em><br>na energiích?</h1>
-    <p class="hero-sub">Přesná kalkulačka postavená na datech PVGIS a aktuálních cenících ERÚ 2026. Výsledek za 30 sekund, bez registrace.</p>
-    <div class="hero-stats">
-      <div class="stat">
-        <span class="stat-num">11 let</span>
-        <span class="stat-label">průměrná návratnost</span>
-      </div>
-      <div class="stat">
-        <span class="stat-num">3,2 M Kč</span>
-        <span class="stat-label">úspora za 25 let</span>
-      </div>
-      <div class="stat">
-        <span class="stat-num">35 %</span>
-        <span class="stat-label">soběstačnost domu</span>
-      </div>
-    </div>
-  </div>
+<!-- WIZARD -->
+<div class="wizard-wrap">
+  <div class="wizard-card" id="wizard-card">
 
-  <!-- MINI KALKULAČKA -->
-  <div class="hero-right" id="kalkulator">
-    <div class="kalk-card">
-      <div class="kalk-title">Rychlá kalkulačka</div>
-      <div class="kalk-subtitle">Orientační výsledek — přesná simulace po registraci</div>
-
-      <div class="form-group">
-        <div class="form-label">
-          Počet bytových jednotek
-          <span id="val-byty">20</span>
+    <!-- Krok 1: Dům -->
+    <div id="step-1">
+      <div class="wiz-progress">
+        <div class="wiz-step-dot active" id="dot-1"></div>
+        <div class="wiz-step-dot" id="dot-2"></div>
+        <div class="wiz-step-dot" id="dot-3"></div>
+        <span class="wiz-step-label">Krok 1 ze 3</span>
+      </div>
+      <div class="wiz-title">🏠 Váš dům</div>
+      <div class="wiz-grid">
+        <div class="wiz-slider-wrap">
+          <div class="wiz-slider-top">
+            <label style="font-size:0.82rem;font-weight:500;color:var(--ink-soft)">Počet bytových jednotek</label>
+            <span class="wiz-slider-val" id="val-byty">20</span>
+          </div>
+          <input type="range" id="sl-byty" min="4" max="120" value="20" step="1" oninput="updateSlider('byty',this.value)">
         </div>
-        <input type="range" id="sl-byty" min="6" max="120" value="20" step="1">
-      </div>
-
-      <div class="form-group">
-        <div class="form-label">
-          Průměrná spotřeba bytu
-          <span id="val-sp">2,5 MWh/rok</span>
+        <div class="wiz-slider-wrap">
+          <div class="wiz-slider-top">
+            <label style="font-size:0.82rem;font-weight:500;color:var(--ink-soft)">Průměrná spotřeba bytu</label>
+            <span class="wiz-slider-val" id="val-sp">2,5 MWh/rok</span>
+          </div>
+          <input type="range" id="sl-sp" min="1" max="6" value="2.5" step="0.5" oninput="updateSlider('sp',this.value)">
         </div>
-        <input type="range" id="sl-sp" min="1" max="6" value="2.5" step="0.5">
       </div>
 
-      <div class="form-group">
-        <div class="form-label">
-          Výkon FVE (kWp)
-          <span id="val-kwp">30 kWp</span>
+      <div style="margin-top:20px">
+        <label style="font-size:0.82rem;font-weight:500;color:var(--ink-soft);display:block;margin-bottom:8px">Co v domě používáte na elektřinu?</label>
+        <div class="wiz-checks" id="zarizeni-checks">
+          <label class="wiz-check-item" id="chk-sporak"><input type="checkbox" value="sporak" onchange="toggleCheck(this)"> 🍳 Elektrický sporák</label>
+          <label class="wiz-check-item" id="chk-bojler"><input type="checkbox" value="bojler" onchange="toggleCheck(this)"> 🚿 Bojler / ohřev vody</label>
+          <label class="wiz-check-item" id="chk-klima"><input type="checkbox" value="klima" onchange="toggleCheck(this)"> ❄️ Klimatizace</label>
+          <label class="wiz-check-item" id="chk-tc"><input type="checkbox" value="tc" onchange="toggleCheck(this)"> 🌡️ Tepelné čerpadlo bytu</label>
+          <label class="wiz-check-item" id="chk-ev"><input type="checkbox" value="ev" onchange="toggleCheck(this)"> 🚗 Nabíjení elektroaut</label>
+          <label class="wiz-check-item" id="chk-akum"><input type="checkbox" value="akum" onchange="toggleCheck(this)"> ⚡ Akumulační topení</label>
         </div>
-        <input type="range" id="sl-kwp" min="10" max="100" value="30" step="5">
       </div>
 
-      <div class="form-group">
-        <label class="form-label" for="sel-dist" style="display:block; margin-bottom:8px">Distributor</label>
-        <select class="form-select" id="sel-dist">
-          <option value="cez">ČEZ Distribuce</option>
-          <option value="egd">EG.D (E.ON)</option>
-          <option value="pre">PREdistribuce</option>
+      <div style="margin-top:20px">
+        <label style="font-size:0.82rem;font-weight:500;color:var(--ink-soft);display:block;margin-bottom:8px">Distributor elektřiny</label>
+        <div class="wiz-toggle-group">
+          <button class="wiz-toggle-btn active" id="dist-cez" onclick="setDist('cez')">ČEZ</button>
+          <button class="wiz-toggle-btn" id="dist-egd" onclick="setDist('egd')">EG.D (E.ON)</button>
+          <button class="wiz-toggle-btn" id="dist-pre" onclick="setDist('pre')">PRE</button>
+        </div>
+      </div>
+
+      <div style="margin-top:20px" class="wiz-field locked">
+        <label>Složení obyvatel domu</label>
+        <select disabled>
+          <option>Smíšené (pracující + důchodci)</option>
         </select>
+        <span class="wiz-lock-badge">🔒 Dostupné v plné verzi</span>
       </div>
 
-      <!-- VÝSLEDEK -->
-      <div class="kalk-result" id="result-box">
-        <div class="result-label">Odhadovaná úspora za 25 let</div>
-        <div class="result-value" id="res-uspora">—</div>
-        <div class="result-sub" id="res-sub">Počítám…</div>
-        <div class="result-detail">
-          <div class="result-detail-item">
-            <div class="rd-val" id="res-rocni">—</div>
-            <div class="rd-label">úspora / rok</div>
+      <div class="wiz-nav">
+        <button class="wiz-btn-next" onclick="goStep(2)">Dál — střecha →</button>
+      </div>
+    </div>
+
+    <!-- Krok 2: Střecha -->
+    <div id="step-2" style="display:none">
+      <div class="wiz-progress">
+        <div class="wiz-step-dot done"></div>
+        <div class="wiz-step-dot active"></div>
+        <div class="wiz-step-dot"></div>
+        <span class="wiz-step-label">Krok 2 ze 3</span>
+      </div>
+      <div class="wiz-title">🏗️ Střecha a lokalita</div>
+      <div class="wiz-grid">
+        <div class="wiz-field">
+          <label>Typ střechy</label>
+          <div class="wiz-toggle-group" style="border:1px solid var(--border)">
+            <button class="wiz-toggle-btn active" id="str-sikma" onclick="setStecha('sikma')">🏠 Šikmá</button>
+            <button class="wiz-toggle-btn" id="str-plocha" onclick="setStecha('plocha')">🏢 Plochá</button>
           </div>
-          <div class="result-detail-item">
-            <div class="rd-val" id="res-navrat">—</div>
-            <div class="rd-label">návratnost</div>
+        </div>
+        <div class="wiz-field">
+          <label>Orientace střechy</label>
+          <select id="sel-azimut">
+            <option value="0">⬆️ Jih (ideální)</option>
+            <option value="-45">↙️ Jihovýchod</option>
+            <option value="45">↗️ Jihozápad</option>
+            <option value="-90">⬅️ Východ</option>
+            <option value="90">➡️ Západ</option>
+            <option value="998">↔️ JZ + JV (dvě plochy)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="wiz-grid" style="margin-top:16px">
+        <div class="wiz-field locked">
+          <label>Sklon střechy (°)</label>
+          <input type="number" value="35" disabled>
+          <span class="wiz-lock-badge">🔒 Dostupné v plné verzi</span>
+        </div>
+        <div class="wiz-field">
+          <label>Město / oblast</label>
+          <select id="sel-lokalita">
+            <option value="1050">Praha a okolí</option>
+            <option value="1050">Středočeský kraj</option>
+            <option value="1080" selected>Jihomoravský kraj</option>
+            <option value="1060">Jihočeský kraj</option>
+            <option value="1040">Ústecký kraj</option>
+            <option value="1030">Moravskoslezský kraj</option>
+            <option value="1070">Zlínský kraj</option>
+            <option value="1060">Olomoucký kraj</option>
+            <option value="1045">Královéhradecký kraj</option>
+            <option value="1045">Pardubický kraj</option>
+            <option value="1040">Liberecký kraj</option>
+            <option value="1035">Karlovarský kraj</option>
+            <option value="1055">Plzeňský kraj</option>
+            <option value="1065">Vysočina</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="wiz-field locked" style="margin-top:16px">
+        <label>Stav střechy a stínění</label>
+        <select disabled>
+          <option>Dobrý stav, bez stínění</option>
+        </select>
+        <span class="wiz-lock-badge">🔒 Dostupné v plné verzi</span>
+      </div>
+
+      <div class="wiz-nav">
+        <button class="wiz-btn-back" onclick="goStep(1)">← Zpět</button>
+        <button class="wiz-btn-next" onclick="goStep(3)">Spočítat →</button>
+      </div>
+    </div>
+
+    <!-- Krok 3: Výsledek -->
+    <div id="step-3" style="display:none">
+      <div class="wiz-progress">
+        <div class="wiz-step-dot done"></div>
+        <div class="wiz-step-dot done"></div>
+        <div class="wiz-step-dot active"></div>
+        <span class="wiz-step-label">Výsledek</span>
+      </div>
+      <div class="wiz-title">📊 Orientační výsledek</div>
+
+      <!-- Metriky -->
+      <div class="result-hero">
+        <div class="result-metric highlight">
+          <div class="rm-label">Úspora za 25 let</div>
+          <div class="rm-val" id="r-uspora25">—</div>
+          <div class="rm-sub" id="r-invest-sub">z investice —</div>
+        </div>
+        <div class="result-metric">
+          <div class="rm-label">Roční úspora (rok 1)</div>
+          <div class="rm-val" id="r-uspora1">—</div>
+          <div class="rm-sub">bez baterie</div>
+        </div>
+        <div class="result-metric">
+          <div class="rm-label">Návratnost</div>
+          <div class="rm-val" id="r-navrat">—</div>
+          <div class="rm-sub">statická</div>
+        </div>
+        <div class="result-metric">
+          <div class="rm-label">Doporučený výkon</div>
+          <div class="rm-val" id="r-kwp">—</div>
+          <div class="rm-sub">orientační</div>
+        </div>
+        <div class="result-metric" style="position:relative;overflow:hidden">
+          <div class="rm-label">Vlastní spotřeba</div>
+          <div class="rm-val rm-blur">42 %</div>
+          <div class="rm-sub rm-blur">z výroby FVE</div>
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:0.75rem;color:var(--ink-muted)">🔒 plná verze</div>
+        </div>
+        <div class="result-metric" style="position:relative;overflow:hidden">
+          <div class="rm-label">Soběstačnost domu</div>
+          <div class="rm-val rm-blur">31 %</div>
+          <div class="rm-sub rm-blur">pokrytí spotřeby</div>
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:0.75rem;color:var(--ink-muted)">🔒 plná verze</div>
+        </div>
+      </div>
+
+      <!-- Graf cashflow -->
+      <div class="chart-wrap">
+        <canvas id="cf-chart" height="200"></canvas>
+        <div class="chart-blur-overlay">
+          <div class="chart-blur-msg">
+            <strong>Cashflow roky 4–25 k dispozici po vyplnění formuláře</strong>
+            <span>Váš specialista vám pošle kompletní analýzu zdarma</span>
           </div>
         </div>
       </div>
 
-      <a href="#registrace" class="kalk-cta" onclick="openModal('register');return false">Získat přesnou simulaci zdarma →</a>
-      <div class="kalk-note">Bez kreditní karty · Výsledek na email do 60 sekund</div>
+      <!-- Limit warning -->
+      <div class="limit-box" id="limit-box" style="display:none">
+        <strong>⏱️ Dnešní limit 3 výpočtů byl vyčerpán</strong>
+        <p>Vyplňte formulář níže — dostanete přesnou simulaci přímo od specialisty.</p>
+      </div>
+
+      <!-- Lead formulář -->
+      <div class="lead-box">
+        <div class="lead-box-title">Chcete přesná čísla pro váš dům?</div>
+        <div class="lead-box-sub">Náš specialista vás kontaktuje do 24 hodin a zajistí vám:</div>
+        <ul class="lead-perks">
+          <li>Osobní návštěvu a odborné změření střechy zdarma</li>
+          <li>Přesnou cenovou nabídku s 3D vizualizací panelů</li>
+          <li>Kompletní podklady pro hlasování na schůzi SVJ</li>
+          <li>Srovnání modelů sdílení EDC / JOM pro váš dům</li>
+        </ul>
+        <div class="lead-grid" id="lead-form">
+          <div class="lead-field">
+            <label>Jméno a příjmení *</label>
+            <input type="text" id="lead-jmeno" placeholder="Jan Novák">
+          </div>
+          <div class="lead-field">
+            <label>Telefon *</label>
+            <input type="tel" id="lead-telefon" placeholder="+420 777 123 456">
+          </div>
+          <div class="lead-field">
+            <label>E-mail *</label>
+            <input type="email" id="lead-email" placeholder="jan@email.cz">
+          </div>
+          <div class="lead-field">
+            <label>Pozice v SVJ</label>
+            <select id="lead-pozice">
+              <option value="">— vyberte —</option>
+              <option>Předseda SVJ</option>
+              <option>Správce domu</option>
+              <option>Člen výboru</option>
+              <option>Vlastník bytu</option>
+              <option>Jiné</option>
+            </select>
+          </div>
+          <div class="lead-field full">
+            <label>Název SVJ nebo adresa domu</label>
+            <input type="text" id="lead-svj" placeholder="SVJ Náměstí Míru 5, Praha 2">
+          </div>
+          <div class="lead-gdpr">
+            <input type="checkbox" id="lead-gdpr-cb">
+            <span>Souhlasím se zpracováním osobních údajů za účelem přípravy nabídky. Údaje nebudou předány třetím stranám.</span>
+          </div>
+        </div>
+        <button class="lead-submit" id="lead-submit-btn" onclick="submitLead()">
+          Chci bezplatnou analýzu a návštěvu specialisty →
+        </button>
+        <div class="lead-note">Žádné závazky · Bez kreditní karty · Výsledky do 24 hodin</div>
+        <div class="lead-msg" id="lead-msg"></div>
+      </div>
+
+      <div style="margin-top:16px;text-align:center">
+        <button onclick="goStep(1)" style="background:none;border:none;color:var(--ink-muted);font-size:0.85rem;cursor:pointer;text-decoration:underline">← Změnit parametry</button>
+      </div>
     </div>
-  </div>
-</section>
+
+  </div><!-- /wizard-card -->
+</div><!-- /wizard-wrap -->
 
 <!-- JAK TO FUNGUJE -->
 <section class="section">
@@ -862,17 +590,17 @@ footer {
     <div class="step reveal">
       <div class="step-num">01</div>
       <div class="step-title">Zadejte parametry domu</div>
-      <div class="step-text">Počet bytů, spotřeba, adresa. Automaticky načteme solární data pro vaši lokalitu z databáze PVGIS (EU JRC).</div>
+      <div class="step-text">Počet bytů, spotřeba, typ střechy. Za 30 sekund máte orientační cashflow na 25 let.</div>
     </div>
     <div class="step reveal" style="transition-delay:0.1s">
       <div class="step-num">02</div>
-      <div class="step-title">Dostanete přesnou simulaci</div>
-      <div class="step-text">15minutová simulace celého roku. Cashflow na 25 let, srovnání modelů sdílení EDC/JOM, vliv baterie.</div>
+      <div class="step-title">Specialista vám zavolá</div>
+      <div class="step-text">Do 24 hodin vás kontaktuje náš energetický specialista a domluví termín bezplatné návštěvy.</div>
     </div>
     <div class="step reveal" style="transition-delay:0.2s">
       <div class="step-num">03</div>
-      <div class="step-title">PDF pro schůzi SVJ</div>
-      <div class="step-text">Exportujte profesionální podklady pro hlasování — grafy, cashflow tabulka, srovnání nabídek.</div>
+      <div class="step-title">Přesná nabídka a podklady pro SVJ</div>
+      <div class="step-text">Dostanete cenovou nabídku s 3D vizualizací a profesionální podklady pro hlasování na schůzi.</div>
     </div>
   </div>
 </section>
@@ -880,7 +608,7 @@ footer {
 <!-- CENY -->
 <section class="pricing-section" id="registrace">
   <div class="section-label">Ceník</div>
-  <div class="section-title" style="color:white">Začněte zdarma</div>
+  <div class="section-title">Začněte zdarma</div>
   <div class="section-sub">Registrace = kvalifikovaný zájem. Žádné závazky.</div>
   <div class="plans">
     <div class="plan reveal">
@@ -888,10 +616,10 @@ footer {
       <div class="plan-price">0 Kč</div>
       <div class="plan-period">navždy</div>
       <ul class="plan-features">
-        <li>3 orientační výpočty</li>
-        <li>Základní cashflow graf</li>
-        <li class="muted">Import faktury</li>
-        <li class="muted">Uložené simulace</li>
+        <li>3 orientační výpočty / den</li>
+        <li>Cashflow graf (roky 1–3)</li>
+        <li class="muted">Detailní simulace</li>
+        <li class="muted">Uložené projekty</li>
         <li class="muted">PDF export</li>
       </ul>
       <a href="#" class="plan-btn" onclick="openModal('register');return false">Začít zdarma</a>
@@ -903,9 +631,9 @@ footer {
       <div class="plan-period">/ měsíc</div>
       <ul class="plan-features">
         <li>Neomezené simulace</li>
+        <li>Kompletní cashflow 25 let</li>
         <li>Import faktury (foto)</li>
         <li>Uložené projekty</li>
-        <li>Graf profilu spotřeby</li>
         <li class="muted">PDF export pro SVJ</li>
       </ul>
       <a href="#" class="plan-btn" onclick="openModal('register');return false">Vyzkoušet 14 dní</a>
@@ -932,55 +660,94 @@ footer {
   <div class="footer-copy">© 2026 SVJ Energie · svjenergie.cz · Všechna práva vyhrazena</div>
 </footer>
 
+<!-- AUTH MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="overlayClick(event)">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-logo">
+      <svg viewBox="0 0 28 28" width="22" fill="none"><rect width="28" height="28" rx="7" fill="#1a6b4a"/><path d="M14 5l-7 10h6l-2 8 9-12h-6l2-6h-2z" fill="#f5a623"/></svg>
+      SVJ Energie
+    </div>
+    <div class="modal-title" id="modal-title">Vítejte zpět</div>
+    <div class="modal-sub" id="modal-sub">Přihlaste se ke svému účtu</div>
+    <div class="modal-tabs">
+      <button class="modal-tab active" id="tab-login" onclick="switchTab('login')">Přihlásit se</button>
+      <button class="modal-tab" id="tab-register" onclick="switchTab('register')">Registrovat</button>
+    </div>
+    <div id="form-login">
+      <div class="auth-field">
+        <label>E-mail</label>
+        <input type="email" id="login-email" placeholder="vas@email.cz" autocomplete="email">
+      </div>
+      <div class="auth-field">
+        <label>Heslo</label>
+        <div class="pw-wrap">
+          <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password">
+          <button class="pw-toggle" type="button" onclick="togglePw('login-password',this)" title="Zobrazit heslo">👁</button>
+        </div>
+      </div>
+      <button class="auth-btn" id="login-btn" onclick="signIn()">Přihlásit se</button>
+      <div class="auth-msg" id="login-msg"></div>
+    </div>
+    <div id="form-register" style="display:none">
+      <div class="auth-field">
+        <label>E-mail</label>
+        <input type="email" id="reg-email" placeholder="vas@email.cz" autocomplete="email">
+      </div>
+      <div class="auth-field">
+        <label>Heslo <span style="font-weight:400;color:var(--ink-muted)">(min. 8 znaků)</span></label>
+        <div class="pw-wrap">
+          <input type="password" id="reg-password" placeholder="••••••••" autocomplete="new-password">
+          <button class="pw-toggle" type="button" onclick="togglePw('reg-password',this)" title="Zobrazit heslo">👁</button>
+        </div>
+      </div>
+      <div class="auth-field">
+        <label>Heslo znovu</label>
+        <div class="pw-wrap">
+          <input type="password" id="reg-password2" placeholder="••••••••" autocomplete="new-password">
+          <button class="pw-toggle" type="button" onclick="togglePw('reg-password2',this)" title="Zobrazit heslo">👁</button>
+        </div>
+      </div>
+      <button class="auth-btn" id="register-btn" onclick="signUp()">Vytvořit účet zdarma</button>
+      <div class="auth-msg" id="register-msg"></div>
+    </div>
+  </div>
+</div>
+
 <script>
-// ── SUPABASE INIT ──
+// ── SUPABASE ──
 const SUPABASE_URL = 'https://aeypeepckmbejdcotdss.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFleXBlZXBja21iZWpkY290ZHNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTkyNjAsImV4cCI6MjA5Mjk3NTI2MH0.JjYiI3bcL1ds1vAkFq59Z0WhNCLAd8oekX6GF4Zq5bA';
 const { createClient } = supabase;
 const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// ── AUTH STATE ──
 sb.auth.onAuthStateChange((event, session) => {
-  if (session?.user) {
-    showLoggedIn(session.user);
-  } else {
-    showLoggedOut();
-  }
+  if (session?.user) { showLoggedIn(session.user); } else { showLoggedOut(); }
 });
 
 function showLoggedIn(user) {
   document.getElementById('nav-login-btn').style.display = 'none';
-  const navUser = document.getElementById('nav-user');
-  navUser.classList.add('visible');
-  // Initials avatar
-  const email = user.email || '';
-  const initials = email.substring(0, 2).toUpperCase();
-  document.getElementById('nav-avatar').textContent = initials;
+  document.getElementById('nav-user').classList.add('visible');
+  document.getElementById('nav-avatar').textContent = (user.email||'?').substring(0,2).toUpperCase();
   closeModal();
 }
-
 function showLoggedOut() {
   document.getElementById('nav-login-btn').style.display = '';
   document.getElementById('nav-user').classList.remove('visible');
 }
+async function signOut() { await sb.auth.signOut(); }
 
-// ── MODAL ──
+// ── AUTH MODAL ──
 function openModal(tab) {
   document.getElementById('modal-overlay').classList.add('open');
-  if (tab === 'register') switchTab('register');
-  else switchTab('login');
+  switchTab(tab === 'register' ? 'register' : 'login');
   document.body.style.overflow = 'hidden';
 }
-
 function closeModal() {
   document.getElementById('modal-overlay').classList.remove('open');
   document.body.style.overflow = '';
 }
-
-function overlayClick(e) {
-  if (e.target === document.getElementById('modal-overlay')) closeModal();
-}
-
+function overlayClick(e) { if (e.target === document.getElementById('modal-overlay')) closeModal(); }
 function switchTab(tab) {
   const isLogin = tab === 'login';
   document.getElementById('tab-login').classList.toggle('active', isLogin);
@@ -988,81 +755,49 @@ function switchTab(tab) {
   document.getElementById('form-login').style.display = isLogin ? '' : 'none';
   document.getElementById('form-register').style.display = isLogin ? 'none' : '';
   document.getElementById('modal-title').textContent = isLogin ? 'Vítejte zpět' : 'Vytvořit účet';
-  document.getElementById('modal-sub').textContent = isLogin
-    ? 'Přihlaste se ke svému účtu'
-    : 'Registrace je zdarma, bez kreditní karty';
+  document.getElementById('modal-sub').textContent = isLogin ? 'Přihlaste se ke svému účtu' : 'Registrace je zdarma, bez kreditní karty';
 }
-
-// ── PŘIHLÁŠENÍ ──
 async function signIn() {
   const email = document.getElementById('login-email').value.trim();
   const password = document.getElementById('login-password').value;
   const btn = document.getElementById('login-btn');
   const msg = document.getElementById('login-msg');
-
-  if (!email || !password) {
-    showMsg(msg, 'Vyplňte e-mail a heslo.', 'error'); return;
-  }
+  if (!email || !password) { showMsg(msg,'Vyplňte e-mail a heslo.','error'); return; }
   btn.disabled = true; btn.textContent = 'Přihlašuji…';
-
   const { error } = await sb.auth.signInWithPassword({ email, password });
-
   btn.disabled = false; btn.textContent = 'Přihlásit se';
-  if (error) {
-    showMsg(msg, chybaCZ(error.message), 'error');
-  } else {
-    showMsg(msg, '✓ Přihlášení proběhlo.', 'success');
-    setTimeout(() => closeModal(), 800);
-  }
+  if (error) { showMsg(msg, chybaCZ(error.message), 'error'); }
+  else { showMsg(msg,'✓ Přihlášení proběhlo.','success'); setTimeout(closeModal, 800); }
 }
-
-// ── REGISTRACE ──
 async function signUp() {
   const email = document.getElementById('reg-email').value.trim();
   const password = document.getElementById('reg-password').value;
   const password2 = document.getElementById('reg-password2').value;
   const btn = document.getElementById('register-btn');
   const msg = document.getElementById('register-msg');
-
-  if (!email || !password) {
-    showMsg(msg, 'Vyplňte e-mail a heslo.', 'error'); return;
-  }
-  if (password.length < 8) {
-    showMsg(msg, 'Heslo musí mít alespoň 8 znaků.', 'error'); return;
-  }
-  if (password !== password2) {
-    showMsg(msg, 'Hesla se neshodují.', 'error'); return;
-  }
+  if (!email || !password) { showMsg(msg,'Vyplňte e-mail a heslo.','error'); return; }
+  if (password.length < 8) { showMsg(msg,'Heslo musí mít alespoň 8 znaků.','error'); return; }
+  if (password !== password2) { showMsg(msg,'Hesla se neshodují.','error'); return; }
   btn.disabled = true; btn.textContent = 'Vytvářím účet…';
-
   const { error } = await sb.auth.signUp({ email, password });
-
   btn.disabled = false; btn.textContent = 'Vytvořit účet zdarma';
-  if (error) {
-    showMsg(msg, chybaCZ(error.message), 'error');
-  } else {
-    showMsg(msg, '✓ Registrace proběhla!', 'success');
+  if (error) { showMsg(msg, chybaCZ(error.message), 'error'); }
+  else {
+    showMsg(msg,'✓ Registrace proběhla!','success');
     setTimeout(() => {
       switchTab('login');
       document.getElementById('login-email').value = email;
       document.getElementById('login-password').focus();
-      showMsg(document.getElementById('login-msg'),
-        '✓ Účet vytvořen. Potvrďte e-mail a přihlaste se.', 'success');
+      showMsg(document.getElementById('login-msg'),'✓ Potvrďte e-mail a přihlaste se.','success');
     }, 900);
   }
 }
-
-// ── ODHLÁŠENÍ ──
-async function signOut() {
-  await sb.auth.signOut();
+function togglePw(inputId, btn) {
+  const inp = document.getElementById(inputId);
+  if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈'; }
+  else { inp.type = 'password'; btn.textContent = '👁'; }
 }
-
-// ── HELPERS ──
-function showMsg(el, text, type) {
-  el.textContent = text;
-  el.className = 'auth-msg ' + type;
-}
-
+function showMsg(el, text, type) { el.textContent = text; el.className = 'auth-msg ' + type; }
 function chybaCZ(msg) {
   if (msg.includes('Invalid login credentials')) return 'Špatný e-mail nebo heslo.';
   if (msg.includes('Email not confirmed')) return 'Nejdříve potvrďte registraci v e-mailu.';
@@ -1070,78 +805,224 @@ function chybaCZ(msg) {
   if (msg.includes('Password should be')) return 'Heslo musí mít alespoň 8 znaků.';
   return 'Chyba: ' + msg;
 }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
-// Escape pro zavření modalu
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') closeModal();
-});
-
-// ── KALKULAČKA ──
-const CENY = {
-  cez: { vt: 6.61, pretoky: 1.50 },
-  egd: { vt: 6.55, pretoky: 1.50 },
-  pre: { vt: 5.57, pretoky: 1.50 },
+// ── WIZARD STATE ──
+const state = {
+  byty: 20, sp: 2.5, dist: 'cez',
+  zarizeni: [],
+  strecha: 'sikma', azimut: 0, lokalita: 1080
 };
 
-const INVEST_KWP = 35000;
-const VYROBA_KWP = 1050;
-const SHARE_VLASTNI = 0.38;
-const RUST = 1.03;
-const DEG  = 0.995;
-
-function fmt(n) {
-  return n.toLocaleString('cs-CZ', { maximumFractionDigits: 0 }) + ' Kč';
+function updateSlider(key, val) {
+  state[key === 'byty' ? 'byty' : 'sp'] = +val;
+  if (key === 'byty') document.getElementById('val-byty').textContent = val;
+  else document.getElementById('val-sp').textContent = (+val).toFixed(1).replace('.',',') + ' MWh/rok';
+}
+function setDist(d) {
+  state.dist = d;
+  ['cez','egd','pre'].forEach(x => document.getElementById('dist-'+x).classList.toggle('active', x===d));
+}
+function setStecha(t) {
+  state.strecha = t;
+  ['sikma','plocha'].forEach(x => document.getElementById('str-'+x).classList.toggle('active', x===t));
+}
+function toggleCheck(cb) {
+  const val = cb.value;
+  const li = document.getElementById('chk-'+val);
+  if (cb.checked) { state.zarizeni.push(val); li.classList.add('checked'); }
+  else { state.zarizeni = state.zarizeni.filter(v=>v!==val); li.classList.remove('checked'); }
 }
 
-function pocitej() {
-  const byty   = +document.getElementById('sl-byty').value;
-  const spMwh  = +document.getElementById('sl-sp').value;
-  const kwp    = +document.getElementById('sl-kwp').value;
-  const dist   = document.getElementById('sel-dist').value;
+// ── LIMIT (localStorage) ──
+function checkLimit() {
+  const today = new Date().toDateString();
+  const data = JSON.parse(localStorage.getItem('svj_calc')||'{}');
+  if (data.date !== today) return 0;
+  return data.count || 0;
+}
+function incrementLimit() {
+  const today = new Date().toDateString();
+  const data = JSON.parse(localStorage.getItem('svj_calc')||'{}');
+  const count = (data.date === today ? (data.count||0) : 0) + 1;
+  localStorage.setItem('svj_calc', JSON.stringify({ date: today, count }));
+  return count;
+}
 
-  document.getElementById('val-byty').textContent = byty;
-  document.getElementById('val-sp').textContent   = spMwh.toFixed(1).replace('.', ',') + ' MWh/rok';
-  document.getElementById('val-kwp').textContent  = kwp + ' kWp';
+// ── STEP NAVIGACE ──
+function goStep(n) {
+  if (n === 3) {
+    const count = incrementLimit();
+    if (count > 3) {
+      document.getElementById('limit-box').style.display = '';
+    }
+    state.azimut = +document.getElementById('sel-azimut').value;
+    state.lokalita = +document.getElementById('sel-lokalita').value;
+    compute();
+  }
+  [1,2,3].forEach(i => document.getElementById('step-'+i).style.display = i===n ? '' : 'none');
+  document.getElementById('wizard-card').scrollIntoView({ behavior:'smooth', block:'start' });
+}
 
-  const ceny      = CENY[dist];
-  const vyroba    = kwp * VYROBA_KWP;
-  const vlastni   = vyroba * SHARE_VLASTNI;
-  const pretoky   = vyroba - vlastni;
-  const invest    = kwp * INVEST_KWP;
+// ── VÝPOČET ──
+const CENY_VT = { cez: 6.61, egd: 6.55, pre: 5.57 };
+const CENY_NT = { cez: 4.20, egd: 4.10, pre: 3.90 };
+const PRETOKY = 1.50;
+const RUST = 1.03; const DEG = 0.995;
 
-  let uspora1 = vlastni * ceny.vt / 1000 + pretoky * ceny.pretoky / 1000;
-  let kum = -invest;
-  let navrat = null;
+// Spotřebiče → přídavek kWh/byt/rok
+const ZAR_VT = { sporak:800, bojler:0, klima:400, tc:0, ev:1200, akum:0 };
+const ZAR_NT = { sporak:0, bojler:900, klima:0, tc:2000, ev:0, akum:1800 };
+
+function compute() {
+  const byty = state.byty;
+  const sp_byt_vt = state.sp * 1000; // kWh/rok/byt základní
+  let extra_vt = 0, extra_nt = 0;
+  state.zarizeni.forEach(z => { extra_vt += (ZAR_VT[z]||0); extra_nt += (ZAR_NT[z]||0); });
+  const sp_vt = (sp_byt_vt + extra_vt) * byty / 1000; // MWh/rok celkem
+  const sp_nt = extra_nt * byty / 1000;
+
+  // Orientace koeficient
+  const AZ_KOEF = { '0':1.0, '-45':0.94, '45':0.94, '-90':0.82, '90':0.82, '998':0.96 };
+  const azKoef = AZ_KOEF[String(state.azimut)] || 1.0;
+
+  // Výroba kWh/kWp/rok dle lokality
+  const vyroba_kwp = state.lokalita * azKoef;
+
+  // Doporučený výkon (75 % VT spotřeby)
+  const kwp = Math.max(5, Math.round((sp_vt * 0.75 / (vyroba_kwp/1000)) / 5) * 5);
+
+  // Výroba celkem
+  const vyroba = kwp * vyroba_kwp; // kWh/rok
+  const vlastni = vyroba * 0.38;   // ~38% vlastní spotřeba (orientační)
+  const pretoky = vyroba - vlastni;
+  const invest = kwp * (kwp < 20 ? 33000 : kwp < 40 ? 28000 : 24000);
+
+  const cena_vt = CENY_VT[state.dist];
+  const uspora1 = vlastni * cena_vt / 1000 + pretoky * PRETOKY / 1000;
+
+  // Cashflow 25 let
+  let cf = [], kum = -invest, navrat = null;
   for (let r = 1; r <= 25; r++) {
-    const u = uspora1 * Math.pow(RUST, r - 1) * Math.pow(DEG, r - 1);
+    const u = uspora1 * Math.pow(RUST, r-1) * Math.pow(DEG, r-1);
     kum += u;
+    cf.push({ rok: r, uspora: Math.round(u), kumulativni: Math.round(kum) });
     if (!navrat && kum >= 0) navrat = r;
   }
+  const uspora25 = cf.reduce((s,r)=>s+r.uspora, 0);
 
-  let sum25 = 0;
-  for (let r = 1; r <= 25; r++) {
-    sum25 += uspora1 * Math.pow(RUST, r - 1) * Math.pow(DEG, r - 1);
-  }
+  // Zobraz
+  const fmtKc = n => n.toLocaleString('cs-CZ',{maximumFractionDigits:0}) + ' Kč';
+  document.getElementById('r-uspora25').textContent = fmtKc(Math.round(uspora25/1000)*1000);
+  document.getElementById('r-uspora1').textContent  = fmtKc(Math.round(uspora1/1000)*1000);
+  document.getElementById('r-navrat').textContent   = navrat ? navrat + ' let' : '>25 let';
+  document.getElementById('r-kwp').textContent      = kwp + ' kWp';
+  document.getElementById('r-invest-sub').textContent = 'z investice ' + fmtKc(invest);
 
-  document.getElementById('res-uspora').textContent = fmt(Math.round(sum25 / 1000) * 1000);
-  document.getElementById('res-sub').textContent    = `z investice ${fmt(invest)} · výroba ${Math.round(vyroba / 1000)} MWh/rok`;
-  document.getElementById('res-rocni').textContent  = fmt(Math.round(uspora1 / 1000) * 1000);
-  document.getElementById('res-navrat').textContent = navrat ? navrat + ' let' : '>25 let';
+  drawChart(cf);
 }
 
-['sl-byty','sl-sp','sl-kwp','sel-dist'].forEach(id => {
-  document.getElementById(id).addEventListener('input', pocitej);
-  document.getElementById(id).addEventListener('change', pocitej);
-});
-pocitej();
+// ── GRAF ──
+let cfChart = null;
+function drawChart(cf) {
+  const ctx = document.getElementById('cf-chart').getContext('2d');
+  const labels = cf.map(r => 'Rok ' + r.rok);
+  const data   = cf.map(r => r.kumulativni);
+
+  // Viditelné jen roky 1–3, zbytek průhledný (blur přes overlay)
+  const colors = cf.map((r,i) => i < 3
+    ? (r.kumulativni >= 0 ? 'rgba(26,107,74,0.85)' : 'rgba(220,60,60,0.7)')
+    : 'rgba(200,200,200,0.3)'
+  );
+
+  if (cfChart) cfChart.destroy();
+  cfChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Kumulativní cashflow (Kč)',
+        data,
+        backgroundColor: colors,
+        borderRadius: 4,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => ctx.parsed.y.toLocaleString('cs-CZ') + ' Kč'
+          }
+        }
+      },
+      scales: {
+        y: {
+          ticks: { callback: v => (v/1000).toLocaleString('cs-CZ') + ' tis. Kč' },
+          grid: { color: 'rgba(0,0,0,0.05)' }
+        },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+}
+
+// ── LEAD ODESLÁNÍ ──
+async function submitLead() {
+  const jmeno   = document.getElementById('lead-jmeno').value.trim();
+  const telefon = document.getElementById('lead-telefon').value.trim();
+  const email   = document.getElementById('lead-email').value.trim();
+  const pozice  = document.getElementById('lead-pozice').value;
+  const svj     = document.getElementById('lead-svj').value.trim();
+  const gdpr    = document.getElementById('lead-gdpr-cb').checked;
+  const btn     = document.getElementById('lead-submit-btn');
+  const msg     = document.getElementById('lead-msg');
+
+  if (!jmeno || !telefon || !email) {
+    showLeadMsg('Vyplňte prosím jméno, telefon a e-mail.', 'error'); return;
+  }
+  if (!gdpr) {
+    showLeadMsg('Potvrďte prosím souhlas se zpracováním údajů.', 'error'); return;
+  }
+
+  btn.disabled = true; btn.textContent = 'Odesílám…';
+
+  try {
+    const { error } = await sb.from('leads').insert([{
+      jmeno, telefon, email, pozice, svj,
+      byty: state.byty,
+      sp_mwh: state.sp,
+      dist: state.dist,
+      zarizeni: state.zarizeni.join(','),
+      strecha: state.strecha,
+      azimut: state.azimut,
+    }]);
+
+    if (error) throw error;
+
+    btn.textContent = '✓ Odesláno';
+    showLeadMsg('✓ Skvěle! Náš specialista vás kontaktuje do 24 hodin. Těšíme se na setkání.', 'success');
+    document.getElementById('lead-form').style.opacity = '0.4';
+    document.getElementById('lead-form').style.pointerEvents = 'none';
+
+  } catch(e) {
+    btn.disabled = false; btn.textContent = 'Chci bezplatnou analýzu a návštěvu specialisty →';
+    showLeadMsg('Nepodařilo se odeslat. Zkuste to prosím znovu nebo nás kontaktujte přímo.', 'error');
+  }
+}
+
+function showLeadMsg(text, type) {
+  const msg = document.getElementById('lead-msg');
+  msg.textContent = text;
+  msg.className = 'lead-msg ' + type;
+}
 
 // ── SCROLL REVEAL ──
 const observer = new IntersectionObserver(entries => {
-  entries.forEach(e => {
-    if (e.isIntersecting) { e.target.classList.add('visible'); }
-  });
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
 }, { threshold: 0.15 });
-
 document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 </script>
 </body>
