@@ -7,6 +7,7 @@
 <meta name="description" content="Spočítejte, kolik ušetří vaše SVJ na fotovoltaice. Přesná kalkulačka pro bytové domy. Bezplatně.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root {
   --ink:       #0f1923;
@@ -550,6 +551,151 @@ footer {
   .hero-stats { gap: 20px; }
   footer { flex-direction: column; gap: 12px; text-align: center; }
 }
+
+/* ── AUTH MODAL ── */
+.modal-overlay {
+  display: none;
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(15,25,35,0.6);
+  backdrop-filter: blur(6px);
+  align-items: center;
+  justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+
+.modal {
+  background: var(--white);
+  border-radius: 16px;
+  padding: 40px;
+  width: 100%;
+  max-width: 420px;
+  margin: 16px;
+  box-shadow: 0 24px 80px rgba(15,25,35,0.2);
+  animation: fadeUp 0.3s ease both;
+  position: relative;
+}
+
+.modal-close {
+  position: absolute; top: 16px; right: 16px;
+  background: none; border: none; cursor: pointer;
+  color: var(--ink-muted); font-size: 1.2rem; line-height: 1;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+.modal-close:hover { background: var(--border); }
+
+.modal-logo {
+  display: flex; align-items: center; gap: 8px;
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.1rem; color: var(--green);
+  margin-bottom: 24px;
+}
+
+.modal-title {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.6rem; color: var(--ink);
+  margin-bottom: 6px;
+}
+.modal-sub {
+  font-size: 0.88rem; color: var(--ink-muted);
+  margin-bottom: 28px;
+}
+
+.modal-tabs {
+  display: flex; gap: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px; overflow: hidden;
+  margin-bottom: 24px;
+}
+.modal-tab {
+  flex: 1; padding: 10px;
+  background: none; border: none; cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.88rem; font-weight: 500;
+  color: var(--ink-muted);
+  transition: all 0.2s;
+}
+.modal-tab.active {
+  background: var(--green); color: var(--white);
+}
+
+.auth-field {
+  margin-bottom: 16px;
+}
+.auth-field label {
+  display: block; font-size: 0.82rem; font-weight: 500;
+  color: var(--ink-soft); margin-bottom: 6px;
+}
+.auth-field input {
+  width: 100%; padding: 11px 14px;
+  border: 1px solid var(--border); border-radius: 8px;
+  font-family: 'DM Sans', sans-serif; font-size: 0.9rem;
+  color: var(--ink); background: var(--white);
+  outline: none; transition: border-color 0.2s;
+}
+.auth-field input:focus { border-color: var(--green); }
+
+.auth-btn {
+  width: 100%; padding: 13px;
+  background: var(--green); color: var(--white);
+  border: none; border-radius: 8px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.95rem; font-weight: 500;
+  cursor: pointer; margin-top: 8px;
+  transition: background 0.2s, transform 0.1s;
+}
+.auth-btn:hover { background: var(--green-mid); transform: translateY(-1px); }
+.auth-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+.auth-msg {
+  margin-top: 14px; padding: 10px 14px;
+  border-radius: 8px; font-size: 0.85rem;
+  display: none;
+}
+.auth-msg.error { background: #fef2f2; color: #b91c1c; display: block; }
+.auth-msg.success { background: var(--green-light); color: var(--green); display: block; }
+
+.auth-divider {
+  text-align: center; font-size: 0.8rem; color: var(--ink-muted);
+  margin: 20px 0; position: relative;
+}
+.auth-divider::before, .auth-divider::after {
+  content: ''; position: absolute; top: 50%;
+  width: 42%; height: 1px; background: var(--border);
+}
+.auth-divider::before { left: 0; }
+.auth-divider::after { right: 0; }
+
+/* Nav přihlášen */
+.nav-user {
+  display: none;
+  align-items: center; gap: 12px;
+}
+.nav-user.visible { display: flex; }
+.nav-avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--green); color: var(--white);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.8rem; font-weight: 600;
+}
+.nav-signout {
+  background: none; border: 1px solid var(--border);
+  color: var(--ink-soft); padding: 6px 14px;
+  border-radius: 6px; font-size: 0.85rem; cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  transition: all 0.2s;
+}
+.nav-signout:hover { border-color: var(--ink-muted); color: var(--ink); }
+
+/* Free tier badge */
+.free-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--sun-light); color: #c47d00;
+  font-size: 0.78rem; font-weight: 600;
+  padding: 4px 10px; border-radius: 100px;
+  margin-left: 8px;
+}
 </style>
 </head>
 <body>
@@ -563,8 +709,65 @@ footer {
     </svg>
     SVJ Energie
   </a>
-  <a href="#kalkulator" class="nav-cta">Spočítat zdarma</a>
+  <!-- Nepřihlášen -->
+  <button class="nav-cta" id="nav-login-btn" onclick="openModal()">Přihlásit se</button>
+  <!-- Přihlášen -->
+  <div class="nav-user" id="nav-user">
+    <div class="nav-avatar" id="nav-avatar">?</div>
+    <a href="https://fve-svj-kalkulacka-dnxjds96gzrdwi5rbgkjx7.streamlit.app" class="nav-cta" target="_blank">Otevřít kalkulačku →</a>
+    <button class="nav-signout" onclick="signOut()">Odhlásit</button>
+  </div>
 </nav>
+
+<!-- AUTH MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="overlayClick(event)">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-logo">
+      <svg viewBox="0 0 28 28" width="22" fill="none"><rect width="28" height="28" rx="7" fill="#1a6b4a"/><path d="M14 5l-7 10h6l-2 8 9-12h-6l2-6h-2z" fill="#f5a623"/></svg>
+      SVJ Energie
+    </div>
+    <div class="modal-title" id="modal-title">Vítejte zpět</div>
+    <div class="modal-sub" id="modal-sub">Přihlaste se ke svému účtu</div>
+
+    <div class="modal-tabs">
+      <button class="modal-tab active" id="tab-login" onclick="switchTab('login')">Přihlásit se</button>
+      <button class="modal-tab" id="tab-register" onclick="switchTab('register')">Registrovat</button>
+    </div>
+
+    <!-- Přihlášení -->
+    <div id="form-login">
+      <div class="auth-field">
+        <label for="login-email">E-mail</label>
+        <input type="email" id="login-email" placeholder="vas@email.cz" autocomplete="email">
+      </div>
+      <div class="auth-field">
+        <label for="login-password">Heslo</label>
+        <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <button class="auth-btn" id="login-btn" onclick="signIn()">Přihlásit se</button>
+      <div class="auth-msg" id="login-msg"></div>
+    </div>
+
+    <!-- Registrace -->
+    <div id="form-register" style="display:none">
+      <div class="auth-field">
+        <label for="reg-email">E-mail</label>
+        <input type="email" id="reg-email" placeholder="vas@email.cz" autocomplete="email">
+      </div>
+      <div class="auth-field">
+        <label for="reg-password">Heslo <span style="font-weight:400;color:var(--ink-muted)">(min. 8 znaků)</span></label>
+        <input type="password" id="reg-password" placeholder="••••••••" autocomplete="new-password">
+      </div>
+      <div class="auth-field">
+        <label for="reg-password2">Heslo znovu</label>
+        <input type="password" id="reg-password2" placeholder="••••••••" autocomplete="new-password">
+      </div>
+      <button class="auth-btn" id="register-btn" onclick="signUp()">Vytvořit účet zdarma</button>
+      <div class="auth-msg" id="register-msg"></div>
+    </div>
+  </div>
+</div>
 
 <!-- HERO -->
 <section class="hero">
@@ -644,7 +847,7 @@ footer {
         </div>
       </div>
 
-      <a href="#registrace" class="kalk-cta">Získat přesnou simulaci zdarma →</a>
+      <a href="#registrace" class="kalk-cta" onclick="openModal('register');return false">Získat přesnou simulaci zdarma →</a>
       <div class="kalk-note">Bez kreditní karty · Výsledek na email do 60 sekund</div>
     </div>
   </div>
@@ -691,7 +894,7 @@ footer {
         <li class="muted">Uložené simulace</li>
         <li class="muted">PDF export</li>
       </ul>
-      <a href="#" class="plan-btn">Začít zdarma</a>
+      <a href="#" class="plan-btn" onclick="openModal('register');return false">Začít zdarma</a>
     </div>
     <div class="plan featured reveal" style="transition-delay:0.1s">
       <div class="plan-badge">Nejoblíbenější</div>
@@ -705,7 +908,7 @@ footer {
         <li>Graf profilu spotřeby</li>
         <li class="muted">PDF export pro SVJ</li>
       </ul>
-      <a href="#" class="plan-btn">Vyzkoušet 14 dní</a>
+      <a href="#" class="plan-btn" onclick="openModal('register');return false">Vyzkoušet 14 dní</a>
     </div>
     <div class="plan reveal" style="transition-delay:0.2s">
       <div class="plan-name">Profesionál</div>
@@ -718,7 +921,7 @@ footer {
         <li>API přístup</li>
         <li>Neomezené projekty</li>
       </ul>
-      <a href="#" class="plan-btn">Kontaktovat</a>
+      <a href="#" class="plan-btn" onclick="openModal('register');return false">Kontaktovat</a>
     </div>
   </div>
 </section>
@@ -730,6 +933,144 @@ footer {
 </footer>
 
 <script>
+// ── SUPABASE INIT ──
+const SUPABASE_URL = 'https://aeypeepckmbejdcotdss.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFleXBlZXBja21iZWpkY290ZHNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTkyNjAsImV4cCI6MjA5Mjk3NTI2MH0.JjYiI3bcL1ds1vAkFq59Z0WhNCLAd8oekX6GF4Zq5bA';
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ── AUTH STATE ──
+sb.auth.onAuthStateChange((event, session) => {
+  if (session?.user) {
+    showLoggedIn(session.user);
+  } else {
+    showLoggedOut();
+  }
+});
+
+function showLoggedIn(user) {
+  document.getElementById('nav-login-btn').style.display = 'none';
+  const navUser = document.getElementById('nav-user');
+  navUser.classList.add('visible');
+  // Initials avatar
+  const email = user.email || '';
+  const initials = email.substring(0, 2).toUpperCase();
+  document.getElementById('nav-avatar').textContent = initials;
+  closeModal();
+}
+
+function showLoggedOut() {
+  document.getElementById('nav-login-btn').style.display = '';
+  document.getElementById('nav-user').classList.remove('visible');
+}
+
+// ── MODAL ──
+function openModal(tab) {
+  document.getElementById('modal-overlay').classList.add('open');
+  if (tab === 'register') switchTab('register');
+  else switchTab('login');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function overlayClick(e) {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
+}
+
+function switchTab(tab) {
+  const isLogin = tab === 'login';
+  document.getElementById('tab-login').classList.toggle('active', isLogin);
+  document.getElementById('tab-register').classList.toggle('active', !isLogin);
+  document.getElementById('form-login').style.display = isLogin ? '' : 'none';
+  document.getElementById('form-register').style.display = isLogin ? 'none' : '';
+  document.getElementById('modal-title').textContent = isLogin ? 'Vítejte zpět' : 'Vytvořit účet';
+  document.getElementById('modal-sub').textContent = isLogin
+    ? 'Přihlaste se ke svému účtu'
+    : 'Registrace je zdarma, bez kreditní karty';
+}
+
+// ── PŘIHLÁŠENÍ ──
+async function signIn() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const btn = document.getElementById('login-btn');
+  const msg = document.getElementById('login-msg');
+
+  if (!email || !password) {
+    showMsg(msg, 'Vyplňte e-mail a heslo.', 'error'); return;
+  }
+  btn.disabled = true; btn.textContent = 'Přihlašuji…';
+
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+
+  btn.disabled = false; btn.textContent = 'Přihlásit se';
+  if (error) {
+    showMsg(msg, chybaCZ(error.message), 'error');
+  } else {
+    showMsg(msg, 'Přihlášení proběhlo. Přesměrovávám…', 'success');
+    setTimeout(() => {
+      window.location.href = 'https://fve-svj-kalkulacka-dnxjds96gzrdwi5rbgkjx7.streamlit.app';
+    }, 800);
+  }
+}
+
+// ── REGISTRACE ──
+async function signUp() {
+  const email = document.getElementById('reg-email').value.trim();
+  const password = document.getElementById('reg-password').value;
+  const password2 = document.getElementById('reg-password2').value;
+  const btn = document.getElementById('register-btn');
+  const msg = document.getElementById('register-msg');
+
+  if (!email || !password) {
+    showMsg(msg, 'Vyplňte e-mail a heslo.', 'error'); return;
+  }
+  if (password.length < 8) {
+    showMsg(msg, 'Heslo musí mít alespoň 8 znaků.', 'error'); return;
+  }
+  if (password !== password2) {
+    showMsg(msg, 'Hesla se neshodují.', 'error'); return;
+  }
+  btn.disabled = true; btn.textContent = 'Vytvářím účet…';
+
+  const { error } = await sb.auth.signUp({ email, password });
+
+  btn.disabled = false; btn.textContent = 'Vytvořit účet zdarma';
+  if (error) {
+    showMsg(msg, chybaCZ(error.message), 'error');
+  } else {
+    showMsg(msg, '✓ Účet vytvořen! Potvrďte e-mail a pak se přihlaste.', 'success');
+  }
+}
+
+// ── ODHLÁŠENÍ ──
+async function signOut() {
+  await sb.auth.signOut();
+}
+
+// ── HELPERS ──
+function showMsg(el, text, type) {
+  el.textContent = text;
+  el.className = 'auth-msg ' + type;
+}
+
+function chybaCZ(msg) {
+  if (msg.includes('Invalid login credentials')) return 'Špatný e-mail nebo heslo.';
+  if (msg.includes('Email not confirmed')) return 'Nejdříve potvrďte registraci v e-mailu.';
+  if (msg.includes('User already registered')) return 'Tento e-mail je již zaregistrován.';
+  if (msg.includes('Password should be')) return 'Heslo musí mít alespoň 8 znaků.';
+  return 'Chyba: ' + msg;
+}
+
+// Escape pro zavření modalu
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+});
+
 // ── KALKULAČKA ──
 const CENY = {
   cez: { vt: 6.61, pretoky: 1.50 },
@@ -737,9 +1078,9 @@ const CENY = {
   pre: { vt: 5.57, pretoky: 1.50 },
 };
 
-const INVEST_KWP = 35000; // Kč/kWp orientačně
-const VYROBA_KWP = 1050;  // kWh/kWp/rok (průměr ČR)
-const SHARE_VLASTNI = 0.38; // ~38 % výroby = vlastní spotřeba typicky
+const INVEST_KWP = 35000;
+const VYROBA_KWP = 1050;
+const SHARE_VLASTNI = 0.38;
 const RUST = 1.03;
 const DEG  = 0.995;
 
@@ -758,16 +1099,13 @@ function pocitej() {
   document.getElementById('val-kwp').textContent  = kwp + ' kWp';
 
   const ceny      = CENY[dist];
-  const vyroba    = kwp * VYROBA_KWP;           // kWh/rok
-  const vlastni   = vyroba * SHARE_VLASTNI;      // kWh/rok vlastní spotřeba
+  const vyroba    = kwp * VYROBA_KWP;
+  const vlastni   = vyroba * SHARE_VLASTNI;
   const pretoky   = vyroba - vlastni;
   const invest    = kwp * INVEST_KWP;
 
-  // Roční úspora rok 1
   let uspora1 = vlastni * ceny.vt / 1000 + pretoky * ceny.pretoky / 1000;
-  // Kumulativní 25 let s růstem cen a degradací
   let kum = -invest;
-  let rocni = uspora1;
   let navrat = null;
   for (let r = 1; r <= 25; r++) {
     const u = uspora1 * Math.pow(RUST, r - 1) * Math.pow(DEG, r - 1);
@@ -775,7 +1113,6 @@ function pocitej() {
     if (!navrat && kum >= 0) navrat = r;
   }
 
-  // Celková úspora za 25 let (kumulativ od 0)
   let sum25 = 0;
   for (let r = 1; r <= 25; r++) {
     sum25 += uspora1 * Math.pow(RUST, r - 1) * Math.pow(DEG, r - 1);
