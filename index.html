@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SVJ Energie — Fotovoltaika pro bytové domy</title>
+<meta name="description" content="Spočítejte, kolik ušetří vaše SVJ na fotovoltaice. Přesná kalkulačka pro bytové domy. Bezplatně.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink:       #0f1923;
+  --ink-soft:  #3d4f5e;
+  --ink-muted: #7a8f9e;
+  --paper:     #f8f5f0;
+  --white:     #ffffff;
+  --sun:       #f5a623;
+  --sun-light: #fef3dc;
+  --green:     #1a6b4a;
+  --green-mid: #2d9068;
+  --green-light: #e6f5ef;
+  --border:    #e2ddd6;
+  --shadow:    rgba(15,25,35,0.08);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* ── NAV ── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 5vw;
+  height: 64px;
+  background: rgba(248,245,240,0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+.nav-logo {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.25rem;
+  color: var(--green);
+  text-decoration: none;
+  display: flex; align-items: center; gap: 8px;
+}
+.nav-logo svg { width: 28px; height: 28px; }
+.nav-cta {
+  background: var(--green);
+  color: var(--white);
+  border: none;
+  padding: 10px 22px;
+  border-radius: 6px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.2s, transform 0.1s;
+}
+.nav-cta:hover { background: var(--green-mid); transform: translateY(-1px); }
+
+/* ── HERO ── */
+.hero {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  padding-top: 64px;
+}
+
+.hero-left {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 80px 5vw 80px 8vw;
+  position: relative;
+}
+
+.hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--sun-light);
+  color: #c47d00;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 6px 14px;
+  border-radius: 100px;
+  margin-bottom: 28px;
+  width: fit-content;
+  animation: fadeUp 0.6s ease both;
+}
+.hero-eyebrow::before {
+  content: '';
+  width: 8px; height: 8px;
+  background: var(--sun);
+  border-radius: 50%;
+  animation: pulse 2s ease infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.4); }
+}
+
+h1 {
+  font-family: 'DM Serif Display', serif;
+  font-size: clamp(2.4rem, 4vw, 3.6rem);
+  line-height: 1.15;
+  color: var(--ink);
+  margin-bottom: 24px;
+  animation: fadeUp 0.6s 0.1s ease both;
+}
+h1 em {
+  font-style: italic;
+  color: var(--green);
+}
+
+.hero-sub {
+  font-size: 1.1rem;
+  color: var(--ink-soft);
+  max-width: 460px;
+  margin-bottom: 40px;
+  animation: fadeUp 0.6s 0.2s ease both;
+}
+
+.hero-stats {
+  display: flex;
+  gap: 32px;
+  animation: fadeUp 0.6s 0.3s ease both;
+}
+.stat { display: flex; flex-direction: column; }
+.stat-num {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.8rem;
+  color: var(--green);
+  line-height: 1;
+}
+.stat-label {
+  font-size: 0.78rem;
+  color: var(--ink-muted);
+  margin-top: 2px;
+}
+
+/* ── KALKULAČKA HERO ── */
+.hero-right {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 8vw 80px 4vw;
+  background: var(--white);
+  border-left: 1px solid var(--border);
+}
+
+.kalk-card {
+  width: 100%;
+  max-width: 460px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 36px;
+  box-shadow: 0 8px 40px var(--shadow);
+  animation: fadeUp 0.6s 0.15s ease both;
+}
+
+.kalk-title {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.4rem;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+.kalk-subtitle {
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+  margin-bottom: 28px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+.form-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--ink-soft);
+  margin-bottom: 8px;
+}
+.form-label span {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1rem;
+  color: var(--green);
+}
+
+input[type=range] {
+  width: 100%;
+  height: 4px;
+  -webkit-appearance: none;
+  background: var(--border);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px; height: 20px;
+  background: var(--green);
+  border-radius: 50%;
+  border: 3px solid var(--white);
+  box-shadow: 0 2px 8px rgba(26,107,74,0.3);
+  transition: transform 0.15s;
+}
+input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+.form-select {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.9rem;
+  color: var(--ink);
+  background: var(--white);
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237a8f9e' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.form-select:focus { border-color: var(--green); }
+
+/* Výsledek */
+.kalk-result {
+  background: var(--green);
+  border-radius: 12px;
+  padding: 24px;
+  margin-top: 24px;
+  color: var(--white);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.4s ease;
+}
+.kalk-result::before {
+  content: '';
+  position: absolute;
+  top: -30px; right: -30px;
+  width: 100px; height: 100px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 50%;
+}
+.kalk-result::after {
+  content: '';
+  position: absolute;
+  bottom: -50px; right: 20px;
+  width: 160px; height: 160px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 50%;
+}
+.result-label {
+  font-size: 0.8rem;
+  opacity: 0.75;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.result-value {
+  font-family: 'DM Serif Display', serif;
+  font-size: 2.8rem;
+  line-height: 1;
+  margin-bottom: 4px;
+  transition: all 0.3s ease;
+}
+.result-sub {
+  font-size: 0.82rem;
+  opacity: 0.8;
+  margin-bottom: 16px;
+}
+.result-detail {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  position: relative; z-index: 1;
+}
+.result-detail-item {
+  background: rgba(255,255,255,0.12);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.result-detail-item .rd-val {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.2rem;
+}
+.result-detail-item .rd-label {
+  font-size: 0.72rem;
+  opacity: 0.75;
+  margin-top: 1px;
+}
+
+.kalk-cta {
+  display: block;
+  width: 100%;
+  margin-top: 20px;
+  padding: 14px;
+  background: var(--ink);
+  color: var(--white);
+  border: none;
+  border-radius: 8px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+  transition: background 0.2s, transform 0.1s;
+}
+.kalk-cta:hover { background: #1d2f3e; transform: translateY(-1px); }
+
+.kalk-note {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+  margin-top: 12px;
+}
+
+/* ── JAK TO FUNGUJE ── */
+.section {
+  padding: 100px 8vw;
+}
+.section-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--green);
+  margin-bottom: 12px;
+}
+.section-title {
+  font-family: 'DM Serif Display', serif;
+  font-size: clamp(1.8rem, 3vw, 2.6rem);
+  color: var(--ink);
+  margin-bottom: 16px;
+  max-width: 560px;
+}
+.section-sub {
+  font-size: 1rem;
+  color: var(--ink-soft);
+  max-width: 520px;
+  margin-bottom: 60px;
+}
+
+.steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
+}
+.step {
+  position: relative;
+  padding: 32px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  transition: box-shadow 0.3s, transform 0.3s;
+}
+.step:hover {
+  box-shadow: 0 12px 40px var(--shadow);
+  transform: translateY(-4px);
+}
+.step-num {
+  font-family: 'DM Serif Display', serif;
+  font-size: 3rem;
+  color: var(--border);
+  line-height: 1;
+  margin-bottom: 16px;
+}
+.step-title {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.2rem;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+.step-text {
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+  line-height: 1.65;
+}
+
+/* ── CENY ── */
+.pricing-section {
+  padding: 100px 8vw;
+  background: var(--ink);
+  color: var(--white);
+}
+.pricing-section .section-label { color: var(--sun); }
+.pricing-section .section-title { color: var(--white); }
+.pricing-section .section-sub { color: rgba(255,255,255,0.6); }
+
+.plans {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  max-width: 900px;
+}
+.plan {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 32px;
+  position: relative;
+  transition: background 0.3s;
+}
+.plan:hover { background: rgba(255,255,255,0.09); }
+.plan.featured {
+  background: var(--green);
+  border-color: var(--green-mid);
+}
+.plan-badge {
+  position: absolute;
+  top: -12px; left: 50%; transform: translateX(-50%);
+  background: var(--sun);
+  color: var(--ink);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: 100px;
+  white-space: nowrap;
+}
+.plan-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.7;
+  margin-bottom: 8px;
+}
+.plan-price {
+  font-family: 'DM Serif Display', serif;
+  font-size: 2.4rem;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.plan-period {
+  font-size: 0.82rem;
+  opacity: 0.6;
+  margin-bottom: 24px;
+}
+.plan-features {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.plan-features li {
+  font-size: 0.88rem;
+  opacity: 0.85;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.plan-features li::before {
+  content: '✓';
+  color: var(--sun);
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.plan-features li.muted { opacity: 0.4; }
+.plan-features li.muted::before { content: '–'; color: inherit; }
+
+.plan-btn {
+  display: block;
+  width: 100%;
+  margin-top: 28px;
+  padding: 12px;
+  border-radius: 7px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+  transition: all 0.2s;
+  border: 1px solid rgba(255,255,255,0.25);
+  background: transparent;
+  color: var(--white);
+}
+.plan.featured .plan-btn {
+  background: var(--white);
+  color: var(--green);
+  border-color: var(--white);
+}
+.plan-btn:hover { opacity: 0.85; transform: translateY(-1px); }
+
+/* ── FOOTER ── */
+footer {
+  padding: 48px 8vw;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.footer-logo {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.1rem;
+  color: var(--green);
+}
+.footer-copy {
+  font-size: 0.82rem;
+  color: var(--ink-muted);
+}
+
+/* ── ANIMACE ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 900px) {
+  .hero { grid-template-columns: 1fr; min-height: auto; }
+  .hero-left { padding: 60px 6vw 40px; }
+  .hero-right { padding: 40px 6vw 60px; border-left: none; border-top: 1px solid var(--border); }
+  .steps { grid-template-columns: 1fr; }
+  .plans { grid-template-columns: 1fr; max-width: 400px; }
+  .hero-stats { gap: 20px; }
+  footer { flex-direction: column; gap: 12px; text-align: center; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="/" class="nav-logo">
+    <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="28" height="28" rx="7" fill="#1a6b4a"/>
+      <path d="M14 5l-7 10h6l-2 8 9-12h-6l2-6h-2z" fill="#f5a623"/>
+    </svg>
+    SVJ Energie
+  </a>
+  <a href="#kalkulator" class="nav-cta">Spočítat zdarma</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-left">
+    <div class="hero-eyebrow">Fotovoltaika pro bytové domy</div>
+    <h1>Kolik ušetří<br><em>vaše SVJ</em><br>na energiích?</h1>
+    <p class="hero-sub">Přesná kalkulačka postavená na datech PVGIS a aktuálních cenících ERÚ 2026. Výsledek za 30 sekund, bez registrace.</p>
+    <div class="hero-stats">
+      <div class="stat">
+        <span class="stat-num">11 let</span>
+        <span class="stat-label">průměrná návratnost</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num">3,2 M Kč</span>
+        <span class="stat-label">úspora za 25 let</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num">35 %</span>
+        <span class="stat-label">soběstačnost domu</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MINI KALKULAČKA -->
+  <div class="hero-right" id="kalkulator">
+    <div class="kalk-card">
+      <div class="kalk-title">Rychlá kalkulačka</div>
+      <div class="kalk-subtitle">Orientační výsledek — přesná simulace po registraci</div>
+
+      <div class="form-group">
+        <div class="form-label">
+          Počet bytových jednotek
+          <span id="val-byty">20</span>
+        </div>
+        <input type="range" id="sl-byty" min="6" max="120" value="20" step="1">
+      </div>
+
+      <div class="form-group">
+        <div class="form-label">
+          Průměrná spotřeba bytu
+          <span id="val-sp">2,5 MWh/rok</span>
+        </div>
+        <input type="range" id="sl-sp" min="1" max="6" value="2.5" step="0.5">
+      </div>
+
+      <div class="form-group">
+        <div class="form-label">
+          Výkon FVE (kWp)
+          <span id="val-kwp">30 kWp</span>
+        </div>
+        <input type="range" id="sl-kwp" min="10" max="100" value="30" step="5">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="sel-dist" style="display:block; margin-bottom:8px">Distributor</label>
+        <select class="form-select" id="sel-dist">
+          <option value="cez">ČEZ Distribuce</option>
+          <option value="egd">EG.D (E.ON)</option>
+          <option value="pre">PREdistribuce</option>
+        </select>
+      </div>
+
+      <!-- VÝSLEDEK -->
+      <div class="kalk-result" id="result-box">
+        <div class="result-label">Odhadovaná úspora za 25 let</div>
+        <div class="result-value" id="res-uspora">—</div>
+        <div class="result-sub" id="res-sub">Počítám…</div>
+        <div class="result-detail">
+          <div class="result-detail-item">
+            <div class="rd-val" id="res-rocni">—</div>
+            <div class="rd-label">úspora / rok</div>
+          </div>
+          <div class="result-detail-item">
+            <div class="rd-val" id="res-navrat">—</div>
+            <div class="rd-label">návratnost</div>
+          </div>
+        </div>
+      </div>
+
+      <a href="#registrace" class="kalk-cta">Získat přesnou simulaci zdarma →</a>
+      <div class="kalk-note">Bez kreditní karty · Výsledek na email do 60 sekund</div>
+    </div>
+  </div>
+</section>
+
+<!-- JAK TO FUNGUJE -->
+<section class="section">
+  <div class="section-label">Jak to funguje</div>
+  <div class="section-title">Tři kroky k přesné analýze</div>
+  <div class="section-sub">Od orientační kalkulačky po kompletní podklady pro schůzi SVJ.</div>
+  <div class="steps">
+    <div class="step reveal">
+      <div class="step-num">01</div>
+      <div class="step-title">Zadejte parametry domu</div>
+      <div class="step-text">Počet bytů, spotřeba, adresa. Automaticky načteme solární data pro vaši lokalitu z databáze PVGIS (EU JRC).</div>
+    </div>
+    <div class="step reveal" style="transition-delay:0.1s">
+      <div class="step-num">02</div>
+      <div class="step-title">Dostanete přesnou simulaci</div>
+      <div class="step-text">15minutová simulace celého roku. Cashflow na 25 let, srovnání modelů sdílení EDC/JOM, vliv baterie.</div>
+    </div>
+    <div class="step reveal" style="transition-delay:0.2s">
+      <div class="step-num">03</div>
+      <div class="step-title">PDF pro schůzi SVJ</div>
+      <div class="step-text">Exportujte profesionální podklady pro hlasování — grafy, cashflow tabulka, srovnání nabídek.</div>
+    </div>
+  </div>
+</section>
+
+<!-- CENY -->
+<section class="pricing-section" id="registrace">
+  <div class="section-label">Ceník</div>
+  <div class="section-title" style="color:white">Začněte zdarma</div>
+  <div class="section-sub">Registrace = kvalifikovaný zájem. Žádné závazky.</div>
+  <div class="plans">
+    <div class="plan reveal">
+      <div class="plan-name">Zdarma</div>
+      <div class="plan-price">0 Kč</div>
+      <div class="plan-period">navždy</div>
+      <ul class="plan-features">
+        <li>3 orientační výpočty</li>
+        <li>Základní cashflow graf</li>
+        <li class="muted">Import faktury</li>
+        <li class="muted">Uložené simulace</li>
+        <li class="muted">PDF export</li>
+      </ul>
+      <a href="#" class="plan-btn">Začít zdarma</a>
+    </div>
+    <div class="plan featured reveal" style="transition-delay:0.1s">
+      <div class="plan-badge">Nejoblíbenější</div>
+      <div class="plan-name">Správce</div>
+      <div class="plan-price">490 Kč</div>
+      <div class="plan-period">/ měsíc</div>
+      <ul class="plan-features">
+        <li>Neomezené simulace</li>
+        <li>Import faktury (foto)</li>
+        <li>Uložené projekty</li>
+        <li>Graf profilu spotřeby</li>
+        <li class="muted">PDF export pro SVJ</li>
+      </ul>
+      <a href="#" class="plan-btn">Vyzkoušet 14 dní</a>
+    </div>
+    <div class="plan reveal" style="transition-delay:0.2s">
+      <div class="plan-name">Profesionál</div>
+      <div class="plan-price">990 Kč</div>
+      <div class="plan-period">/ měsíc</div>
+      <ul class="plan-features">
+        <li>Vše ze Správce</li>
+        <li>PDF export pro schůzi</li>
+        <li>Prioritní podpora</li>
+        <li>API přístup</li>
+        <li>Neomezené projekty</li>
+      </ul>
+      <a href="#" class="plan-btn">Kontaktovat</a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">SVJ Energie</div>
+  <div class="footer-copy">© 2026 SVJ Energie · svjenergie.cz · Všechna práva vyhrazena</div>
+</footer>
+
+<script>
+// ── KALKULAČKA ──
+const CENY = {
+  cez: { vt: 6.61, pretoky: 1.50 },
+  egd: { vt: 6.55, pretoky: 1.50 },
+  pre: { vt: 5.57, pretoky: 1.50 },
+};
+
+const INVEST_KWP = 35000; // Kč/kWp orientačně
+const VYROBA_KWP = 1050;  // kWh/kWp/rok (průměr ČR)
+const SHARE_VLASTNI = 0.38; // ~38 % výroby = vlastní spotřeba typicky
+const RUST = 1.03;
+const DEG  = 0.995;
+
+function fmt(n) {
+  return n.toLocaleString('cs-CZ', { maximumFractionDigits: 0 }) + ' Kč';
+}
+
+function pocitej() {
+  const byty   = +document.getElementById('sl-byty').value;
+  const spMwh  = +document.getElementById('sl-sp').value;
+  const kwp    = +document.getElementById('sl-kwp').value;
+  const dist   = document.getElementById('sel-dist').value;
+
+  document.getElementById('val-byty').textContent = byty;
+  document.getElementById('val-sp').textContent   = spMwh.toFixed(1).replace('.', ',') + ' MWh/rok';
+  document.getElementById('val-kwp').textContent  = kwp + ' kWp';
+
+  const ceny      = CENY[dist];
+  const vyroba    = kwp * VYROBA_KWP;           // kWh/rok
+  const vlastni   = vyroba * SHARE_VLASTNI;      // kWh/rok vlastní spotřeba
+  const pretoky   = vyroba - vlastni;
+  const invest    = kwp * INVEST_KWP;
+
+  // Roční úspora rok 1
+  let uspora1 = vlastni * ceny.vt / 1000 + pretoky * ceny.pretoky / 1000;
+  // Kumulativní 25 let s růstem cen a degradací
+  let kum = -invest;
+  let rocni = uspora1;
+  let navrat = null;
+  for (let r = 1; r <= 25; r++) {
+    const u = uspora1 * Math.pow(RUST, r - 1) * Math.pow(DEG, r - 1);
+    kum += u;
+    if (!navrat && kum >= 0) navrat = r;
+  }
+
+  // Celková úspora za 25 let (kumulativ od 0)
+  let sum25 = 0;
+  for (let r = 1; r <= 25; r++) {
+    sum25 += uspora1 * Math.pow(RUST, r - 1) * Math.pow(DEG, r - 1);
+  }
+
+  document.getElementById('res-uspora').textContent = fmt(Math.round(sum25 / 1000) * 1000);
+  document.getElementById('res-sub').textContent    = `z investice ${fmt(invest)} · výroba ${Math.round(vyroba / 1000)} MWh/rok`;
+  document.getElementById('res-rocni').textContent  = fmt(Math.round(uspora1 / 1000) * 1000);
+  document.getElementById('res-navrat').textContent = navrat ? navrat + ' let' : '>25 let';
+}
+
+['sl-byty','sl-sp','sl-kwp','sel-dist'].forEach(id => {
+  document.getElementById(id).addEventListener('input', pocitej);
+  document.getElementById(id).addEventListener('change', pocitej);
+});
+pocitej();
+
+// ── SCROLL REVEAL ──
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) { e.target.classList.add('visible'); }
+  });
+}, { threshold: 0.15 });
+
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
