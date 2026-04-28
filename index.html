@@ -714,7 +714,7 @@ footer {
   <!-- Přihlášen -->
   <div class="nav-user" id="nav-user">
     <div class="nav-avatar" id="nav-avatar">?</div>
-    <a href="https://fve-svj-kalkulacka-dnxjds96gzrdwi5rbgkjx7.streamlit.app" class="nav-cta" target="_blank">Otevřít kalkulačku →</a>
+    <a href="#kalkulator" class="nav-cta">Otevřít kalkulačku →</a>
     <button class="nav-signout" onclick="signOut()">Odhlásit</button>
   </div>
 </nav>
@@ -1011,10 +1011,8 @@ async function signIn() {
   if (error) {
     showMsg(msg, chybaCZ(error.message), 'error');
   } else {
-    showMsg(msg, 'Přihlášení proběhlo. Přesměrovávám…', 'success');
-    setTimeout(() => {
-      window.location.href = 'https://fve-svj-kalkulacka-dnxjds96gzrdwi5rbgkjx7.streamlit.app';
-    }, 800);
+    showMsg(msg, '✓ Přihlášení proběhlo.', 'success');
+    setTimeout(() => closeModal(), 800);
   }
 }
 
@@ -1043,7 +1041,14 @@ async function signUp() {
   if (error) {
     showMsg(msg, chybaCZ(error.message), 'error');
   } else {
-    showMsg(msg, '✓ Účet vytvořen! Potvrďte e-mail a pak se přihlaste.', 'success');
+    showMsg(msg, '✓ Registrace proběhla!', 'success');
+    setTimeout(() => {
+      switchTab('login');
+      document.getElementById('login-email').value = email;
+      document.getElementById('login-password').focus();
+      showMsg(document.getElementById('login-msg'),
+        '✓ Účet vytvořen. Potvrďte e-mail a přihlaste se.', 'success');
+    }, 900);
   }
 }
 
