@@ -30,7 +30,7 @@ app.add_middleware(
 # HEALTH CHECK — UptimeRobot pinguje tuto URL každých 5 min
 # ================================================================
 
-@app.get("/health", tags=["system"])
+@app.api_route("/health", methods=["GET", "HEAD"], tags=["system"])
 def health():
     return {"status": "ok"}
 
