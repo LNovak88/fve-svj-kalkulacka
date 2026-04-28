@@ -506,6 +506,38 @@ footer { padding: 48px 8vw; border-top: 1px solid var(--border); display: flex; 
         </div>
       </div>
 
+      <!-- Rozpad úspory -->
+      <div id="r-rozpad" style="display:none; margin-bottom:20px">
+        <div style="font-size:0.8rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--green);margin-bottom:10px">Z čeho se úspora skládá</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--green-light);border-radius:8px;border-left:3px solid var(--green)">
+            <span style="font-size:0.88rem">⚡ Úspora JOM — sjednocení odběrných míst <span style="font-size:0.76rem;color:var(--ink-muted)">(bez FVE, okamžitě)</span></span>
+            <strong id="r-jom" style="color:var(--green);white-space:nowrap">—</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--paper);border-radius:8px">
+            <span style="font-size:0.88rem">☀️ Úspora z FVE — vlastní výroba + přetoky</span>
+            <strong id="r-fve" style="white-space:nowrap">—</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- Srovnání scénářů -->
+      <div id="r-scenare" style="display:none;margin-bottom:20px">
+        <div style="font-size:0.8rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--green);margin-bottom:10px">Bez FVE vs. s FVE — náklady za 25 let</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div style="padding:16px;background:#fef2f2;border-radius:10px;text-align:center">
+            <div style="font-size:0.78rem;color:#b91c1c;margin-bottom:4px">❌ Bez FVE zaplatíte</div>
+            <div id="r-bez-fve" style="font-family:'DM Serif Display',serif;font-size:1.6rem;color:#b91c1c">—</div>
+            <div style="font-size:0.75rem;color:#b91c1c;opacity:0.7">za 25 let na elektřině</div>
+          </div>
+          <div style="padding:16px;background:var(--green-light);border-radius:10px;text-align:center">
+            <div style="font-size:0.78rem;color:var(--green);margin-bottom:4px">✅ S FVE zaplatíte</div>
+            <div id="r-s-fve" style="font-family:'DM Serif Display',serif;font-size:1.6rem;color:var(--green)">—</div>
+            <div style="font-size:0.75rem;color:var(--green);opacity:0.7">úspora <strong id="r-diff">—</strong></div>
+          </div>
+        </div>
+      </div>
+
       <!-- Graf cashflow -->
       <div class="chart-wrap">
         <canvas id="cf-chart" height="200"></canvas>
@@ -515,6 +547,11 @@ footer { padding: 48px 8vw; border-top: 1px solid var(--border); display: flex; 
             <span>Váš specialista vám pošle kompletní analýzu zdarma</span>
           </div>
         </div>
+      </div>
+
+      <!-- Předpoklady výpočtu -->
+      <div id="r-predpoklady" style="display:none;margin-top:8px;padding:12px 16px;background:var(--paper);border-radius:8px;border:1px solid var(--border)">
+        <div style="font-size:0.75rem;color:var(--ink-muted);line-height:1.7" id="r-predpoklady-text"></div>
       </div>
 
       <!-- Limit warning -->
@@ -913,11 +950,52 @@ function compute() {
 
   // Zobraz
   const fmtKc = n => n.toLocaleString('cs-CZ',{maximumFractionDigits:0}) + ' Kč';
+  const fmtMil = n => (n/1000000).toLocaleString('cs-CZ',{maximumFractionDigits:2}) + ' mil. Kč';
   document.getElementById('r-uspora25').textContent = fmtKc(Math.round(uspora25/1000)*1000);
   document.getElementById('r-uspora1').textContent  = fmtKc(Math.round(uspora1/1000)*1000);
   document.getElementById('r-navrat').textContent   = navrat ? navrat + ' let' : '>25 let';
   document.getElementById('r-kwp').textContent      = kwp + ' kWp';
   document.getElementById('r-invest-sub').textContent = 'z investice ' + fmtKc(invest);
+
+  // ── JOM úspora (orientační) ──
+  // Stávající: (N bytů + 1 SP) × stálá platba 179 Kč + N × jistič bytu ~132 Kč
+  // JOM: 1 × stálá + 1 × velký jistič ~450 Kč
+  const STAY = { cez:179, egd:160, pre:157 };
+  const JBYT = { cez:132, egd:120, pre:115 };
+  const JJOM = { cez:450, egd:360, pre:420 };
+  const stay = STAY[state.dist];
+  const platby_ted = (byty + 1) * stay + byty * JBYT[state.dist];
+  const platby_jom = stay + JJOM[state.dist];
+  const jom_mes = Math.max(0, platby_ted - platby_jom);
+  const jom_rok = jom_mes * 12;
+  const jom_25  = jom_rok * 25;
+
+  document.getElementById('r-jom').textContent = fmtKc(Math.round(jom_rok/1000)*1000) + '/rok';
+  document.getElementById('r-fve').textContent = fmtKc(Math.round(uspora1/1000)*1000) + '/rok';
+  document.getElementById('r-rozpad').style.display = '';
+
+  // ── Srovnání scénářů ──
+  const sp_cel_kwh = (sp_vt + sp_nt) * 1000;
+  const cena_vt_kc = CENY_VT[state.dist] / 1000; // Kč/kWh → Kč/kWh (CENY_VT je v Kč/MWh → /1000)
+  // Náklady bez FVE za 25 let (růst cen 3%/rok)
+  let bez_fve = 0;
+  for (let r = 1; r <= 25; r++) bez_fve += sp_cel_kwh * CENY_VT[state.dist] / 1000 * Math.pow(RUST, r-1);
+  const s_fve = Math.max(0, bez_fve - uspora25 + invest);
+  const diff  = bez_fve - s_fve;
+
+  document.getElementById('r-bez-fve').textContent = fmtMil(bez_fve);
+  document.getElementById('r-s-fve').textContent   = fmtMil(s_fve);
+  document.getElementById('r-diff').textContent    = fmtMil(diff);
+  document.getElementById('r-scenare').style.display = '';
+
+  // ── Předpoklady ──
+  const lokalitaNazev = document.getElementById('sel-lokalita').options[document.getElementById('sel-lokalita').selectedIndex].text;
+  document.getElementById('r-predpoklady-text').innerHTML =
+    `📐 <strong>Předpoklady výpočtu:</strong> ${lokalitaNazev} — ${Math.round(vyroba_kwp)} kWh/kWp/rok · ` +
+    `cena elektřiny ${CENY_VT[state.dist].toFixed(2)} Kč/kWh · ` +
+    `vlastní spotřeba ~38 % výroby · růst cen 3 %/rok · degradace panelů 0,5 %/rok. ` +
+    `Přiznáváme zjednodušení — přesná simulace dle vaší adresy a střechy je součástí bezplatné analýzy.`;
+  document.getElementById('r-predpoklady').style.display = '';
 
   drawChart(cf);
 }
