@@ -1,0 +1,18 @@
+# render.yaml — automatický deploy na Render.com
+# Návod:
+#   1. Push tento soubor + main.py + engine.py do GitHub repozitáře
+#   2. Na render.com: New → Web Service → vyber repo
+#   3. Render detekuje tento soubor a nastaví vše automaticky
+#   4. Po deployi nastav UptimeRobot: https://tvoje-url.onrender.com/health každých 5 min
+
+services:
+  - type: web
+    name: fve-svj-api
+    runtime: python
+    buildCommand: pip install -r requirements_api.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.0
+    # Free tier — spí po 15 min nečinnosti → řeší UptimeRobot
+    plan: free
