@@ -70,10 +70,8 @@ JISTIC_BYT = {
     "PREdistribuce":  {"1×25A":132, "3×16A":190, "3×20A":230, "3×25A":287, "3×32A":360},
 }
 
-# Skutečné fixní ceny jističů pro dům/SVJ (trojfázové) — Kč/měs s DPH 2026
-# Zdroj: usetreno.cz regulované ceny 2026 (dle ceníků ČEZ, EGD, PRE k 10.2.2026)
-# Platí stejně pro D i C tarif — jistič (rezervovaný příkon) je regulován ERÚ
-# Klíč = horní mez rozsahu v ampérech
+# Skutečné fixní ceny jističů pro dům/SVJ — kategorie D (domácnost) — Kč/měs s DPH 2026
+# Zdroj: ERÚ cenový výměr 14/2025, usetreno.cz k 10.2.2026
 JISTIC_DUM = {
     "ČEZ Distribuce": {10:121,  16:191,  20:240,  25:309,  32:383,
                        40:479,  50:600,  63:751,  80:869, 100:989},
@@ -82,28 +80,58 @@ JISTIC_DUM = {
     "PREdistribuce":  {10:106,  16:169,  20:213,  25:266,  32:339,
                        40:424,  50:530,  63:667,  80:773, 100:879},
 }
-# Přírůstek Kč/A nad hodnotu 3×63A (dle ceníku ERÚ 2026)
+# Přírůstek Kč/A nad max. hodnotu v tabulce (D tarif)
 JISTIC_DUM_A = {
-    "ČEZ Distribuce": 5.99,   # Kč/A/měs s DPH
+    "ČEZ Distribuce": 5.99,
     "EG.D (E.ON)":    5.81,
     "PREdistribuce":  5.30,
 }
 
-def _cena_jistice_dum(dist, sazba, ampery=63):
-    """Vrátí skutečnou měsíční cenu jističe domu dle ampér (Kč/měs s DPH).
-    Používá fixní tabulku JISTIC_DUM pro standardní velikosti.
-    Pro jističe nad 63A počítá přírůstkovým koeficientem.
-    Parametr 'sazba' zachován pro zpětnou kompatibilitu.
+# ================================================================
+# JISTIC_DUM_C — JOM/SVJ jako PODNIKATEL (kategorie C) — Kč/měs s DPH 2026
+# SVJ po přechodu na JOM se stane podnikatelem → platí C02d ceník!
+# C tarif má výrazně vyšší cenu jističe než D tarif (ČEZ +46-52%, PRE viz tabulka)
+#
+# Zdroj:
+#   ČEZ C02d: ceník cpienergo.com platný 1.1.2026 (Kč bez DPH × 1.21)
+#   EGD C02d: ERÚ výměr 14/2025 — EGD nerozlišuje D/C pro jistič, stejné jako D
+#   PRE C02d: ceník ztenergy.cz platný 1.1.2026 (přímo s DPH)
+# ================================================================
+JISTIC_DUM_C = {
+    "ČEZ Distribuce": {16:286,  20:358,  25:450,  32:572,
+                       40:715,  50:894,  63:1145, 80:1265, 100:1384, 125:1549, 160:1788},
+    "EG.D (E.ON)":    {10:116,  16:186,  20:232,  25:290,  32:373,   # stejné jako D
+                       40:465,  50:581,  63:729,  80:845,  100:961},
+    "PREdistribuce":  {10:144,  16:230,  20:288,  25:359,  32:460,
+                       40:575,  50:719,  63:905,  80:1150, 100:1437, 125:1797, 160:2300},
+}
+# Přírůstek Kč/A nad max. hodnotu v tabulce (C tarif)
+JISTIC_DUM_C_A = {
+    "ČEZ Distribuce": 14.88,  # distribuce C02d koef s DPH
+    "EG.D (E.ON)":     5.81,  # stejné jako D
+    "PREdistribuce":  14.37,  # z ceníku PRE C02d
+}
+
+
+def _cena_jistice_dum(dist, sazba, ampery=63, c_tarif=False):
+    """Vrátí měsíční cenu jističe domu (Kč/měs s DPH).
+
+    c_tarif=True → použije C tarif ceník (pro JOM/SVJ jako podnikatel).
+    c_tarif=False → D tarif (pro stávající stav — individuální byty).
     """
-    tab = JISTIC_DUM.get(dist, JISTIC_DUM["ČEZ Distribuce"])
-    amp_a = JISTIC_DUM_A.get(dist, 11.91)
-    # Najdi nejbližší vyšší nebo rovno klíč v tabulce
+    if c_tarif:
+        tab   = JISTIC_DUM_C.get(dist, JISTIC_DUM_C["ČEZ Distribuce"])
+        amp_a = JISTIC_DUM_C_A.get(dist, 14.88)
+    else:
+        tab   = JISTIC_DUM.get(dist, JISTIC_DUM["ČEZ Distribuce"])
+        amp_a = JISTIC_DUM_A.get(dist, 5.99)
     klice = sorted(tab.keys())
     for k in klice:
         if ampery <= k:
             return tab[k]
-    # Nad 63A — přírůstek od hodnoty 3×63A
-    return round(tab[63] + (ampery - 63) * amp_a)
+    # Nad max. hodnotou v tabulce — lineární přírůstek
+    max_k = klice[-1]
+    return round(tab[max_k] + (ampery - max_k) * amp_a)
 
 def _jistic_dum_ampery(pocet_bytu, zarizeni):
     """Odhadne velikost hlavního jističe JOM (patka domu) v ampérech.
@@ -1135,7 +1163,7 @@ if expert_mod:
         _jsp_cena  = _cena_jistice_dum(dist, sazba, _jsp_a)
         # JOM — jeden velký jistič pro celý dům (byty + SP)
         _jdum_amp  = _jistic_dum_ampery(pocet_bytu, zarizeni_sel if "zarizeni_sel" in dir() else ["zaklad"])
-        _jdum_cena = _cena_jistice_dum(dist, sazba, _jdum_amp)
+        _jdum_cena = _cena_jistice_dum(dist, sazba, _jdum_amp, c_tarif=True)
         # Stávající platby: (N bytů + SP) × stálé + N×jistič_byt + jistič_SP
         _platby_ted_r = (int(pocet_bytu) + 1) * stay + int(pocet_bytu) * _jbyt_cena + _jsp_cena
         # JOM platby: 1 stálá + 1 velký jistič
@@ -1365,7 +1393,7 @@ if expert_mod:
                     _jsp_a3    = int(st.session_state.get("wizard_data", {}).get("jistic_sp_a", 25))
                     _jsp_c3    = _cena_jistice_dum(dist, sazba, _jsp_a3)
                     _jdum_a3   = _jistic_dum_ampery(pocet_bytu, zarizeni_sel)
-                    _jdum_c3   = _cena_jistice_dum(dist, sazba, _jdum_a3)
+                    _jdum_c3   = _cena_jistice_dum(dist, sazba, _jdum_a3, c_tarif=True)
                     # (N+1 ODM stávající) vs (1 ODM JOM)
                     _platby_ted3 = (int(pocet_bytu)+1)*stay + int(pocet_bytu)*_jbyt_c3 + _jsp_c3
                     _platby_jom3 = stay + _jdum_c3
@@ -1673,7 +1701,7 @@ else:
         _jbyt_cena_d = JISTIC_BYT.get(dist, JISTIC_BYT["ČEZ Distribuce"]).get(_jbyt_w, 132)
         _sazba_d  = _sazba_auto  # sazba bytů
         _jdom_amp = _jistic_dum_ampery(pocet_bytu, zarizeni_sel)
-        _jdom_cena = _cena_jistice_dum(dist, _sazba_d, _jdom_amp)
+        _jdom_cena = _cena_jistice_dum(dist, _sazba_d, _jdom_amp, c_tarif=True)
         _platby_ted = (int(pocet_bytu) * (_stay_d + _jbyt_cena_d)
                        + (_stay_d + _cena_jistice_dum(dist, _sazba_d, _sp_res["jistic_sp_a"])))
         _platby_jom = _stay_d + _jdom_cena
@@ -2097,7 +2125,7 @@ else:
             _jsp_a2     = int(wd.get("jistic_sp_a", 25))
             _jsp_cena2  = _cena_jistice_dum(dist, sazba, _jsp_a2)
             _jdum_amp2  = _jistic_dum_ampery(pocet_bytu, zarizeni_sel)
-            _jdum_cena2 = _cena_jistice_dum(dist, sazba, _jdum_amp2)
+            _jdum_cena2 = _cena_jistice_dum(dist, sazba, _jdum_amp2, c_tarif=True)
             _platby_ted2 = (int(pocet_bytu)+1)*stay + int(pocet_bytu)*_jbyt_cena2 + _jsp_cena2
             _platby_jom2 = stay + _jdum_cena2
             uspora_jist = (_platby_ted2 - _platby_jom2) * 12.0
@@ -2267,7 +2295,7 @@ if model=="jom":
     _jsp_a_r     = int(_pg("jistic_sp_a", 25))
     _jsp_cena_r  = _cena_jistice_dum(dist, sazba, _jsp_a_r)
     _jdum_amp_r  = _jistic_dum_ampery(pocet_bytu, _zar_r if isinstance(_zar_r, list) else [])
-    _jdum_cena_r = _cena_jistice_dum(dist, sazba, _jdum_amp_r)
+    _jdum_cena_r = _cena_jistice_dum(dist, sazba, _jdum_amp_r, c_tarif=True)
     _platby_ted_res = (int(pocet_bytu)+1)*stay + int(pocet_bytu)*_jbyt_cena_r + _jsp_cena_r
     _platby_jom_res = stay + _jdum_cena_r
     uspora_jist = (_platby_ted_res - _platby_jom_res) * 12.0
