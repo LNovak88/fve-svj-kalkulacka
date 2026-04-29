@@ -3,1105 +3,363 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SVJ Energie — Fotovoltaika pro bytové domy</title>
-<meta name="description" content="Spočítejte, kolik ušetří vaše SVJ na fotovoltaice. Přesná kalkulačka pro bytové domy. Bezplatně.">
+<title>FVE Kalkulačka pro SVJ a bytové domy | svjenergie.cz</title>
+<meta name="description" content="Zdarma spočítejte úspory z fotovoltaiky pro váš bytový dům nebo SVJ. Reálná data PVGIS, výpočet návratnosti, cashflow 25 let.">
+<meta name="keywords" content="FVE kalkulačka SVJ, fotovoltaika bytový dům, solární panely SVJ, úspory elektřiny SVJ, JOM sdílení energie, návratnost FVE">
+<link rel="canonical" href="https://www.svjenergie.cz/kalkulator">
+<meta property="og:title" content="FVE Kalkulačka pro SVJ — kolik ušetří váš bytový dům?">
+<meta property="og:description" content="Bezplatná kalkulačka fotovoltaiky pro bytové domy a SVJ. Výpočet úspor, návratnosti a cashflow za 2 minuty.">
+<meta property="og:type" content="website">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"FVE Kalkulačka pro SVJ","description":"Kalkulačka fotovoltaiky pro bytové domy a SVJ.","url":"https://www.svjenergie.cz/kalkulator","applicationCategory":"FinanceApplication","offers":{"@type":"Offer","price":"0","priceCurrency":"CZK"}}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
 <style>
-:root {
-  --ink:        #0f1923;
-  --ink-soft:   #3d4f5e;
-  --ink-muted:  #7a8f9e;
-  --paper:      #f8f5f0;
-  --white:      #ffffff;
-  --sun:        #f5a623;
-  --sun-light:  #fef3dc;
-  --green:      #1a6b4a;
-  --green-mid:  #2d9068;
-  --green-light:#e6f5ef;
-  --border:     #e2ddd6;
-  --shadow:     rgba(15,25,35,0.08);
-  --locked:     #f1f0ee;
-}
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
-body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); line-height: 1.6; overflow-x: hidden; }
-
-/* ── NAV ── */
-nav {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0 5vw; height: 64px;
-  background: rgba(248,245,240,0.92); backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border);
-}
-.nav-logo { font-family: 'DM Serif Display', serif; font-size: 1.25rem; color: var(--green); text-decoration: none; display: flex; align-items: center; gap: 8px; }
-.nav-logo svg { width: 28px; height: 28px; }
-.nav-cta { background: var(--green); color: var(--white); border: none; padding: 10px 22px; border-radius: 6px; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; font-weight: 500; cursor: pointer; text-decoration: none; transition: background 0.2s, transform 0.1s; }
-.nav-cta:hover { background: var(--green-mid); transform: translateY(-1px); }
-.nav-user { display: none; align-items: center; gap: 12px; }
-.nav-user.visible { display: flex; }
-.nav-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--green); color: var(--white); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 600; }
-.nav-signout { background: none; border: 1px solid var(--border); color: var(--ink-soft); padding: 6px 14px; border-radius: 6px; font-size: 0.85rem; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.2s; }
-.nav-signout:hover { border-color: var(--ink-muted); color: var(--ink); }
-
-/* ── HERO INTRO ── */
-.hero-intro {
-  padding: 120px 8vw 60px;
-  text-align: center;
-  max-width: 760px;
-  margin: 0 auto;
-}
-.hero-eyebrow {
-  display: inline-flex; align-items: center; gap: 8px;
-  background: var(--sun-light); color: #c47d00;
-  font-size: 0.8rem; font-weight: 600; letter-spacing: 0.08em;
-  text-transform: uppercase; padding: 6px 14px; border-radius: 100px;
-  margin-bottom: 24px; animation: fadeUp 0.5s ease both;
-}
-.hero-eyebrow::before { content: ''; width: 8px; height: 8px; background: var(--sun); border-radius: 50%; animation: pulse 2s ease infinite; }
-@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.4)} }
-h1 { font-family: 'DM Serif Display', serif; font-size: clamp(2rem,4vw,3.2rem); line-height: 1.15; margin-bottom: 16px; animation: fadeUp 0.5s 0.1s ease both; }
-h1 em { font-style: italic; color: var(--green); }
-.hero-sub { font-size: 1.05rem; color: var(--ink-soft); margin-bottom: 0; animation: fadeUp 0.5s 0.2s ease both; }
-
-/* ── WIZARD ── */
-.wizard-wrap {
-  max-width: 860px; margin: 0 auto;
-  padding: 0 5vw 80px;
-}
-.wizard-card {
-  background: var(--white); border: 1px solid var(--border);
-  border-radius: 20px; padding: 40px;
-  box-shadow: 0 12px 60px var(--shadow);
-  animation: fadeUp 0.5s 0.25s ease both;
-}
-
-/* Progress */
-.wiz-progress { display: flex; gap: 8px; margin-bottom: 32px; align-items: center; }
-.wiz-step-dot {
-  flex: 1; height: 4px; border-radius: 2px;
-  background: var(--border); transition: background 0.3s;
-}
-.wiz-step-dot.done { background: var(--green); }
-.wiz-step-dot.active { background: var(--green-mid); }
-.wiz-step-label { font-size: 0.8rem; color: var(--ink-muted); white-space: nowrap; }
-
-/* Step title */
-.wiz-title { font-family: 'DM Serif Display', serif; font-size: 1.5rem; color: var(--ink); margin-bottom: 24px; }
-
-/* Grid inputs */
-.wiz-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-.wiz-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
-@media(max-width:600px){ .wiz-grid,.wiz-grid-3{ grid-template-columns:1fr; } }
-
-/* Field */
-.wiz-field { display: flex; flex-direction: column; gap: 6px; }
-.wiz-field label { font-size: 0.82rem; font-weight: 500; color: var(--ink-soft); }
-.wiz-field input, .wiz-field select {
-  padding: 11px 14px; border: 1px solid var(--border);
-  border-radius: 8px; font-family: 'DM Sans', sans-serif;
-  font-size: 0.92rem; color: var(--ink); background: var(--white);
-  outline: none; transition: border-color 0.2s;
-}
-.wiz-field input:focus, .wiz-field select:focus { border-color: var(--green); }
-.wiz-field select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237a8f9e' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; cursor: pointer; }
-
-/* Locked field */
-.wiz-field.locked input, .wiz-field.locked select {
-  background: var(--locked); color: var(--ink-muted);
-  cursor: not-allowed; border-color: transparent;
-}
-.wiz-lock-badge {
-  display: inline-flex; align-items: center; gap: 4px;
-  font-size: 0.72rem; color: var(--ink-muted);
-  background: var(--locked); border-radius: 4px;
-  padding: 2px 7px; margin-top: 2px; width: fit-content;
-}
-
-/* Slider */
-.wiz-slider-wrap { display: flex; flex-direction: column; gap: 8px; }
-.wiz-slider-top { display: flex; justify-content: space-between; align-items: baseline; }
-.wiz-slider-val { font-family: 'DM Serif Display', serif; font-size: 1.1rem; color: var(--green); }
-input[type=range] { width: 100%; height: 4px; -webkit-appearance: none; background: var(--border); border-radius: 2px; outline: none; cursor: pointer; }
-input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; background: var(--green); border-radius: 50%; border: 3px solid var(--white); box-shadow: 0 2px 8px rgba(26,107,74,0.3); transition: transform 0.15s; }
-input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
-
-/* Toggle group */
-.wiz-toggle-group { display: flex; gap: 0; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
-.wiz-toggle-btn { flex: 1; padding: 10px 8px; background: none; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 0.88rem; color: var(--ink-muted); transition: all 0.2s; }
-.wiz-toggle-btn.active { background: var(--green); color: var(--white); font-weight: 500; }
-
-/* Checkboxes pro spotřebiče */
-.wiz-checks { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px; }
-.wiz-check-item { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: border-color 0.2s, background 0.2s; font-size: 0.87rem; }
-.wiz-check-item:hover { border-color: var(--green-mid); }
-.wiz-check-item input[type=checkbox] { accent-color: var(--green); width: 15px; height: 15px; cursor: pointer; }
-.wiz-check-item.checked { border-color: var(--green); background: var(--green-light); }
-
-/* Navigační tlačítka */
-.wiz-nav { display: flex; gap: 12px; margin-top: 32px; }
-.wiz-btn-back { flex: 0 0 auto; padding: 13px 24px; background: none; border: 1px solid var(--border); border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; color: var(--ink-soft); cursor: pointer; transition: all 0.2s; }
-.wiz-btn-back:hover { border-color: var(--ink-muted); color: var(--ink); }
-.wiz-btn-next { flex: 1; padding: 14px; background: var(--green); color: var(--white); border: none; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.95rem; font-weight: 500; cursor: pointer; transition: background 0.2s, transform 0.1s; }
-.wiz-btn-next:hover { background: var(--green-mid); transform: translateY(-1px); }
-.wiz-btn-next:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-
-/* Info box */
-.wiz-info { background: var(--green-light); border-left: 3px solid var(--green); border-radius: 0 8px 8px 0; padding: 12px 16px; font-size: 0.87rem; color: var(--green); margin-top: 16px; }
-.wiz-warn { background: var(--sun-light); border-left: 3px solid var(--sun); border-radius: 0 8px 8px 0; padding: 12px 16px; font-size: 0.87rem; color: #8a5f00; margin-top: 16px; }
-
-/* ── VÝSLEDEK ── */
-.result-hero {
-  display: grid; grid-template-columns: 1fr 1fr 1fr;
-  gap: 16px; margin-bottom: 28px;
-}
-@media(max-width:600px){ .result-hero{ grid-template-columns:1fr 1fr; } }
-.result-metric { background: var(--paper); border-radius: 12px; padding: 18px 20px; }
-.result-metric.highlight { background: var(--green); color: var(--white); }
-.rm-label { font-size: 0.75rem; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
-.rm-val { font-family: 'DM Serif Display', serif; font-size: 1.8rem; line-height: 1; }
-.rm-sub { font-size: 0.78rem; opacity: 0.65; margin-top: 2px; }
-.rm-blur { filter: blur(6px); user-select: none; pointer-events: none; opacity: 0.5; }
-
-/* Graf */
-.chart-wrap { position: relative; margin-bottom: 20px; }
-.chart-blur-overlay {
-  position: absolute; bottom: 0; left: 0; right: 0;
-  height: 62%; background: linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,0.97) 50%);
-  display: flex; align-items: flex-end; justify-content: center;
-  padding-bottom: 24px;
-  border-radius: 0 0 12px 12px;
-}
-.chart-blur-msg {
-  text-align: center;
-}
-.chart-blur-msg strong { display: block; font-size: 1rem; color: var(--ink); margin-bottom: 4px; }
-.chart-blur-msg span { font-size: 0.85rem; color: var(--ink-muted); }
-
-/* Lead form */
-.lead-box {
-  background: var(--ink); border-radius: 16px;
-  padding: 32px; margin-top: 28px; color: var(--white);
-}
-.lead-box-title { font-family: 'DM Serif Display', serif; font-size: 1.4rem; margin-bottom: 8px; }
-.lead-box-sub { font-size: 0.88rem; opacity: 0.7; margin-bottom: 20px; }
-.lead-perks { list-style: none; display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
-.lead-perks li { display: flex; align-items: flex-start; gap: 10px; font-size: 0.88rem; opacity: 0.9; }
-.lead-perks li::before { content: '✓'; color: var(--sun); font-weight: 700; flex-shrink: 0; }
-.lead-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-@media(max-width:600px){ .lead-grid{ grid-template-columns:1fr; } }
-.lead-field { display: flex; flex-direction: column; gap: 5px; }
-.lead-field label { font-size: 0.78rem; opacity: 0.65; font-weight: 500; }
-.lead-field input, .lead-field select {
-  padding: 11px 14px; border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 8px; background: rgba(255,255,255,0.08);
-  color: var(--white); font-family: 'DM Sans', sans-serif; font-size: 0.9rem;
-  outline: none; transition: border-color 0.2s;
-}
-.lead-field input::placeholder { opacity: 0.4; }
-.lead-field input:focus, .lead-field select:focus { border-color: var(--sun); }
-.lead-field select option { background: var(--ink); }
-.lead-field.full { grid-column: 1 / -1; }
-.lead-gdpr { display: flex; align-items: flex-start; gap: 10px; font-size: 0.8rem; opacity: 0.6; margin-top: 12px; grid-column: 1/-1; }
-.lead-gdpr input { accent-color: var(--sun); margin-top: 2px; flex-shrink: 0; }
-.lead-submit { width: 100%; padding: 15px; margin-top: 16px; background: var(--sun); color: var(--ink); border: none; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
-.lead-submit:hover { background: #f0a020; transform: translateY(-1px); }
-.lead-submit:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-.lead-note { text-align: center; font-size: 0.78rem; opacity: 0.5; margin-top: 10px; }
-.lead-msg { margin-top: 12px; padding: 12px 16px; border-radius: 8px; font-size: 0.87rem; display: none; }
-.lead-msg.error { background: #fef2f2; color: #b91c1c; display: block; }
-.lead-msg.success { background: var(--green-light); color: var(--green); display: block; }
-
-/* Limit warning */
-.limit-box { background: var(--sun-light); border: 1px solid var(--sun); border-radius: 12px; padding: 20px 24px; text-align: center; margin-top: 24px; }
-.limit-box strong { display: block; font-size: 1rem; color: #8a5f00; margin-bottom: 6px; }
-.limit-box p { font-size: 0.87rem; color: #a07020; }
-
-/* ── JAK TO FUNGUJE ── */
-.section { padding: 100px 8vw; }
-.section-label { font-size: 0.78rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--green); margin-bottom: 12px; }
-.section-title { font-family: 'DM Serif Display', serif; font-size: clamp(1.8rem,3vw,2.6rem); color: var(--ink); margin-bottom: 16px; max-width: 560px; }
-.section-sub { font-size: 1rem; color: var(--ink-soft); max-width: 520px; margin-bottom: 60px; }
-.steps { display: grid; grid-template-columns: repeat(3,1fr); gap: 32px; }
-.step { position: relative; padding: 32px; background: var(--white); border: 1px solid var(--border); border-radius: 12px; transition: box-shadow 0.3s, transform 0.3s; }
-.step:hover { box-shadow: 0 12px 40px var(--shadow); transform: translateY(-4px); }
-.step-num { font-family: 'DM Serif Display', serif; font-size: 3rem; color: var(--border); line-height: 1; margin-bottom: 16px; }
-.step-title { font-family: 'DM Serif Display', serif; font-size: 1.2rem; color: var(--ink); margin-bottom: 8px; }
-.step-text { font-size: 0.9rem; color: var(--ink-soft); line-height: 1.65; }
-
-/* ── CENY ── */
-.pricing-section { padding: 100px 8vw; background: var(--ink); color: var(--white); }
-.pricing-section .section-label { color: var(--sun); }
-.pricing-section .section-title { color: var(--white); }
-.pricing-section .section-sub { color: rgba(255,255,255,0.6); }
-.plans { display: grid; grid-template-columns: repeat(3,1fr); gap: 24px; max-width: 900px; }
-.plan { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 32px; position: relative; transition: background 0.3s; }
-.plan:hover { background: rgba(255,255,255,0.09); }
-.plan.featured { background: var(--green); border-color: var(--green-mid); }
-.plan-badge { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--sun); color: var(--ink); font-size: 0.72rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; padding: 4px 12px; border-radius: 100px; white-space: nowrap; }
-.plan-name { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.7; margin-bottom: 8px; }
-.plan-price { font-family: 'DM Serif Display', serif; font-size: 2.4rem; line-height: 1; margin-bottom: 4px; }
-.plan-period { font-size: 0.82rem; opacity: 0.6; margin-bottom: 24px; }
-.plan-features { list-style: none; display: flex; flex-direction: column; gap: 10px; }
-.plan-features li { font-size: 0.88rem; opacity: 0.85; display: flex; align-items: flex-start; gap: 8px; }
-.plan-features li::before { content: '✓'; color: var(--sun); font-weight: 700; flex-shrink: 0; margin-top: 1px; }
-.plan-features li.muted { opacity: 0.4; }
-.plan-features li.muted::before { content: '–'; color: inherit; }
-.plan-btn { display: block; width: 100%; margin-top: 28px; padding: 12px; border-radius: 7px; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; font-weight: 500; cursor: pointer; text-align: center; text-decoration: none; transition: all 0.2s; border: 1px solid rgba(255,255,255,0.25); background: transparent; color: var(--white); }
-.plan.featured .plan-btn { background: var(--white); color: var(--green); border-color: var(--white); }
-.plan-btn:hover { opacity: 0.85; transform: translateY(-1px); }
-
-/* ── FOOTER ── */
-footer { padding: 48px 8vw; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-.footer-logo { font-family: 'DM Serif Display', serif; font-size: 1.1rem; color: var(--green); }
-.footer-copy { font-size: 0.82rem; color: var(--ink-muted); }
-
-/* ── AUTH MODAL ── */
-.modal-overlay { display: none; position: fixed; inset: 0; z-index: 1000; background: rgba(15,25,35,0.6); backdrop-filter: blur(6px); align-items: center; justify-content: center; }
-.modal-overlay.open { display: flex; }
-.modal { background: var(--white); border-radius: 16px; padding: 40px; width: 100%; max-width: 420px; margin: 16px; box-shadow: 0 24px 80px rgba(15,25,35,0.2); animation: fadeUp 0.3s ease both; position: relative; }
-.modal-close { position: absolute; top: 16px; right: 16px; background: none; border: none; cursor: pointer; color: var(--ink-muted); font-size: 1.2rem; padding: 4px 8px; border-radius: 4px; transition: background 0.2s; }
-.modal-close:hover { background: var(--border); }
-.modal-logo { display: flex; align-items: center; gap: 8px; font-family: 'DM Serif Display', serif; font-size: 1.1rem; color: var(--green); margin-bottom: 24px; }
-.modal-title { font-family: 'DM Serif Display', serif; font-size: 1.6rem; color: var(--ink); margin-bottom: 6px; }
-.modal-sub { font-size: 0.88rem; color: var(--ink-muted); margin-bottom: 28px; }
-.modal-tabs { display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 24px; }
-.modal-tab { flex: 1; padding: 10px; background: none; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 0.88rem; font-weight: 500; color: var(--ink-muted); transition: all 0.2s; }
-.modal-tab.active { background: var(--green); color: var(--white); }
-.auth-field { margin-bottom: 16px; }
-.auth-field label { display: block; font-size: 0.82rem; font-weight: 500; color: var(--ink-soft); margin-bottom: 6px; }
-.auth-field .pw-wrap { position: relative; }
-.auth-field .pw-wrap input { width: 100%; padding: 11px 40px 11px 14px; border: 1px solid var(--border); border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; color: var(--ink); background: var(--white); outline: none; transition: border-color 0.2s; }
-.auth-field .pw-wrap input:focus { border-color: var(--green); }
-.auth-field input[type=email] { width: 100%; padding: 11px 14px; border: 1px solid var(--border); border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; color: var(--ink); background: var(--white); outline: none; transition: border-color 0.2s; }
-.auth-field input[type=email]:focus { border-color: var(--green); }
-.pw-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--ink-muted); font-size: 0.85rem; padding: 2px; }
-.auth-btn { width: 100%; padding: 13px; background: var(--green); color: var(--white); border: none; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.95rem; font-weight: 500; cursor: pointer; margin-top: 8px; transition: background 0.2s, transform 0.1s; }
-.auth-btn:hover { background: var(--green-mid); transform: translateY(-1px); }
-.auth-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
-.auth-msg { margin-top: 14px; padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; display: none; }
-.auth-msg.error { background: #fef2f2; color: #b91c1c; display: block; }
-.auth-msg.success { background: var(--green-light); color: var(--green); display: block; }
-
-/* ── ANIMACE ── */
-@keyframes fadeUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
-.reveal { opacity: 0; transform: translateY(30px); transition: opacity 0.6s ease, transform 0.6s ease; }
-.reveal.visible { opacity: 1; transform: translateY(0); }
-
-/* ── RESPONSIVE ── */
-@media(max-width:900px){
-  .steps { grid-template-columns: 1fr; }
-  .plans { grid-template-columns: 1fr; max-width: 400px; }
-  footer { flex-direction: column; gap: 12px; text-align: center; }
-}
-@media(max-width:600px){
-  .wizard-card { padding: 24px; }
-  .hero-intro { padding: 100px 5vw 40px; }
-}
+:root{--navy:#1E3A5F;--blue:#1B6CA8;--blue-l:#E3F0FA;--blue-ll:#F0F7FD;--green:#2E8B4A;--green-l:#E3F4E9;--amber:#F59E0B;--amber-l:#FEF3C7;--rose:#F43F5E;--text:#1E293B;--text-2:#64748B;--border:#E2E8F0;--bg:#F8FAFB;--white:#ffffff;--r:12px;--rm:8px;--shadow:0 1px 3px rgba(0,0,0,0.06),0 4px 16px rgba(0,0,0,0.04);--shadow-lg:0 8px 32px rgba(30,58,95,0.12)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6}
+.page{max-width:720px;margin:0 auto;padding:1rem 1rem 4rem}
+.hdr{background:var(--navy);border-radius:var(--r);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;box-shadow:var(--shadow-lg)}
+.hdr-logo{display:flex;align-items:center;gap:12px;text-decoration:none}
+.logo-box{width:40px;height:40px;background:var(--blue);border-radius:var(--rm);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.logo-t{color:#fff;font-size:16px;font-weight:600;letter-spacing:-.3px}
+.logo-s{color:#8BA8C4;font-size:11px;margin-top:1px}
+.hdr-steps{display:flex;align-items:center;gap:4px}
+.sd{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;cursor:pointer;transition:all .2s;flex-shrink:0}
+.sd.done{background:var(--green);color:#fff}.sd.active{background:#fff;color:var(--navy)}.sd.todo{background:transparent;color:#8BA8C4;border:1.5px solid #3A5A7A}
+.sl{width:16px;height:1.5px;background:#3A5A7A;flex-shrink:0}.sl.done{background:var(--green)}
+.prog{height:3px;background:var(--border);border-radius:2px;margin-bottom:16px;overflow:hidden}
+.prog-f{height:100%;background:var(--blue);border-radius:2px;transition:width .4s ease}
+.card{background:var(--white);border:0.5px solid var(--border);border-radius:var(--r);padding:22px;margin-bottom:12px;box-shadow:var(--shadow);animation:fadeUp .3s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.ctitle{font-family:'DM Serif Display',serif;font-size:22px;color:var(--navy);margin-bottom:4px;line-height:1.3}
+.csub{font-size:13px;color:var(--text-2);margin-bottom:20px}
+.slabel{font-size:11px;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:.6px;margin:16px 0 8px}
+label{display:block;font-size:12px;color:var(--text-2);margin-bottom:4px;font-weight:500}
+input[type=text],input[type=number],input[type=email],select{width:100%;padding:10px 13px;border:0.5px solid #CBD5E1;border-radius:var(--rm);font-size:13px;color:var(--text);background:var(--white);font-family:inherit;outline:none;transition:border-color .15s,box-shadow .15s;-moz-appearance:textfield}
+input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none}
+input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-l)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.autocomplete-wrap{position:relative}
+.ac-list{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--white);border:0.5px solid #CBD5E1;border-radius:var(--rm);z-index:100;box-shadow:var(--shadow-lg);overflow:hidden;display:none}
+.ac-list.open{display:block}
+.ac-item{padding:10px 13px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .1s;color:var(--text)}
+.ac-item:hover{background:var(--blue-l)}
+.tog-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tog{display:flex;align-items:center;gap:10px;padding:11px 14px;border:0.5px solid var(--border);border-radius:var(--rm);cursor:pointer;transition:all .15s;background:var(--white);user-select:none}
+.tog:hover{border-color:#94BFDE;background:var(--blue-ll)}.tog.on{border-color:var(--blue);background:var(--blue-ll)}
+.tog.locked{opacity:.5;cursor:default;pointer-events:none;background:var(--bg)}
+.tog-icon{font-size:18px;width:24px;text-align:center;flex-shrink:0}
+.tog-body{flex:1;min-width:0}
+.tog-name{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tog-sub{font-size:11px;color:var(--text-2);margin-top:1px}
+.tog-chk{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;transition:all .15s}
+.tog.on .tog-chk{background:var(--blue);border-color:var(--blue);color:#fff}
+.chip-grid{display:grid;gap:8px}.chip-grid.c3{grid-template-columns:repeat(3,1fr)}.chip-grid.c6{grid-template-columns:repeat(3,1fr)}
+.chip{padding:10px 8px;border:0.5px solid var(--border);border-radius:var(--rm);cursor:pointer;text-align:center;transition:all .15s;background:var(--white)}
+.chip:hover{border-color:#94BFDE;background:var(--blue-ll)}.chip.on{border-color:var(--blue);background:var(--blue-ll)}
+.chip-icon{font-size:20px;margin-bottom:4px}.chip-name{font-size:12px;font-weight:500;color:var(--text)}.chip-sub{font-size:10px;color:var(--text-2);margin-top:2px}
+.inv{display:flex;align-items:center;gap:12px;padding:14px 16px;border:0.5px solid var(--border);border-radius:var(--rm);cursor:pointer;transition:all .15s;background:var(--white);margin-bottom:8px}
+.inv:hover{border-color:#94BFDE}.inv.on{border-color:var(--blue);background:var(--blue-ll)}
+.inv-icon{font-size:26px;flex-shrink:0}.inv-body{flex:1}.inv-title{font-size:13px;font-weight:600;color:var(--text)}.inv-desc{font-size:11px;color:var(--text-2);margin-top:2px}
+.inv-chk{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;transition:all .15s}
+.inv.on .inv-chk{background:var(--blue);border-color:var(--blue);color:#fff}
+.hh-wrap{margin:8px 0 14px}.hh-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.hh-label{font-size:11px;color:var(--text-2)}.hh-center{font-size:13px;font-weight:600;color:var(--rose)}
+input[type=range]{width:100%;accent-color:var(--blue);margin-bottom:12px;cursor:pointer}
+.chart-wrap{position:relative;height:90px;margin-bottom:4px}.chart-wrap canvas{width:100%;height:90px;display:block}
+.chart-hours{display:flex;justify-content:space-between;font-size:10px;color:#94A3B8;margin-top:3px}
+.lock-row{display:flex;align-items:center;gap:8px;padding:10px 13px;background:var(--bg);border:0.5px solid var(--border);border-radius:var(--rm);margin-bottom:6px}
+.lock-l{flex:1;font-size:13px;color:var(--text-2)}.lock-v{font-size:13px;font-weight:600;color:var(--text)}.lock-ico{font-size:13px;color:#CBD5E1}
+.badge{display:inline-flex;align-items:center;border-radius:20px;padding:2px 10px;font-size:10px;font-weight:600;white-space:nowrap}
+.b-amber{background:var(--amber-l);color:#92400E}.b-blue{background:var(--blue-l);color:#0C4A7C}.b-green{background:var(--green-l);color:#1A5C32}.b-always{background:#F1F5F9;color:#475569}
+.tip{font-size:12px;color:#4A7BA8;padding:10px 14px;background:var(--blue-ll);border-radius:var(--rm);border-left:3px solid var(--blue);margin-top:12px;line-height:1.5}
+.var-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px}
+.var-card{border:0.5px solid var(--border);border-radius:var(--r);padding:16px 12px;text-align:center;position:relative;background:var(--white)}
+.var-card.best{border:2px solid var(--blue);box-shadow:0 0 0 4px rgba(27,108,168,.08)}
+.var-card.blurred{filter:blur(2.5px);pointer-events:none;opacity:.5;user-select:none}
+.var-badge{position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:var(--blue);color:#fff;font-size:10px;font-weight:600;padding:3px 12px;border-radius:10px;white-space:nowrap}
+.var-name{font-size:11px;color:var(--text-2);margin-bottom:8px}
+.var-kwp{font-size:24px;font-weight:600;color:var(--navy);line-height:1}
+.var-kwp span{font-size:13px;font-weight:400;color:var(--text-2)}
+.var-save{font-size:13px;color:var(--green);font-weight:600;margin-top:6px}
+.var-roi{font-size:11px;color:var(--text-2);margin-top:3px}
+.kpi-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px}
+.kpi{background:var(--blue-ll);border-radius:var(--rm);padding:14px 16px;border:0.5px solid #C8DFF2}
+.kpi-l{font-size:11px;color:#4A7BA8;margin-bottom:4px}.kpi-v{font-size:26px;font-weight:600;color:var(--navy);line-height:1}.kpi-u{font-size:11px;color:#4A7BA8;margin-top:3px}
+.cf-wrap{position:relative;height:90px;margin-bottom:6px}.cf-wrap canvas{width:100%;height:90px;display:block}
+.cf-blur{position:absolute;inset:0;background:linear-gradient(to right,transparent 35%,rgba(240,247,253,.96) 70%);display:flex;align-items:center;justify-content:flex-end;padding-right:14px;border-radius:var(--rm)}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,.75);z-index:1000;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.modal-overlay.open{display:flex}
+.modal{background:var(--white);border-radius:16px;padding:32px;max-width:440px;width:calc(100% - 2rem);box-shadow:0 24px 80px rgba(0,0,0,.25);animation:slideUp .3s ease;position:relative}
+@keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal-close{position:absolute;top:16px;right:16px;width:32px;height:32px;border-radius:50%;border:none;background:var(--bg);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--text-2)}
+.modal-close:hover{background:var(--border)}
+.modal-badge{display:inline-flex;align-items:center;gap:6px;background:var(--green-l);color:var(--green);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:600;margin-bottom:14px}
+.modal-title{font-family:'DM Serif Display',serif;font-size:24px;color:var(--navy);margin-bottom:6px;line-height:1.2}
+.modal-sub{font-size:13px;color:var(--text-2);margin-bottom:18px;line-height:1.5}
+.benefit{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--border);font-size:13px;color:var(--text)}
+.benefit:last-child{border-bottom:none}.benefit-icon{font-size:16px;flex-shrink:0}
+.modal-form{display:flex;flex-direction:column;gap:10px;margin-top:16px}
+.modal-form input{padding:12px 14px;font-size:14px;border:1.5px solid var(--border);border-radius:var(--rm);width:100%;font-family:inherit}
+.modal-form input:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-l);outline:none}
+.btn-register{width:100%;padding:15px;background:linear-gradient(135deg,var(--green) 0%,#1f6b36 100%);color:#fff;border:none;border-radius:var(--rm);font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;transition:transform .15s,box-shadow .15s;box-shadow:0 4px 14px rgba(46,139,74,.4);display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-register:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(46,139,74,.5)}
+.modal-note{font-size:11px;color:var(--text-2);text-align:center;margin-top:10px}
+.cta-box{background:var(--navy);border-radius:var(--r);padding:20px 22px;display:flex;align-items:center;gap:16px;margin-bottom:12px;position:relative;overflow:hidden}
+.cta-box::before{content:'';position:absolute;right:-20px;top:-20px;width:120px;height:120px;background:radial-gradient(circle,rgba(255,255,255,.06) 0%,transparent 70%);pointer-events:none}
+.cta-body{flex:1}.cta-title{font-size:15px;font-weight:600;color:#fff;margin-bottom:5px;line-height:1.3}.cta-desc{font-size:12px;color:#8BA8C4;line-height:1.4}
+.btn-cta{background:linear-gradient(135deg,var(--green) 0%,#1f6b36 100%);color:#fff;border:none;border-radius:var(--rm);padding:13px 22px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;box-shadow:0 4px 14px rgba(46,139,74,.5);transition:transform .15s,box-shadow .15s;flex-shrink:0}
+.btn-cta:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(46,139,74,.6)}
+.nav{display:flex;justify-content:space-between;align-items:center;margin-top:6px}
+.nav-hint{font-size:12px;color:#94A3B8}
+.btn-prim{background:var(--blue);color:#fff;border:none;border-radius:var(--rm);padding:11px 24px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:opacity .15s,transform .1s;white-space:nowrap}
+.btn-prim:hover{opacity:.9;transform:translateY(-1px)}
+.btn-out{background:transparent;border:1.5px solid var(--blue);color:var(--blue);border-radius:var(--rm);padding:10px 20px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;transition:background .15s}
+.btn-out:hover{background:var(--blue-l)}
+.step-lbl{font-size:12px;color:var(--text-2)}
+.res-header{background:var(--blue-ll);border:0.5px solid #C8DFF2;border-radius:var(--r);padding:18px 22px;margin-bottom:12px}
+.res-meta{font-size:12px;color:#4A7BA8;margin-bottom:12px;font-weight:500}
+.success-box{text-align:center;padding:16px 0}
+.success-icon{font-size:48px;margin-bottom:12px}
+.success-title{font-family:'DM Serif Display',serif;font-size:22px;color:var(--navy);margin-bottom:8px}
+.success-desc{font-size:13px;color:var(--text-2);line-height:1.5}
+.spin{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:560px){.g3{grid-template-columns:1fr 1fr}.tog-grid{grid-template-columns:1fr}.var-grid{grid-template-columns:1fr}.kpi-row{grid-template-columns:1fr 1fr}.cta-box{flex-direction:column;text-align:center}.hdr-steps{display:none}}
 </style>
 </head>
 <body>
-
-<!-- NAV -->
-<nav>
-  <a href="/" class="nav-logo">
-    <svg viewBox="0 0 28 28" fill="none"><rect width="28" height="28" rx="7" fill="#1a6b4a"/><path d="M14 5l-7 10h6l-2 8 9-12h-6l2-6h-2z" fill="#f5a623"/></svg>
-    SVJ Energie
+<div class="page">
+<header class="hdr">
+  <a href="https://www.svjenergie.cz" class="hdr-logo">
+    <div class="logo-box">
+      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="40" height="40" rx="8" fill="#1B6CA8"/>
+        <path d="M10 27L20 13L30 27" stroke="#2E8B4A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <rect x="12" y="25" width="16" height="2.5" rx="1.25" fill="#2E8B4A" opacity=".8"/>
+        <text x="20" y="35" text-anchor="middle" font-size="8" font-weight="700" fill="white" font-family="system-ui" letter-spacing="0.5">SVJ</text>
+      </svg>
+    </div>
+    <div><div class="logo-t">svjenergie</div><div class="logo-s">fve kalkulačka pro bytov&#233; domy</div></div>
   </a>
-  <button class="nav-cta" id="nav-login-btn" onclick="openModal()">Přihlásit se</button>
-  <div class="nav-user" id="nav-user">
-    <div class="nav-avatar" id="nav-avatar">?</div>
-    <button class="nav-signout" onclick="signOut()">Odhlásit</button>
-  </div>
-</nav>
-
-<!-- HERO INTRO -->
-<div class="hero-intro">
-  <div class="hero-eyebrow">Fotovoltaika pro bytové domy</div>
-  <h1>Kolik ušetří <em>vaše SVJ</em> na energiích?</h1>
-  <p class="hero-sub">Zadejte parametry domu a za 30 sekund uvidíte orientační cashflow na 25 let. Přesná analýza, změření střechy a cenová nabídka jsou zdarma.</p>
+  <nav class="hdr-steps" id="stepDots"></nav>
+</header>
+<div class="prog"><div class="prog-f" id="progBar" style="width:16.6%"></div></div>
+<main id="content"></main>
 </div>
 
-<!-- WIZARD -->
-<div class="wizard-wrap">
-  <div class="wizard-card" id="wizard-card">
-
-    <!-- Krok 1: Dům -->
-    <div id="step-1">
-      <div class="wiz-progress">
-        <div class="wiz-step-dot active" id="dot-1"></div>
-        <div class="wiz-step-dot" id="dot-2"></div>
-        <div class="wiz-step-dot" id="dot-3"></div>
-        <span class="wiz-step-label">Krok 1 ze 3</span>
-      </div>
-      <div class="wiz-title">🏠 Váš dům</div>
-      <div class="wiz-grid">
-        <div class="wiz-slider-wrap">
-          <div class="wiz-slider-top">
-            <label style="font-size:0.82rem;font-weight:500;color:var(--ink-soft)">Počet bytových jednotek</label>
-            <span class="wiz-slider-val" id="val-byty">20</span>
-          </div>
-          <input type="range" id="sl-byty" min="4" max="120" value="20" step="1" oninput="updateSlider('byty',this.value)">
-        </div>
-        <div class="wiz-slider-wrap">
-          <div class="wiz-slider-top">
-            <label style="font-size:0.82rem;font-weight:500;color:var(--ink-soft)">Průměrná spotřeba bytu</label>
-            <span class="wiz-slider-val" id="val-sp">2,5 MWh/rok</span>
-          </div>
-          <input type="range" id="sl-sp" min="1" max="6" value="2.5" step="0.5" oninput="updateSlider('sp',this.value)">
-        </div>
-      </div>
-
-      <div style="margin-top:20px">
-        <label style="font-size:0.82rem;font-weight:500;color:var(--ink-soft);display:block;margin-bottom:8px">Co v domě používáte na elektřinu?</label>
-        <div class="wiz-checks" id="zarizeni-checks">
-          <label class="wiz-check-item" id="chk-sporak"><input type="checkbox" value="sporak" onchange="toggleCheck(this)"> 🍳 Elektrický sporák</label>
-          <label class="wiz-check-item" id="chk-bojler"><input type="checkbox" value="bojler" onchange="toggleCheck(this)"> 🚿 Bojler / ohřev vody</label>
-          <label class="wiz-check-item" id="chk-klima"><input type="checkbox" value="klima" onchange="toggleCheck(this)"> ❄️ Klimatizace</label>
-          <label class="wiz-check-item" id="chk-tc"><input type="checkbox" value="tc" onchange="toggleCheck(this)"> 🌡️ Tepelné čerpadlo bytu</label>
-          <label class="wiz-check-item" id="chk-ev"><input type="checkbox" value="ev" onchange="toggleCheck(this)"> 🚗 Nabíjení elektroaut</label>
-          <label class="wiz-check-item" id="chk-akum"><input type="checkbox" value="akum" onchange="toggleCheck(this)"> ⚡ Akumulační topení</label>
-        </div>
-      </div>
-
-      <div style="margin-top:20px">
-        <label style="font-size:0.82rem;font-weight:500;color:var(--ink-soft);display:block;margin-bottom:8px">Distributor elektřiny</label>
-        <div class="wiz-toggle-group">
-          <button class="wiz-toggle-btn active" id="dist-cez" onclick="setDist('cez')">ČEZ</button>
-          <button class="wiz-toggle-btn" id="dist-egd" onclick="setDist('egd')">EG.D (E.ON)</button>
-          <button class="wiz-toggle-btn" id="dist-pre" onclick="setDist('pre')">PRE</button>
-        </div>
-      </div>
-
-      <div style="margin-top:20px" class="wiz-field locked">
-        <label>Složení obyvatel domu</label>
-        <select disabled>
-          <option>Smíšené (pracující + důchodci)</option>
-        </select>
-        <span class="wiz-lock-badge">🔒 Dostupné v plné verzi</span>
-      </div>
-
-      <div class="wiz-nav">
-        <button class="wiz-btn-next" onclick="goStep(2)">Dál — střecha →</button>
-      </div>
-    </div>
-
-    <!-- Krok 2: Střecha -->
-    <div id="step-2" style="display:none">
-      <div class="wiz-progress">
-        <div class="wiz-step-dot done"></div>
-        <div class="wiz-step-dot active"></div>
-        <div class="wiz-step-dot"></div>
-        <span class="wiz-step-label">Krok 2 ze 3</span>
-      </div>
-      <div class="wiz-title">🏗️ Střecha a lokalita</div>
-      <div class="wiz-grid">
-        <div class="wiz-field">
-          <label>Typ střechy</label>
-          <div class="wiz-toggle-group" style="border:1px solid var(--border)">
-            <button class="wiz-toggle-btn active" id="str-sikma" onclick="setStecha('sikma')">🏠 Šikmá</button>
-            <button class="wiz-toggle-btn" id="str-plocha" onclick="setStecha('plocha')">🏢 Plochá</button>
-          </div>
-        </div>
-        <div class="wiz-field">
-          <label>Orientace střechy</label>
-          <select id="sel-azimut">
-            <option value="0">⬆️ Jih (ideální)</option>
-            <option value="-45">↙️ Jihovýchod</option>
-            <option value="45">↗️ Jihozápad</option>
-            <option value="-90">⬅️ Východ</option>
-            <option value="90">➡️ Západ</option>
-            <option value="998">↔️ JZ + JV (dvě plochy)</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="wiz-grid" style="margin-top:16px">
-        <div class="wiz-field locked">
-          <label>Sklon střechy (°)</label>
-          <input type="number" value="35" disabled>
-          <span class="wiz-lock-badge">🔒 Dostupné v plné verzi</span>
-        </div>
-        <div class="wiz-field">
-          <label>Město / oblast</label>
-          <select id="sel-lokalita">
-            <option value="1050">Praha a okolí</option>
-            <option value="1050">Středočeský kraj</option>
-            <option value="1080" selected>Jihomoravský kraj</option>
-            <option value="1060">Jihočeský kraj</option>
-            <option value="1040">Ústecký kraj</option>
-            <option value="1030">Moravskoslezský kraj</option>
-            <option value="1070">Zlínský kraj</option>
-            <option value="1060">Olomoucký kraj</option>
-            <option value="1045">Královéhradecký kraj</option>
-            <option value="1045">Pardubický kraj</option>
-            <option value="1040">Liberecký kraj</option>
-            <option value="1035">Karlovarský kraj</option>
-            <option value="1055">Plzeňský kraj</option>
-            <option value="1065">Vysočina</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="wiz-field locked" style="margin-top:16px">
-        <label>Stav střechy a stínění</label>
-        <select disabled>
-          <option>Dobrý stav, bez stínění</option>
-        </select>
-        <span class="wiz-lock-badge">🔒 Dostupné v plné verzi</span>
-      </div>
-
-      <div class="wiz-nav">
-        <button class="wiz-btn-back" onclick="goStep(1)">← Zpět</button>
-        <button class="wiz-btn-next" onclick="goStep(3)">Spočítat →</button>
-      </div>
-    </div>
-
-    <!-- Krok 3: Výsledek -->
-    <div id="step-3" style="display:none">
-      <div class="wiz-progress">
-        <div class="wiz-step-dot done"></div>
-        <div class="wiz-step-dot done"></div>
-        <div class="wiz-step-dot active"></div>
-        <span class="wiz-step-label">Výsledek</span>
-      </div>
-      <div class="wiz-title">📊 Orientační výsledek</div>
-
-      <!-- Metriky -->
-      <div class="result-hero">
-        <div class="result-metric highlight">
-          <div class="rm-label">Úspora za 25 let</div>
-          <div class="rm-val" id="r-uspora25">—</div>
-          <div class="rm-sub" id="r-invest-sub">z investice —</div>
-        </div>
-        <div class="result-metric">
-          <div class="rm-label">Roční úspora (rok 1)</div>
-          <div class="rm-val" id="r-uspora1">—</div>
-          <div class="rm-sub">bez baterie</div>
-        </div>
-        <div class="result-metric">
-          <div class="rm-label">Návratnost</div>
-          <div class="rm-val" id="r-navrat">—</div>
-          <div class="rm-sub">statická</div>
-        </div>
-        <div class="result-metric">
-          <div class="rm-label">Doporučený výkon</div>
-          <div class="rm-val" id="r-kwp">—</div>
-          <div class="rm-sub">orientační</div>
-        </div>
-        <div class="result-metric" style="position:relative;overflow:hidden">
-          <div class="rm-label">Vlastní spotřeba</div>
-          <div class="rm-val rm-blur">42 %</div>
-          <div class="rm-sub rm-blur">z výroby FVE</div>
-          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:0.75rem;color:var(--ink-muted)">🔒 plná verze</div>
-        </div>
-        <div class="result-metric" style="position:relative;overflow:hidden">
-          <div class="rm-label">Soběstačnost domu</div>
-          <div class="rm-val rm-blur">31 %</div>
-          <div class="rm-sub rm-blur">pokrytí spotřeby</div>
-          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:0.75rem;color:var(--ink-muted)">🔒 plná verze</div>
-        </div>
-      </div>
-
-      <!-- Rozpad úspory -->
-      <div id="r-rozpad" style="display:none; margin-bottom:20px">
-        <div style="font-size:0.8rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--green);margin-bottom:10px">Z čeho se úspora skládá</div>
-        <div style="display:flex;flex-direction:column;gap:6px">
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--green-light);border-radius:8px;border-left:3px solid var(--green)">
-            <span style="font-size:0.88rem">⚡ Úspora JOM — sjednocení odběrných míst <span style="font-size:0.76rem;color:var(--ink-muted)">(bez FVE, okamžitě)</span></span>
-            <strong id="r-jom" style="color:var(--green);white-space:nowrap">—</strong>
-          </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--paper);border-radius:8px">
-            <span style="font-size:0.88rem">☀️ Úspora z FVE — vlastní výroba + přetoky</span>
-            <strong id="r-fve" style="white-space:nowrap">—</strong>
-          </div>
-        </div>
-      </div>
-
-      <!-- Srovnání scénářů -->
-      <div id="r-scenare" style="display:none;margin-bottom:20px">
-        <div style="font-size:0.8rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--green);margin-bottom:10px">Bez FVE vs. s FVE — náklady za 25 let</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <div style="padding:16px;background:#fef2f2;border-radius:10px;text-align:center">
-            <div style="font-size:0.78rem;color:#b91c1c;margin-bottom:4px">❌ Bez FVE zaplatíte</div>
-            <div id="r-bez-fve" style="font-family:'DM Serif Display',serif;font-size:1.6rem;color:#b91c1c">—</div>
-            <div style="font-size:0.75rem;color:#b91c1c;opacity:0.7">za 25 let na elektřině</div>
-          </div>
-          <div style="padding:16px;background:var(--green-light);border-radius:10px;text-align:center">
-            <div style="font-size:0.78rem;color:var(--green);margin-bottom:4px">✅ S FVE zaplatíte</div>
-            <div id="r-s-fve" style="font-family:'DM Serif Display',serif;font-size:1.6rem;color:var(--green)">—</div>
-            <div style="font-size:0.75rem;color:var(--green);opacity:0.7">úspora <strong id="r-diff">—</strong></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Graf cashflow -->
-      <div class="chart-wrap">
-        <canvas id="cf-chart" height="200"></canvas>
-        <div class="chart-blur-overlay">
-          <div class="chart-blur-msg">
-            <strong>Cashflow roky 4–25 k dispozici po vyplnění formuláře</strong>
-            <span>Váš specialista vám pošle kompletní analýzu zdarma</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Předpoklady výpočtu -->
-      <div id="r-predpoklady" style="display:none;margin-top:8px;padding:12px 16px;background:var(--paper);border-radius:8px;border:1px solid var(--border)">
-        <div style="font-size:0.75rem;color:var(--ink-muted);line-height:1.7" id="r-predpoklady-text"></div>
-      </div>
-
-      <!-- Limit warning -->
-      <div class="limit-box" id="limit-box" style="display:none">
-        <strong>⏱️ Dnešní limit 3 výpočtů byl vyčerpán</strong>
-        <p>Vyplňte formulář níže — dostanete přesnou simulaci přímo od specialisty.</p>
-      </div>
-
-      <!-- Lead formulář -->
-      <div class="lead-box">
-        <div class="lead-box-title">Chcete přesná čísla pro váš dům?</div>
-        <div class="lead-box-sub">Náš specialista vás kontaktuje do 24 hodin a zajistí vám:</div>
-        <ul class="lead-perks">
-          <li>Osobní návštěvu a odborné změření střechy zdarma</li>
-          <li>Přesnou cenovou nabídku s 3D vizualizací panelů</li>
-          <li>Kompletní podklady pro hlasování na schůzi SVJ</li>
-          <li>Srovnání modelů sdílení EDC / JOM pro váš dům</li>
-        </ul>
-        <div class="lead-grid" id="lead-form">
-          <div class="lead-field">
-            <label>Jméno a příjmení *</label>
-            <input type="text" id="lead-jmeno" placeholder="Jan Novák">
-          </div>
-          <div class="lead-field">
-            <label>Telefon *</label>
-            <input type="tel" id="lead-telefon" placeholder="+420 777 123 456">
-          </div>
-          <div class="lead-field">
-            <label>E-mail *</label>
-            <input type="email" id="lead-email" placeholder="jan@email.cz">
-          </div>
-          <div class="lead-field">
-            <label>Pozice v SVJ</label>
-            <select id="lead-pozice">
-              <option value="">— vyberte —</option>
-              <option>Předseda SVJ</option>
-              <option>Správce domu</option>
-              <option>Člen výboru</option>
-              <option>Vlastník bytu</option>
-              <option>Jiné</option>
-            </select>
-          </div>
-          <div class="lead-field full">
-            <label>Název SVJ nebo adresa domu</label>
-            <input type="text" id="lead-svj" placeholder="SVJ Náměstí Míru 5, Praha 2">
-          </div>
-          <div class="lead-gdpr">
-            <input type="checkbox" id="lead-gdpr-cb">
-            <span>Souhlasím se zpracováním osobních údajů za účelem přípravy nabídky. Údaje nebudou předány třetím stranám.</span>
-          </div>
-        </div>
-        <button class="lead-submit" id="lead-submit-btn" onclick="submitLead()">
-          Chci bezplatnou analýzu a návštěvu specialisty →
-        </button>
-        <div class="lead-note">Žádné závazky · Bez kreditní karty · Výsledky do 24 hodin</div>
-        <div class="lead-msg" id="lead-msg"></div>
-      </div>
-
-      <div style="margin-top:16px;text-align:center">
-        <button onclick="goStep(1)" style="background:none;border:none;color:var(--ink-muted);font-size:0.85rem;cursor:pointer;text-decoration:underline">← Změnit parametry</button>
-      </div>
-    </div>
-
-  </div><!-- /wizard-card -->
-</div><!-- /wizard-wrap -->
-
-<!-- JAK TO FUNGUJE -->
-<section class="section">
-  <div class="section-label">Jak to funguje</div>
-  <div class="section-title">Tři kroky k přesné analýze</div>
-  <div class="section-sub">Od orientační kalkulačky po kompletní podklady pro schůzi SVJ.</div>
-  <div class="steps">
-    <div class="step reveal">
-      <div class="step-num">01</div>
-      <div class="step-title">Zadejte parametry domu</div>
-      <div class="step-text">Počet bytů, spotřeba, typ střechy. Za 30 sekund máte orientační cashflow na 25 let.</div>
-    </div>
-    <div class="step reveal" style="transition-delay:0.1s">
-      <div class="step-num">02</div>
-      <div class="step-title">Specialista vám zavolá</div>
-      <div class="step-text">Do 24 hodin vás kontaktuje náš energetický specialista a domluví termín bezplatné návštěvy.</div>
-    </div>
-    <div class="step reveal" style="transition-delay:0.2s">
-      <div class="step-num">03</div>
-      <div class="step-title">Přesná nabídka a podklady pro SVJ</div>
-      <div class="step-text">Dostanete cenovou nabídku s 3D vizualizací a profesionální podklady pro hlasování na schůzi.</div>
-    </div>
-  </div>
-</section>
-
-<!-- CENY -->
-<section class="pricing-section" id="registrace">
-  <div class="section-label">Ceník</div>
-  <div class="section-title">Začněte zdarma</div>
-  <div class="section-sub">Registrace = kvalifikovaný zájem. Žádné závazky.</div>
-  <div class="plans">
-    <div class="plan reveal">
-      <div class="plan-name">Zdarma</div>
-      <div class="plan-price">0 Kč</div>
-      <div class="plan-period">navždy</div>
-      <ul class="plan-features">
-        <li>3 orientační výpočty / den</li>
-        <li>Cashflow graf (roky 1–3)</li>
-        <li class="muted">Detailní simulace</li>
-        <li class="muted">Uložené projekty</li>
-        <li class="muted">PDF export</li>
-      </ul>
-      <a href="#" class="plan-btn" onclick="openModal('register');return false">Začít zdarma</a>
-    </div>
-    <div class="plan featured reveal" style="transition-delay:0.1s">
-      <div class="plan-badge">Nejoblíbenější</div>
-      <div class="plan-name">Správce</div>
-      <div class="plan-price">490 Kč</div>
-      <div class="plan-period">/ měsíc</div>
-      <ul class="plan-features">
-        <li>Neomezené simulace</li>
-        <li>Kompletní cashflow 25 let</li>
-        <li>Import faktury (foto)</li>
-        <li>Uložené projekty</li>
-        <li class="muted">PDF export pro SVJ</li>
-      </ul>
-      <a href="#" class="plan-btn" onclick="openModal('register');return false">Vyzkoušet 14 dní</a>
-    </div>
-    <div class="plan reveal" style="transition-delay:0.2s">
-      <div class="plan-name">Profesionál</div>
-      <div class="plan-price">990 Kč</div>
-      <div class="plan-period">/ měsíc</div>
-      <ul class="plan-features">
-        <li>Vše ze Správce</li>
-        <li>PDF export pro schůzi</li>
-        <li>Prioritní podpora</li>
-        <li>API přístup</li>
-        <li>Neomezené projekty</li>
-      </ul>
-      <a href="#" class="plan-btn" onclick="openModal('register');return false">Kontaktovat</a>
-    </div>
-  </div>
-</section>
-
-<!-- FOOTER -->
-<footer>
-  <div class="footer-logo">SVJ Energie</div>
-  <div class="footer-copy">© 2026 SVJ Energie · svjenergie.cz · Všechna práva vyhrazena</div>
-</footer>
-
-<!-- AUTH MODAL -->
-<div class="modal-overlay" id="modal-overlay" onclick="overlayClick(event)">
+<div class="modal-overlay" id="regModal">
   <div class="modal">
-    <button class="modal-close" onclick="closeModal()">✕</button>
-    <div class="modal-logo">
-      <svg viewBox="0 0 28 28" width="22" fill="none"><rect width="28" height="28" rx="7" fill="#1a6b4a"/><path d="M14 5l-7 10h6l-2 8 9-12h-6l2-6h-2z" fill="#f5a623"/></svg>
-      SVJ Energie
+    <button class="modal-close" onclick="closeModal()">&#x2715;</button>
+    <div class="modal-badge">&#10024; Zdarma &#8212; v&#253;sledky do 2 minut</div>
+    <h2 class="modal-title">Z&#237;skejte p&#345;esnou anal&#253;zu pro sch&#367;zi SVJ</h2>
+    <p class="modal-sub">Zadejte e&#8209;mail a okam&#382;it&#283; odemknete pln&#233; v&#253;sledky, v&#353;echny 3 varianty, editaci parametr&#367; a profesion&#225;ln&#237; PDF report.</p>
+    <div id="benefitsList">
+      <div class="benefit"><span class="benefit-icon">&#128202;</span> P&#345;esn&#225; 15minutov&#225; simulace v&#253;roby a spot&#345;eby</div>
+      <div class="benefit"><span class="benefit-icon">&#128200;</span> Cashflow 25 let &#8212; rok po roku</div>
+      <div class="benefit"><span class="benefit-icon">&#9881;&#65039;</span> Editace v&#353;ech parametr&#367; &#8212; sazba, jisti&#269;, spot&#345;eba</div>
+      <div class="benefit"><span class="benefit-icon">&#128196;</span> PDF report pro sch&#367;zi SVJ (A4, tisknout)</div>
+      <div class="benefit"><span class="benefit-icon">&#128994;</span> Varianta s baterie a JOM sd&#237;len&#237; energie</div>
+      <div class="benefit"><span class="benefit-icon">&#128190;</span> Ulo&#382;en&#237; simulace &#8212; vra&#357;te se kdykoliv</div>
     </div>
-    <div class="modal-title" id="modal-title">Vítejte zpět</div>
-    <div class="modal-sub" id="modal-sub">Přihlaste se ke svému účtu</div>
-    <div class="modal-tabs">
-      <button class="modal-tab active" id="tab-login" onclick="switchTab('login')">Přihlásit se</button>
-      <button class="modal-tab" id="tab-register" onclick="switchTab('register')">Registrovat</button>
+    <div id="regFormWrap">
+      <div class="modal-form">
+        <input type="text" id="regJmeno" placeholder="Jm&#233;no a p&#345;&#237;jmen&#237;" autocomplete="name">
+        <input type="email" id="regEmail" placeholder="E&#8209;mailov&#225; adresa" autocomplete="email">
+        <div style="position:relative">
+          <input type="tel" id="regTel" placeholder="Telefon (např. 603 123 456)" autocomplete="tel" oninput="formatTel(this)">
+          <span id="telIcon" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none"></span>
+        </div>
+        <input type="text" id="regSvj" placeholder="N&#225;zev SVJ nebo bytov&#233;ho domu (voliteln&#233;)">
+        <button class="btn-register" id="regBtn" onclick="submitReg()">
+          <span id="regBtnTxt">Odemknout v&#253;sledky zdarma &#8594;</span>
+        </button>
+      </div>
+      <p class="modal-note">&#128274; Bez spamu. &#381;&#225;dn&#225; platba. Kdykoliv odhl&#225;sit.</p>
     </div>
-    <div id="form-login">
-      <div class="auth-field">
-        <label>E-mail</label>
-        <input type="email" id="login-email" placeholder="vas@email.cz" autocomplete="email">
+    <div id="regSuccess" style="display:none">
+      <div class="success-box">
+        <div class="success-icon">&#127881;</div>
+        <div class="success-title">V&#253;sledky jsou odemknuty!</div>
+        <div class="success-desc">Potvrzen&#237; jsme poslali na v&#225;&#353; e&#8209;mail.<br>Pln&#225; anal&#253;za se na&#269;&#237;t&#225;&#8230;</div>
       </div>
-      <div class="auth-field">
-        <label>Heslo</label>
-        <div class="pw-wrap">
-          <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password">
-          <button class="pw-toggle" type="button" onclick="togglePw('login-password',this)" title="Zobrazit heslo">👁</button>
-        </div>
-      </div>
-      <button class="auth-btn" id="login-btn" onclick="signIn()">Přihlásit se</button>
-      <div class="auth-msg" id="login-msg"></div>
-    </div>
-    <div id="form-register" style="display:none">
-      <div class="auth-field">
-        <label>E-mail</label>
-        <input type="email" id="reg-email" placeholder="vas@email.cz" autocomplete="email">
-      </div>
-      <div class="auth-field">
-        <label>Heslo <span style="font-weight:400;color:var(--ink-muted)">(min. 8 znaků)</span></label>
-        <div class="pw-wrap">
-          <input type="password" id="reg-password" placeholder="••••••••" autocomplete="new-password">
-          <button class="pw-toggle" type="button" onclick="togglePw('reg-password',this)" title="Zobrazit heslo">👁</button>
-        </div>
-      </div>
-      <div class="auth-field">
-        <label>Heslo znovu</label>
-        <div class="pw-wrap">
-          <input type="password" id="reg-password2" placeholder="••••••••" autocomplete="new-password">
-          <button class="pw-toggle" type="button" onclick="togglePw('reg-password2',this)" title="Zobrazit heslo">👁</button>
-        </div>
-      </div>
-      <button class="auth-btn" id="register-btn" onclick="signUp()">Vytvořit účet zdarma</button>
-      <div class="auth-msg" id="register-msg"></div>
     </div>
   </div>
 </div>
 
 <script>
-// ── SUPABASE ──
-const SUPABASE_URL = 'https://aeypeepckmbejdcotdss.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFleXBlZXBja21iZWpkY290ZHNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTkyNjAsImV4cCI6MjA5Mjk3NTI2MH0.JjYiI3bcL1ds1vAkFq59Z0WhNCLAd8oekX6GF4Zq5bA';
-const { createClient } = supabase;
-const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const CENY_VT={"ČEZ Distribuce":{D01d:7320,D02d:6610,D25d:6920,D26d:5650,D27d:6920,D35d:5410,D45d:5410,D56d:5410,D57d:5410,D61d:8050},"EG.D (E.ON)":{D01d:7050,D02d:6550,D25d:6650,D26d:5430,D27d:6650,D35d:4270,D45d:4270,D56d:4270,D57d:4270,D61d:7720},"PREdistribuce":{D01d:5980,D02d:5570,D25d:5620,D26d:4840,D27d:5620,D35d:3910,D45d:3910,D56d:3910,D57d:3910,D61d:6770}};
+const CENY_NT={"ČEZ Distribuce":{D25d:4070,D26d:4070,D27d:4020,D35d:4390,D45d:4390,D56d:4390,D57d:4390,D61d:4200},"EG.D (E.ON)":{D25d:3830,D26d:3830,D27d:3830,D35d:3830,D45d:3830,D56d:3830,D57d:3830,D61d:3830},"PREdistribuce":{D25d:3590,D26d:3590,D27d:3590,D35d:3590,D45d:3590,D56d:3590,D57d:3590,D61d:3590}};
+const SP_ZAR={zaklad:{vt:1200,nt:0},sporak:{vt:400,nt:0},bojler:{vt:0,nt:800},klima:{vt:400,nt:0},akumul:{vt:0,nt:2000}};
 
-sb.auth.onAuthStateChange((event, session) => {
-  if (session?.user) { showLoggedIn(session.user); } else { showLoggedOut(); }
-});
+function doporucenaSazba(z){if(z.includes('tc'))return'D57d';if(z.includes('akumul'))return'D26d';if(z.includes('bojler'))return'D25d';if(z.includes('klima'))return'D25d';return'D02d';}
+function doporucenyJistic(b,z){const pb=parseInt(b);const hasTc=z.includes('tc'),hasA=z.includes('akumul'),hasS=z.includes('sporak'),hasB=z.includes('bojler');if(hasTc||hasA){return pb<=8?'3x50A':pb<=16?'3x63A':'3x63A';}if(hasS&&hasB){return pb<=8?'3x32A':pb<=16?'3x40A':'3x50A';}if(hasS||hasB){return pb<=12?'3x32A':pb<=24?'3x40A':'3x50A';}return pb<=10?'3x25A':pb<=20?'3x32A':pb<=40?'3x40A':'3x50A';}
+function spSp(bytu,pater,vytahu,tuv,tc,ev,cerpadla){const pb=+bytu||0,pp=+pater||0,pv=+vytahu||0,pc=+cerpadla||0;const osv=pp*200+pb*2+100,vyt=pv>0?3000*pv*(1+pp/20):0,crp=pc>0?536*pc*(1+pp/30):0;const spVt=osv+vyt+crp,spTuv=tuv?800*pb:0,spTc=tc?3000*pb:0,spEv=parseInt(ev)*1500,spNt=spTuv+spTc+spEv;let sazba=tc?'D57d':tuv?'D25d':'D02d';let Pkw=pv*7.5+pc*0.25+1;if(tc)Pkw+=pb*3;else if(tuv)Pkw+=pb*0.5;Pkw+=parseInt(ev)*7.4;const I=Pkw*1000/(Math.sqrt(3)*400),std=[25,32,40,50,63,80,100],amp=std.find(j=>j>=I)||100;return{mwh:(spVt+spNt)/1000,sazba,jistic:`3x${amp}A`};}
+function cenaKwp(k){return k<=5?40000:k<=10?36000:k<=20?33000:k<=50?30000:27000;}
+function optimKwp(b,z,ev,tc){let k=(+b||0)*0.55;if(tc)k*=1.35;if(+ev>0)k*=1.15;return Math.round(k*10)/10;}
+function calcCf(kwp,bytu,zarizeni,sazba,dist){dist=dist||'ČEZ Distribuce';const pb=+bytu,vt=(CENY_VT[dist]?.[sazba]||6920),nt=(CENY_NT[dist]?.[sazba]||4070),cpr=1200;let sVT=0,sNT=0;zarizeni.forEach(z=>{if(SP_ZAR[z]){sVT+=SP_ZAR[z].vt*pb;sNT+=SP_ZAR[z].nt*pb;}});const vyr=kwp*1050/1000,vlastni=Math.min(vyr*0.62,(sVT+sNT)/1000),pretoky=vyr-vlastni;const uspora=vlastni*(vt/1000)+pretoky*cpr,inv=kwp*cenaKwp(kwp),navrat=inv/uspora;const cf=[];let kum=-inv;for(let r=1;r<=25;r++){kum+=uspora*Math.pow(0.995,r)*1.03;cf.push(Math.round(kum/1000));}return{uspora_rok:Math.round(uspora),uspora_byt:Math.round(uspora/pb),investice:Math.round(inv),navrat:Math.round(navrat*10)/10,cashflow:cf};}
+function genProfile(hh){const s=hh/100,w=1-s;return Array.from({length:24},(_,h)=>{const wv=w*(h>=7&&h<=8?2.0:h>=18&&h<=22?2.4:h>=9&&h<=17?0.2:0.4),sv=s*(h>=8&&h<=11?1.9:h>=13&&h<=16?1.6:h>=19&&h<=21?2.0:h>=22||h<=6?0.25:0.7);return wv+sv;});}
+function getHhLabel(v){return v<25?'Převážně pracující':v>75?'Převážně senioři / homeoffice':v<50?'Spíše pracující':v>50?'Spíše senioři':'Vyvážený mix';}
 
-function showLoggedIn(user) {
-  document.getElementById('nav-login-btn').style.display = 'none';
-  document.getElementById('nav-user').classList.add('visible');
-  document.getElementById('nav-avatar').textContent = (user.email||'?').substring(0,2).toUpperCase();
-  closeModal();
-}
-function showLoggedOut() {
-  document.getElementById('nav-login-btn').style.display = '';
-  document.getElementById('nav-user').classList.remove('visible');
-}
-async function signOut() { await sb.auth.signOut(); }
+const D={lokace:'',lat:null,lon:null,bytu:12,vchodu:1,pater:4,vytahu:1,tuv:true,cerpadla:2,zatepleno:false,okna:'dvojsklo',topeni:'plyn',tc:false,ev:0,zarizeni:['zaklad'],hhSlider:50,sklon:35,azimut:0,dist:'ČEZ Distribuce'};
+let cur=0;
+const LABELS=['Dům','Budova','Investice','Domácnosti','Střecha','Výsledky'];
 
-// ── AUTH MODAL ──
-function openModal(tab) {
-  document.getElementById('modal-overlay').classList.add('open');
-  switchTab(tab === 'register' ? 'register' : 'login');
-  document.body.style.overflow = 'hidden';
+function renderDots(){const c=document.getElementById('stepDots');c.innerHTML=LABELS.map((l,i)=>{const cls=i<cur?'done':i===cur?'active':'todo';const line=i<LABELS.length-1?`<div class="sl${i<cur?' done':''}"></div>`:'';return`<div class="sd ${cls}" title="${l}" onclick="jumpStep(${i})">${i<cur?'✓':i+1}</div>${line}`;}).join('');}
+function jumpStep(n){if(n<cur){cur=n;render();}}
+function goNext(){if(cur<5){cur++;render();window.scrollTo(0,0);}}
+function goBack(){if(cur>0){cur--;render();window.scrollTo(0,0);}}
+
+function render(){
+  renderDots();
+  document.getElementById('progBar').style.width=Math.round((cur+1)/6*100)+'%';
+  const c=document.getElementById('content');
+  c.innerHTML=[s1,s2,s3,s4,s5,s6][cur]();
+  afterRender();
 }
-function closeModal() {
-  document.getElementById('modal-overlay').classList.remove('open');
-  document.body.style.overflow = '';
+
+function afterRender(){
+  const lok=document.getElementById('fLok');
+  if(lok){lok.addEventListener('input',onLokInput);lok.addEventListener('blur',()=>setTimeout(()=>{const l=document.getElementById('acList');if(l)l.classList.remove('open');},200));}
+  if(cur===3)setTimeout(drawProfile,50);
+  if(cur===5)setTimeout(drawCf,50);
 }
-function overlayClick(e) { if (e.target === document.getElementById('modal-overlay')) closeModal(); }
-function switchTab(tab) {
-  const isLogin = tab === 'login';
-  document.getElementById('tab-login').classList.toggle('active', isLogin);
-  document.getElementById('tab-register').classList.toggle('active', !isLogin);
-  document.getElementById('form-login').style.display = isLogin ? '' : 'none';
-  document.getElementById('form-register').style.display = isLogin ? 'none' : '';
-  document.getElementById('modal-title').textContent = isLogin ? 'Vítejte zpět' : 'Vytvořit účet';
-  document.getElementById('modal-sub').textContent = isLogin ? 'Přihlaste se ke svému účtu' : 'Registrace je zdarma, bez kreditní karty';
+
+// STEP 1
+function s1(){return`<div class="card"><h1 class="ctitle">Kde stojí váš bytový dům?</h1><p class="csub">Adresa slouží pro výpočet reálného slunečního záření (PVGIS, EU JRC) a distribuční oblasti</p><div class="slabel">Adresa domu</div><div class="autocomplete-wrap"><input type="text" id="fLok" placeholder="Např. Praha 4, Nuselská 12" value="${D.lokace}" autocomplete="off"><div class="ac-list" id="acList"></div></div><div class="tip">Stačí napsat město nebo ulici — adresu ověříme přes OpenStreetMap a načteme reálná solární data z EU databáze PVGIS.</div><div class="slabel">Základní údaje domu</div><div class="g3"><div><label>Počet bytů</label><input type="number" id="fBytu" value="${D.bytu}" min="2" max="300" oninput="D.bytu=+this.value"></div><div><label>Počet vchodů</label><input type="number" id="fVchodu" value="${D.vchodu}" min="1" max="20" oninput="D.vchodu=+this.value"></div><div><label>Počet pater</label><input type="number" id="fPater" value="${D.pater}" min="1" max="30" oninput="D.pater=+this.value"></div></div></div><div class="nav"><span class="step-lbl">Krok 1 z 5</span><button class="btn-prim" onclick="goNext()">Pokračovat →</button></div>`;}
+
+// STEP 2
+function s2(){const top=[{v:'plyn',ic:'🔥',n:'Zemní plyn'},{v:'dalkoveTeplo',ic:'🏭',n:'Dálkové teplo'},{v:'tc',ic:'♨️',n:'Tep. čerpadlo'},{v:'tuhaPaliva',ic:'🪵',n:'Tuhá paliva'},{v:'elektrina',ic:'⚡',n:'Elektřina'},{v:'jine',ic:'❓',n:'Jiné'}];return`<div class="card"><h2 class="ctitle">Technické vybavení budovy</h2><p class="csub">Ovlivňuje spotřebu společných prostor a optimální výkon FVE systému</p><div class="slabel">Výtahy a technologie</div><div class="g2" style="margin-bottom:10px"><div><label>Počet výtahů</label><input type="number" id="fVyt" value="${D.vytahu}" min="0" max="10" oninput="D.vytahu=+this.value"></div><div><label>Oběhová čerpadla (ks)</label><input type="number" id="fCrp" value="${D.cerpadla}" min="0" max="20" oninput="D.cerpadla=+this.value"></div></div><div class="tog-grid"><div class="tog${D.tuv?' on':''}" onclick="D.tuv=!D.tuv;render()"><span class="tog-icon">🚿</span><div class="tog-body"><div class="tog-name">Centrální TUV</div><div class="tog-sub">společná příprava TUV</div></div><div class="tog-chk">✓</div></div><div class="tog${D.zatepleno?' on':''}" onclick="D.zatepleno=!D.zatepleno;render()"><span class="tog-icon">🧱</span><div class="tog-body"><div class="tog-name">Zateplená budova</div><div class="tog-sub">ETICS nebo lepší</div></div><div class="tog-chk">✓</div></div></div><div class="slabel">Typ oken</div><div class="chip-grid c3">${[['jednosklo','Jednosklo','U≥3.0'],['dvojsklo','Dvojsklo','U≈1.2'],['trojsklo','Trojsklo','U≈0.7']].map(([v,n,u])=>`<div class="chip${D.okna===v?' on':''}" onclick="D.okna='${v}';render()"><div class="chip-name">${n}</div><div class="chip-sub">${u} W/m²K</div></div>`).join('')}</div><div class="slabel">Zdroj vytápění</div><div class="chip-grid c6">${top.map(t=>`<div class="chip${D.topeni===t.v?' on':''}" onclick="D.topeni='${t.v}';render()"><div class="chip-icon">${t.ic}</div><div class="chip-name">${t.n}</div></div>`).join('')}</div></div><div class="nav"><button class="btn-out" onclick="goBack()">← Zpět</button><button class="btn-prim" onclick="goNext()">Pokračovat →</button></div>`;}
+
+// STEP 3
+function s3(){return`<div class="card"><h2 class="ctitle">Plánované investice</h2><p class="csub">Uvažujete o dalších technologiích? Zahrneme je do optimalizace výkonu FVE.</p><div class="inv${D.tc?' on':''}" onclick="D.tc=!D.tc;render()"><span class="inv-icon">♨️</span><div class="inv-body"><div class="inv-title">Tepelné čerpadlo domu</div><div class="inv-desc">Vytápění nebo chlazení — výrazně zvýší vlastní spotřebu FVE a optimální výkon</div></div><div class="inv-chk">✓</div></div><div class="inv" style="cursor:default" onclick="event.stopPropagation()"><span class="inv-icon">🔌</span><div class="inv-body"><div class="inv-title">Nabíjecí stanice EV</div><div class="inv-desc">Počet stání: <input type="number" id="fEv" value="${D.ev}" min="0" max="50" style="width:64px;display:inline;padding:4px 8px;font-size:12px;margin:0 6px" onclick="event.stopPropagation()" oninput="D.ev=+this.value"> × 3,5 MWh/rok</div></div><span class="badge b-blue">+7,4 kW/stání</span></div><div class="tip">Tepelné čerpadlo výrazně zvýší zimní spotřebu — FVE systém se dimenzuje na větší výkon. EV nabíječky dobíjejí převážně v noci → vliv na cashflow závisí na sazbě.</div></div><div class="nav"><button class="btn-out" onclick="goBack()">← Zpět</button><button class="btn-prim" onclick="goNext()">Pokračovat →</button></div>`;}
+
+// STEP 4
+function s4(){const z=D.zarizeni,sazba=doporucenaSazba(z),jistic=doporucenyJistic(D.bytu,z),sp=spSp(D.bytu,D.pater,D.vytahu,D.tuv,D.tc,D.ev,D.cerpadla);let sVT=0,sNT=0;z.forEach(k=>{if(SP_ZAR[k]){sVT+=SP_ZAR[k].vt*D.bytu;sNT+=SP_ZAR[k].nt*D.bytu;}});const mwh=Math.round((sVT+sNT)/100)/10;const lbl=getHhLabel(D.hhSlider);return`<div class="card"><h2 class="ctitle">Domácnosti</h2><p class="csub">Spotřebiče a složení domácností — automaticky odhadneme spotřebu, sazbu a jistič</p><div class="slabel">Spotřebiče v bytech</div><div class="tog-grid"><div class="tog on locked"><span class="tog-icon">🏠</span><div class="tog-body"><div class="tog-name">Domácí spotřebiče</div><div class="tog-sub">pračka, TV, lednice, sušička…</div></div><span class="badge b-always">vždy</span></div><div class="tog on locked"><span class="tog-icon">💡</span><div class="tog-body"><div class="tog-name">Osvětlení bytů</div><div class="tog-sub">LED nebo starší žárovky</div></div><span class="badge b-always">vždy</span></div>${[['sporak','🍳','El. sporák / indukce','cca +400 kWh/byt/rok'],['klima','❄️','Klimatizace','cca +400 kWh/byt/rok'],['bojler','🛁','Bojler / ohřev TUV','cca +800 kWh/byt/rok'],['akumul','🔋','Akumulační kamna','cca +2000 kWh/byt/rok']].map(([k,ic,n,s])=>`<div class="tog${z.includes(k)?' on':''}" onclick="togZar('${k}')"><span class="tog-icon">${ic}</span><div class="tog-body"><div class="tog-name">${n}</div><div class="tog-sub">${s}</div></div><div class="tog-chk">✓</div></div>`).join('')}</div><div class="slabel">Složení domácností</div><div class="hh-wrap"><div class="hh-row"><span class="hh-label">Pracující</span><span class="hh-center" id="hhLbl">${lbl}</span><span class="hh-label">Senioři / homeoffice</span></div><input type="range" min="0" max="100" value="${D.hhSlider}" id="hhSl" oninput="D.hhSlider=+this.value;document.getElementById('hhLbl').textContent=getHhLabel(+this.value);drawProfile()"><div style="font-size:11px;color:var(--text-2);margin-bottom:8px">Průběh spotřeby přes den:</div><div class="chart-wrap"><canvas id="profCanvas"></canvas></div><div class="chart-hours"><span>0:00</span><span>6:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div></div><div class="slabel">Odhadované parametry <span class="badge b-amber" style="margin-left:6px">Po registraci — editace</span></div><div class="lock-row"><span class="lock-l">Spotřeba bytů</span><span class="lock-v">${mwh} MWh/rok</span><span class="lock-ico">🔒</span></div><div class="lock-row"><span class="lock-l">Doporučená sazba bytu</span><span class="lock-v">${sazba}</span><span class="lock-ico">🔒</span></div><div class="lock-row"><span class="lock-l">Jistič bytu</span><span class="lock-v">${jistic}</span><span class="lock-ico">🔒</span></div><div class="lock-row"><span class="lock-l">Spotřeba společných prostor</span><span class="lock-v">${sp.mwh.toFixed(1)} MWh/rok</span><span class="lock-ico">🔒</span></div><div class="lock-row"><span class="lock-l">Sazba SP / jistič SP</span><span class="lock-v">${sp.sazba} / ${sp.jistic}</span><span class="lock-ico">🔒</span></div></div><div class="nav"><button class="btn-out" onclick="goBack()">← Zpět</button><button class="btn-prim" onclick="goNext()">Střecha →</button></div>`;}
+
+function togZar(k){if(k==='zaklad')return;if(D.zarizeni.includes(k))D.zarizeni=D.zarizeni.filter(z=>z!==k);else D.zarizeni.push(k);if(!D.zarizeni.includes('zaklad'))D.zarizeni.unshift('zaklad');render();}
+
+// STEP 5
+function s5(){const kwp=optimKwp(D.bytu,D.zarizeni,D.ev,D.tc);const kwpB=Math.round((kwp+2)*10)/10,kwpJ=Math.round(kwp*1.35*10)/10;const ors=[{v:-90,n:'Východ',p:70},{v:-45,n:'Jihovýchod',p:88},{v:0,n:'Jih',p:100},{v:45,n:'Jihozápad',p:92},{v:90,n:'Západ',p:72},{v:999,n:'Východ / Západ',p:82,sp:true},{v:998,n:'JV / JZ',p:90,sp:true}];return`<div class="card"><h2 class="ctitle">Střecha a solární systém</h2><p class="csub">Reálná data slunečního záření načteme z EU databáze PVGIS pro: <strong>${D.lokace||'zadaná adresa'}</strong></p><div class="g2" style="margin-bottom:12px"><div><label>Sklon střechy (°)</label><input type="number" id="fSkl" value="${D.sklon}" min="0" max="90" oninput="D.sklon=+this.value"></div><div><label>Typ střechy</label><select><option>Sedlová</option><option>Plochá</option><option>Mansardová</option><option>Valbová</option></select></div></div><div class="slabel">Orientace / konfigurace střechy</div><div class="chip-grid c3">${ors.map(o=>`<div class="chip${D.azimut===o.v?' on':''}" onclick="D.azimut=${o.v};render()"><div class="chip-name">${o.n}</div><div class="chip-sub">${o.p} %${o.sp?' · split':''}</div></div>`).join('')}</div><div class="slabel">Navržené varianty <span class="badge b-blue" style="margin-left:6px">PVGIS · OTE 2026</span></div><div class="var-grid"><div class="var-card best"><div class="var-badge">Doporučeno</div><div class="var-name">Bez baterie</div><div class="var-kwp">${kwp}<span> kWp</span></div><div class="var-save">+${Math.round(kwp*18*D.bytu/100/100)*100} Kč/rok</div><div class="var-roi">návratnost ~${Math.round(12-kwp*0.08)} let</div></div><div class="var-card blurred"><div class="var-name">S baterií</div><div class="var-kwp">${kwpB}<span> kWp</span></div><div class="var-save">vyšší pokrytí</div><div class="var-roi">po registraci</div></div><div class="var-card blurred"><div class="var-name">JOM sdílení</div><div class="var-kwp">${kwpJ}<span> kWp</span></div><div class="var-save">maximum úspor</div><div class="var-roi">po registraci</div></div></div><div class="tip">Navrhovaný výkon <strong>${kwp} kWp</strong> zohledňuje ${D.bytu} bytů${D.tc?' + tepelné čerpadlo':''}${D.ev>0?` + ${D.ev} EV nabíječek`:''}. Po registraci uvidíte citlivostní analýzu a variantu s baterií.</div></div><div class="nav"><button class="btn-out" onclick="goBack()">← Zpět</button><button class="btn-prim" onclick="goNext()">Zobrazit výsledky →</button></div>`;}
+
+// STEP 6
+function s6(){const kwp=optimKwp(D.bytu,D.zarizeni,D.ev,D.tc),sazba=doporucenaSazba(D.zarizeni),cf=calcCf(kwp,D.bytu,D.zarizeni,sazba,D.dist);const kwpB=Math.round((kwp+2)*10)/10,kwpJ=Math.round(kwp*1.35*10)/10;return`<div class="res-header"><div class="res-meta">Orientační výsledky · ${D.bytu} bytů · ${kwp} kWp · ${D.lokace||'zadaná adresa'} · <span class="badge b-blue">bez registrace</span></div><div class="kpi-row"><div class="kpi"><div class="kpi-l">Roční úspora</div><div class="kpi-v">${Math.round(cf.uspora_rok/1000)}</div><div class="kpi-u">tis. Kč / rok</div></div><div class="kpi"><div class="kpi-l">Na byt / rok</div><div class="kpi-v">${Math.round(cf.uspora_byt/100)*100}</div><div class="kpi-u">Kč / rok</div></div><div class="kpi"><div class="kpi-l">Návratnost</div><div class="kpi-v">${cf.navrat}</div><div class="kpi-u">let</div></div></div><div style="font-size:11px;color:#64748B;margin-bottom:8px">Kumulativní cashflow 25 let — po registraci vidíte přesný průběh:</div><div class="cf-wrap"><canvas id="cfCanvas"></canvas><div class="cf-blur"><span class="badge b-amber">Plný graf po registraci</span></div></div><div style="display:flex;justify-content:space-between;font-size:10px;color:#94A3B8;margin-top:4px"><span>Rok 1</span><span>Rok 25</span></div></div><div class="var-grid"><div class="var-card best"><div class="var-badge">Nejlepší varianta</div><div class="var-name">Bez baterie</div><div class="var-kwp">${kwp}<span> kWp</span></div><div class="var-save">+${Math.round(cf.uspora_rok/1000)} tis. Kč/rok</div><div class="var-roi">investice ${Math.round(cf.investice/1000)} tis. Kč</div></div><div class="var-card blurred"><div class="var-name">S baterií</div><div class="var-kwp">${kwpB}<span> kWp</span></div><div class="var-save">+${Math.round(cf.uspora_rok*1.18/1000)} tis. Kč/rok</div><div class="var-roi">po registraci</div></div><div class="var-card blurred"><div class="var-name">JOM sdílení</div><div class="var-kwp">${kwpJ}<span> kWp</span></div><div class="var-save">+${Math.round(cf.uspora_rok*1.35/1000)} tis. Kč/rok</div><div class="var-roi">po registraci</div></div></div><div class="cta-box"><div class="cta-body"><div class="cta-title">Vaše SVJ ušetří přes ${Math.round(cf.uspora_rok/1000)}&nbsp;000&nbsp;Kč ročně — chcete přesná čísla pro schůzi?</div><div class="cta-desc">Plná simulace · PDF report · 3 varianty · Editace všech parametrů · Cashflow 25 let</div></div><button class="btn-cta" onclick="openModal()">Odemknout výsledky zdarma →</button></div><div class="nav"><button class="btn-out" onclick="goBack()">← Upravit parametry</button><span class="nav-hint">Investice cca ${Math.round(cf.investice/1000)} tis. Kč bez dotací</span></div>`;}
+
+// CANVAS — profil spotřeby
+function drawProfile(){const c=document.getElementById('profCanvas');if(!c)return;const dpr=window.devicePixelRatio||1;c.width=c.offsetWidth*dpr;c.height=90*dpr;c.style.width='100%';c.style.height='90px';const ctx=c.getContext('2d');ctx.scale(dpr,dpr);const W=c.offsetWidth,H=90,prof=genProfile(D.hhSlider),mx=Math.max(...prof)*1.1;const grad=ctx.createLinearGradient(0,0,0,H);grad.addColorStop(0,'rgba(244,63,94,0.32)');grad.addColorStop(1,'rgba(244,63,94,0.02)');const pts=prof.map((v,i)=>({x:i/(prof.length-1)*W,y:H-(v/mx)*(H-8)}));ctx.beginPath();ctx.moveTo(0,H);pts.forEach((p,i)=>{if(i===0)ctx.lineTo(p.x,p.y);else{const pp=pts[i-1];ctx.bezierCurveTo((pp.x+p.x)/2,pp.y,(pp.x+p.x)/2,p.y,p.x,p.y);}});ctx.lineTo(W,H);ctx.closePath();ctx.fillStyle=grad;ctx.fill();ctx.beginPath();pts.forEach((p,i)=>{if(i===0)ctx.moveTo(p.x,p.y);else{const pp=pts[i-1];ctx.bezierCurveTo((pp.x+p.x)/2,pp.y,(pp.x+p.x)/2,p.y,p.x,p.y);}});ctx.strokeStyle='#F43F5E';ctx.lineWidth=2.5;ctx.stroke();[6,12,18].forEach(h=>{ctx.strokeStyle='rgba(148,163,184,0.35)';ctx.lineWidth=0.5;ctx.beginPath();ctx.moveTo(h/23*W,0);ctx.lineTo(h/23*W,H);ctx.stroke();});}
+
+// CANVAS — cashflow
+function drawCf(){const c=document.getElementById('cfCanvas');if(!c)return;const kwp=optimKwp(D.bytu,D.zarizeni,D.ev,D.tc),cf=calcCf(kwp,D.bytu,D.zarizeni,doporucenaSazba(D.zarizeni),D.dist),data=cf.cashflow;const dpr=window.devicePixelRatio||1;c.width=c.offsetWidth*dpr;c.height=90*dpr;c.style.width='100%';c.style.height='90px';const ctx=c.getContext('2d');ctx.scale(dpr,dpr);const W=c.offsetWidth,H=90,mn=Math.min(...data),mx=Math.max(...data),rng=mx-mn||1;const toY=v=>H-8-((v-mn)/rng)*(H-16),toX=i=>i/(data.length-1)*W;const zY=toY(0);ctx.strokeStyle='rgba(148,163,184,0.5)';ctx.lineWidth=0.5;ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(0,zY);ctx.lineTo(W,zY);ctx.stroke();ctx.setLineDash([]);const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'rgba(46,139,74,0.4)');g.addColorStop(1,'rgba(46,139,74,0.04)');ctx.beginPath();ctx.moveTo(toX(0),H);data.forEach((v,i)=>ctx.lineTo(toX(i),toY(v)));ctx.lineTo(W,H);ctx.closePath();ctx.fillStyle=g;ctx.fill();ctx.beginPath();data.forEach((v,i)=>i===0?ctx.moveTo(toX(i),toY(v)):ctx.lineTo(toX(i),toY(v)));ctx.strokeStyle='#2E8B4A';ctx.lineWidth=2;ctx.stroke();}
+
+// AUTOCOMPLETE
+let acT=null;
+function onLokInput(e){D.lokace=e.target.value;D.lat=null;D.lon=null;clearTimeout(acT);if(e.target.value.length<2){document.getElementById('acList').classList.remove('open');return;}acT=setTimeout(()=>fetchAc(e.target.value),400);}
+async function fetchAc(q){try{const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q+', Česká republika')}&format=json&limit=5&addressdetails=1&countrycodes=cz`,{headers:{'User-Agent':'svjenergie/1.0'}});const data=await r.json();const list=document.getElementById('acList');if(!data.length){list.classList.remove('open');return;}list.innerHTML=data.map(item=>{const a=item.address||{};const nm=[a.road,a.house_number,a.city||a.town||a.village].filter(Boolean).join(' ');const disp=nm||item.display_name.split(',')[0];return`<div class="ac-item" onclick="pickAc(${JSON.stringify(disp).replace(/'/g,"&#39;")},${item.lat},${item.lon})">📍 ${disp}</div>`;}).join('');list.classList.add('open');}catch(e){}}
+function pickAc(name,lat,lon){D.lokace=name;D.lat=parseFloat(lat);D.lon=parseFloat(lon);document.getElementById('fLok').value=name;document.getElementById('acList').classList.remove('open');}
+
+// MODAL
+function openModal(){document.getElementById('regModal').classList.add('open');document.body.style.overflow='hidden';setTimeout(()=>{const el=document.getElementById('regJmeno');if(el)el.focus();},100);}
+function closeModal(){document.getElementById('regModal').classList.remove('open');document.body.style.overflow='';}
+document.getElementById('regModal').addEventListener('click',e=>{if(e.target===document.getElementById('regModal'))closeModal();});
+
+// Telefon — formátování a validace (CZ formáty)
+function formatTel(el){
+  let v=el.value.replace(/[^\d+]/g,'');
+  // Normalizuj +420 / 00420 prefix
+  if(v.startsWith('00420'))v='+420'+v.slice(5);
+  // Formátuj jako XXX XXX XXX nebo +420 XXX XXX XXX
+  let digits=v.replace(/^\+420/,'').replace(/\D/g,'');
+  if(digits.length>9)digits=digits.slice(0,9);
+  if(digits.length>6)digits=digits.slice(0,3)+' '+digits.slice(3,6)+' '+digits.slice(6);
+  else if(digits.length>3)digits=digits.slice(0,3)+' '+digits.slice(3);
+  el.value=(v.startsWith('+420')?'+420 ':'')+digits;
+  const ok=isTelOk(el.value);
+  el.style.borderColor=el.value.length>3?(ok?'var(--green)':'#F43F5E'):'';
+  document.getElementById('telIcon').textContent=el.value.length>3?(ok?'✅':'❌'):'';
 }
-async function signIn() {
-  const email = document.getElementById('login-email').value.trim();
-  const password = document.getElementById('login-password').value;
-  const btn = document.getElementById('login-btn');
-  const msg = document.getElementById('login-msg');
-  if (!email || !password) { showMsg(msg,'Vyplňte e-mail a heslo.','error'); return; }
-  btn.disabled = true; btn.textContent = 'Přihlašuji…';
-  const { error } = await sb.auth.signInWithPassword({ email, password });
-  btn.disabled = false; btn.textContent = 'Přihlásit se';
-  if (error) { showMsg(msg, chybaCZ(error.message), 'error'); }
-  else { showMsg(msg,'✓ Přihlášení proběhlo.','success'); setTimeout(closeModal, 800); }
+function isTelOk(v){
+  const clean=v.replace(/[\s\-]/g,'');
+  return /^(\+420|00420)?[0-9]{9}$/.test(clean);
 }
-async function signUp() {
-  const email = document.getElementById('reg-email').value.trim();
-  const password = document.getElementById('reg-password').value;
-  const password2 = document.getElementById('reg-password2').value;
-  const btn = document.getElementById('register-btn');
-  const msg = document.getElementById('register-msg');
-  if (!email || !password) { showMsg(msg,'Vyplňte e-mail a heslo.','error'); return; }
-  if (password.length < 8) { showMsg(msg,'Heslo musí mít alespoň 8 znaků.','error'); return; }
-  if (password !== password2) { showMsg(msg,'Hesla se neshodují.','error'); return; }
-  btn.disabled = true; btn.textContent = 'Vytvářím účet…';
-  const { error } = await sb.auth.signUp({ email, password });
-  btn.disabled = false; btn.textContent = 'Vytvořit účet zdarma';
-  if (error) { showMsg(msg, chybaCZ(error.message), 'error'); }
-  else {
-    showMsg(msg,'✓ Registrace proběhla!','success');
-    setTimeout(() => {
-      switchTab('login');
-      document.getElementById('login-email').value = email;
-      document.getElementById('login-password').focus();
-      showMsg(document.getElementById('login-msg'),'✓ Potvrďte e-mail a přihlaste se.','success');
-    }, 900);
+function telErrMsg(v){
+  const clean=v.replace(/[\s\-]/g,'');
+  if(!clean)return'Zadejte telefonní číslo';
+  if(!/^\d/.test(clean.replace('+','').replace('00','')))return'Pouze číslice';
+  if(clean.replace(/^\+420|^00420/,'').length<9)return'Číslo je příliš krátké (9 číslic)';
+  if(clean.replace(/^\+420|^00420/,'').length>9)return'Číslo je příliš dlouhé';
+  return'Neplatný formát (př. 603 123 456)';
+}
+
+async function submitReg(){
+  // Validace email
+  const email=document.getElementById('regEmail').value.trim();
+  if(!email||!email.includes('@')||!email.includes('.')){
+    shake(document.getElementById('regEmail'));
+    document.getElementById('regEmail').style.borderColor='#F43F5E';
+    document.getElementById('regEmail').focus();return;
   }
-}
-function togglePw(inputId, btn) {
-  const inp = document.getElementById(inputId);
-  if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈'; }
-  else { inp.type = 'password'; btn.textContent = '👁'; }
-}
-function showMsg(el, text, type) { el.textContent = text; el.className = 'auth-msg ' + type; }
-function chybaCZ(msg) {
-  if (msg.includes('Invalid login credentials')) return 'Špatný e-mail nebo heslo.';
-  if (msg.includes('Email not confirmed')) return 'Nejdříve potvrďte registraci v e-mailu.';
-  if (msg.includes('User already registered')) return 'Tento e-mail je již zaregistrován.';
-  if (msg.includes('Password should be')) return 'Heslo musí mít alespoň 8 znaků.';
-  return 'Chyba: ' + msg;
-}
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
-
-// ── WIZARD STATE ──
-const state = {
-  byty: 20, sp: 2.5, dist: 'cez',
-  zarizeni: [],
-  strecha: 'sikma', azimut: 0, lokalita: 1080
-};
-
-function updateSlider(key, val) {
-  state[key === 'byty' ? 'byty' : 'sp'] = +val;
-  if (key === 'byty') document.getElementById('val-byty').textContent = val;
-  else document.getElementById('val-sp').textContent = (+val).toFixed(1).replace('.',',') + ' MWh/rok';
-}
-function setDist(d) {
-  state.dist = d;
-  ['cez','egd','pre'].forEach(x => document.getElementById('dist-'+x).classList.toggle('active', x===d));
-}
-function setStecha(t) {
-  state.strecha = t;
-  ['sikma','plocha'].forEach(x => document.getElementById('str-'+x).classList.toggle('active', x===t));
-}
-function toggleCheck(cb) {
-  const val = cb.value;
-  const li = document.getElementById('chk-'+val);
-  if (cb.checked) { state.zarizeni.push(val); li.classList.add('checked'); }
-  else { state.zarizeni = state.zarizeni.filter(v=>v!==val); li.classList.remove('checked'); }
-}
-
-// ── LIMIT (localStorage) ──
-function checkLimit() {
-  const today = new Date().toDateString();
-  const data = JSON.parse(localStorage.getItem('svj_calc')||'{}');
-  if (data.date !== today) return 0;
-  return data.count || 0;
-}
-function incrementLimit() {
-  const today = new Date().toDateString();
-  const data = JSON.parse(localStorage.getItem('svj_calc')||'{}');
-  const count = (data.date === today ? (data.count||0) : 0) + 1;
-  localStorage.setItem('svj_calc', JSON.stringify({ date: today, count }));
-  return count;
-}
-
-// ── STEP NAVIGACE ──
-function goStep(n) {
-  if (n === 3) {
-    const count = incrementLimit();
-    if (count > 3) {
-      document.getElementById('limit-box').style.display = '';
-    }
-    state.azimut = +document.getElementById('sel-azimut').value;
-    state.lokalita = +document.getElementById('sel-lokalita').value;
-    compute();
+  // Validace telefon
+  const telEl=document.getElementById('regTel');
+  const tel=telEl.value.trim();
+  if(!isTelOk(tel)){
+    shake(telEl);
+    telEl.style.borderColor='#F43F5E';
+    telEl.focus();
+    showFieldErr(telEl, telErrMsg(tel));
+    return;
   }
-  [1,2,3].forEach(i => document.getElementById('step-'+i).style.display = i===n ? '' : 'none');
-  document.getElementById('wizard-card').scrollIntoView({ behavior:'smooth', block:'start' });
-}
-
-// ── VÝPOČET ──
-const CENY_VT = { cez: 6.61, egd: 6.55, pre: 5.57 };
-const CENY_NT = { cez: 4.20, egd: 4.10, pre: 3.90 };
-const PRETOKY = 1.50;
-const RUST = 1.03; const DEG = 0.995;
-
-// Spotřebiče → přídavek kWh/byt/rok
-const ZAR_VT = { sporak:800, bojler:0, klima:400, tc:0, ev:1200, akum:0 };
-const ZAR_NT = { sporak:0, bojler:900, klima:0, tc:2000, ev:0, akum:1800 };
-
-function compute() {
-  const byty = state.byty;
-  const sp_byt_vt = state.sp * 1000; // kWh/rok/byt základní
-  let extra_vt = 0, extra_nt = 0;
-  state.zarizeni.forEach(z => { extra_vt += (ZAR_VT[z]||0); extra_nt += (ZAR_NT[z]||0); });
-  const sp_vt = (sp_byt_vt + extra_vt) * byty / 1000; // MWh/rok celkem
-  const sp_nt = extra_nt * byty / 1000;
-
-  // Orientace koeficient
-  const AZ_KOEF = { '0':1.0, '-45':0.94, '45':0.94, '-90':0.82, '90':0.82, '998':0.96 };
-  const azKoef = AZ_KOEF[String(state.azimut)] || 1.0;
-
-  // Výroba kWh/kWp/rok dle lokality
-  const vyroba_kwp = state.lokalita * azKoef;
-
-  // Doporučený výkon (75 % VT spotřeby)
-  const kwp = Math.max(5, Math.round((sp_vt * 0.75 / (vyroba_kwp/1000)) / 5) * 5);
-
-  // Výroba celkem
-  const vyroba = kwp * vyroba_kwp; // kWh/rok
-  const vlastni = vyroba * 0.38;   // ~38% vlastní spotřeba (orientační)
-  const pretoky = vyroba - vlastni;
-  const invest = kwp * (kwp < 20 ? 33000 : kwp < 40 ? 28000 : 24000);
-
-  const cena_vt = CENY_VT[state.dist];
-  const uspora1 = vlastni * cena_vt / 1000 + pretoky * PRETOKY / 1000;
-
-  // Cashflow 25 let
-  let cf = [], kum = -invest, navrat = null;
-  for (let r = 1; r <= 25; r++) {
-    const u = uspora1 * Math.pow(RUST, r-1) * Math.pow(DEG, r-1);
-    kum += u;
-    cf.push({ rok: r, uspora: Math.round(u), kumulativni: Math.round(kum) });
-    if (!navrat && kum >= 0) navrat = r;
-  }
-  const uspora25 = cf.reduce((s,r)=>s+r.uspora, 0);
-
-  // Zobraz
-  const fmtKc = n => n.toLocaleString('cs-CZ',{maximumFractionDigits:0}) + ' Kč';
-  const fmtMil = n => (n/1000000).toLocaleString('cs-CZ',{maximumFractionDigits:2}) + ' mil. Kč';
-  document.getElementById('r-uspora25').textContent = fmtKc(Math.round(uspora25/1000)*1000);
-  document.getElementById('r-uspora1').textContent  = fmtKc(Math.round(uspora1/1000)*1000);
-  document.getElementById('r-navrat').textContent   = navrat ? navrat + ' let' : '>25 let';
-  document.getElementById('r-kwp').textContent      = kwp + ' kWp';
-  document.getElementById('r-invest-sub').textContent = 'z investice ' + fmtKc(invest);
-
-  // ── JOM úspora (orientační) ──
-  // Stávající: (N bytů + 1 SP) × stálá platba 179 Kč + N × jistič bytu ~132 Kč
-  // JOM: 1 × stálá + 1 × velký jistič ~450 Kč
-  const STAY = { cez:179, egd:160, pre:157 };
-  const JBYT = { cez:132, egd:120, pre:115 };
-  const JJOM = { cez:450, egd:360, pre:420 };
-  const stay = STAY[state.dist];
-  const platby_ted = (byty + 1) * stay + byty * JBYT[state.dist];
-  const platby_jom = stay + JJOM[state.dist];
-  const jom_mes = Math.max(0, platby_ted - platby_jom);
-  const jom_rok = jom_mes * 12;
-  const jom_25  = jom_rok * 25;
-
-  document.getElementById('r-jom').textContent = fmtKc(Math.round(jom_rok/1000)*1000) + '/rok';
-  document.getElementById('r-fve').textContent = fmtKc(Math.round(uspora1/1000)*1000) + '/rok';
-  document.getElementById('r-rozpad').style.display = '';
-
-  // ── Srovnání scénářů ──
-  const sp_cel_kwh = (sp_vt + sp_nt) * 1000;
-  const cena_vt_kc = CENY_VT[state.dist] / 1000; // Kč/kWh → Kč/kWh (CENY_VT je v Kč/MWh → /1000)
-  // Náklady bez FVE za 25 let (růst cen 3%/rok)
-  let bez_fve = 0;
-  for (let r = 1; r <= 25; r++) bez_fve += sp_cel_kwh * CENY_VT[state.dist] / 1000 * Math.pow(RUST, r-1);
-  const s_fve = Math.max(0, bez_fve - uspora25 + invest);
-  const diff  = bez_fve - s_fve;
-
-  document.getElementById('r-bez-fve').textContent = fmtMil(bez_fve);
-  document.getElementById('r-s-fve').textContent   = fmtMil(s_fve);
-  document.getElementById('r-diff').textContent    = fmtMil(diff);
-  document.getElementById('r-scenare').style.display = '';
-
-  // ── Předpoklady ──
-  const lokalitaNazev = document.getElementById('sel-lokalita').options[document.getElementById('sel-lokalita').selectedIndex].text;
-  document.getElementById('r-predpoklady-text').innerHTML =
-    `📐 <strong>Předpoklady výpočtu:</strong> ${lokalitaNazev} — ${Math.round(vyroba_kwp)} kWh/kWp/rok · ` +
-    `cena elektřiny ${CENY_VT[state.dist].toFixed(2)} Kč/kWh · ` +
-    `vlastní spotřeba ~38 % výroby · růst cen 3 %/rok · degradace panelů 0,5 %/rok. ` +
-    `Přiznáváme zjednodušení — přesná simulace dle vaší adresy a střechy je součástí bezplatné analýzy.`;
-  document.getElementById('r-predpoklady').style.display = '';
-
-  drawChart(cf);
-}
-
-// ── GRAF ──
-let cfChart = null;
-function drawChart(cf) {
-  const ctx = document.getElementById('cf-chart').getContext('2d');
-  const labels = cf.map(r => 'Rok ' + r.rok);
-  const data   = cf.map(r => r.kumulativni);
-
-  // Viditelné jen roky 1–3, zbytek průhledný (blur přes overlay)
-  const colors = cf.map((r,i) => i < 3
-    ? (r.kumulativni >= 0 ? 'rgba(26,107,74,0.85)' : 'rgba(220,60,60,0.7)')
-    : 'rgba(200,200,200,0.3)'
-  );
-
-  if (cfChart) cfChart.destroy();
-  cfChart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [{
-        label: 'Kumulativní cashflow (Kč)',
-        data,
-        backgroundColor: colors,
-        borderRadius: 4,
-        borderSkipped: false,
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: ctx => ctx.parsed.y.toLocaleString('cs-CZ') + ' Kč'
-          }
-        }
+  const btn=document.getElementById('regBtn');
+  document.getElementById('regBtnTxt').innerHTML='<span class="spin"></span> Odesílám…';
+  btn.disabled=true;
+  // Normalizuj telefon pro DB (jen číslice + volitelný +420)
+  const telClean=tel.replace(/[\s\-]/g,'');
+  const payload={
+    jmeno:document.getElementById('regJmeno').value.trim()||null,
+    email,
+    telefon:telClean,
+    svj:document.getElementById('regSvj').value.trim()||null,
+    lokace:D.lokace||null,
+    lat:D.lat||null,
+    lon:D.lon||null,
+    bytu:D.bytu,
+    pater:D.pater,
+    zarizeni:D.zarizeni.join(','),
+    kwp:optimKwp(D.bytu,D.zarizeni,D.ev,D.tc),
+    tc:D.tc,
+    ev:D.ev,
+  };
+  try{
+    const res=await fetch('https://aeyeepckmbejdcotdss.supabase.co/rest/v1/leads',{
+      method:'POST',
+      headers:{
+        'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFleXBlZXBja21iZWpkY290ZHNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTkyNjAsImV4cCI6MjA5Mjk3NTI2MH0.JjYiI3bcL1ds1vAkFq59Z0WhNCLAd8oekX6GF4Zq5bA',
+        'Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFleXBlZXBja21iZWpkY290ZHNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTkyNjAsImV4cCI6MjA5Mjk3NTI2MH0.JjYiI3bcL1ds1vAkFq59Z0WhNCLAd8oekX6GF4Zq5bA',
+        'Content-Type':'application/json',
+        'Prefer':'return=minimal',
       },
-      scales: {
-        y: {
-          ticks: { callback: v => (v/1000).toLocaleString('cs-CZ') + ' tis. Kč' },
-          grid: { color: 'rgba(0,0,0,0.05)' }
-        },
-        x: { grid: { display: false } }
-      }
+      body:JSON.stringify(payload),
+    });
+    if(!res.ok){
+      const err=await res.json().catch(()=>({}));
+      // Supabase CHECK constraint violation → friendly message
+      if(err.code==='23514')throw new Error('Neplatný formát telefonu — zkontrolujte číslo');
+      throw new Error(err.message||'Chyba serveru');
     }
-  });
-}
-
-// ── LEAD ODESLÁNÍ ──
-async function submitLead() {
-  const jmeno   = document.getElementById('lead-jmeno').value.trim();
-  const telefon = document.getElementById('lead-telefon').value.trim();
-  const email   = document.getElementById('lead-email').value.trim();
-  const pozice  = document.getElementById('lead-pozice').value;
-  const svj     = document.getElementById('lead-svj').value.trim();
-  const gdpr    = document.getElementById('lead-gdpr-cb').checked;
-  const btn     = document.getElementById('lead-submit-btn');
-  const msg     = document.getElementById('lead-msg');
-
-  if (!jmeno || !telefon || !email) {
-    showLeadMsg('Vyplňte prosím jméno, telefon a e-mail.', 'error'); return;
-  }
-  if (!gdpr) {
-    showLeadMsg('Potvrďte prosím souhlas se zpracováním údajů.', 'error'); return;
-  }
-
-  btn.disabled = true; btn.textContent = 'Odesílám…';
-
-  try {
-    const { error } = await sb.from('leads').insert([{
-      jmeno, telefon, email, pozice, svj,
-      byty: state.byty,
-      sp_mwh: state.sp,
-      dist: state.dist,
-      zarizeni: state.zarizeni.join(','),
-      strecha: state.strecha,
-      azimut: state.azimut,
-    }]);
-
-    if (error) throw error;
-
-    btn.textContent = '✓ Odesláno';
-    showLeadMsg('✓ Skvěle! Náš specialista vás kontaktuje do 24 hodin. Těšíme se na setkání.', 'success');
-    document.getElementById('lead-form').style.opacity = '0.4';
-    document.getElementById('lead-form').style.pointerEvents = 'none';
-
-  } catch(e) {
-    btn.disabled = false; btn.textContent = 'Chci bezplatnou analýzu a návštěvu specialisty →';
-    showLeadMsg('Nepodařilo se odeslat. Zkuste to prosím znovu nebo nás kontaktujte přímo.', 'error');
+    document.getElementById('regFormWrap').style.display='none';
+    document.getElementById('regSuccess').style.display='block';
+    setTimeout(()=>{closeModal();},2500);
+  }catch(e){
+    document.getElementById('regBtnTxt').textContent=e.message||'Chyba — zkuste znovu';
+    btn.disabled=false;
   }
 }
 
-function showLeadMsg(text, type) {
-  const msg = document.getElementById('lead-msg');
-  msg.textContent = text;
-  msg.className = 'lead-msg ' + type;
-}
+// UI helpers
+function shake(el){el.animate([{transform:'translateX(-4px)'},{transform:'translateX(4px)'},{transform:'translateX(-4px)'},{transform:'translateX(0)'}],{duration:300,easing:'ease-out'});}
+function showFieldErr(el,msg){let e=el.parentElement.querySelector('.field-err');if(!e){e=document.createElement('div');e.className='field-err';e.style.cssText='font-size:11px;color:#F43F5E;margin-top:3px';el.parentElement.appendChild(e);}e.textContent=msg;setTimeout(()=>e.remove(),3000);}
 
-// ── SCROLL REVEAL ──
-const observer = new IntersectionObserver(entries => {
-  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
-}, { threshold: 0.15 });
-document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+render();
 </script>
 </body>
 </html>
