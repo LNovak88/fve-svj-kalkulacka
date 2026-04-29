@@ -128,7 +128,7 @@ input[type=range]{width:100%;accent-color:var(--blue);margin-bottom:12px;cursor:
 .stepper{display:flex;align-items:center;border:0.5px solid #CBD5E1;border-radius:var(--rm);overflow:hidden;background:var(--white)}
 .stepper-btn{width:36px;height:40px;border:none;background:var(--bg);cursor:pointer;font-size:18px;font-weight:400;color:var(--blue);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .1s;user-select:none;line-height:1}
 .stepper-btn:hover{background:var(--blue-l)}.stepper-btn:active{background:var(--blue-l)}
-.stepper-val{flex:1;text-align:center;font-size:15px;font-weight:600;color:var(--text);border:none;outline:none;background:transparent;min-width:32px;padding:0}
+.stepper-val{flex:1;text-align:center;font-size:15px;font-weight:600;color:var(--text);border:none;outline:none;background:transparent;min-width:32px;padding:0;-moz-appearance:textfield;width:48px}
 @keyframes spin{to{transform:rotate(360deg)}}
 @media(max-width:560px){.g3{grid-template-columns:1fr 1fr}.tog-grid{grid-template-columns:1fr}.var-grid{grid-template-columns:1fr}.kpi-row{grid-template-columns:1fr 1fr}.cta-box{flex-direction:column;text-align:center}.hdr-steps{display:none}}
 </style>
@@ -260,12 +260,12 @@ function drawCf(){const c=document.getElementById('cfCanvas');if(!c)return;const
 function stepper(key,label,min,max,step){
   step=step||1;
   const neg=-step;
-  return `<div><label>${label}</label><div class="stepper"><button class="stepper-btn" onclick="stepChange('${key}',${neg},${min},${max})" type="button">&#x2212;</button><span class="stepper-val" id="sv_${key}">${D[key]}</span><button class="stepper-btn" onclick="stepChange('${key}',${step},${min},${max})" type="button">+</button></div></div>`;
+  return `<div><label>${label}</label><div class="stepper"><button class="stepper-btn" onclick="stepChange('${key}',${neg},${min},${max})" type="button">&#x2212;</button><input class="stepper-val" id="sv_${key}" type="number" value="${D[key]}" min="${min}" max="${max}" oninput="D['${key}']=Math.min(${max},Math.max(${min},+this.value||${min}));this.value=D['${key}'];stepChange('${key}',0,${min},${max})"><button class="stepper-btn" onclick="stepChange('${key}',${step},${min},${max})" type="button">+</button></div></div>`;
 }
 function stepChange(key,delta,min,max){
   D[key]=Math.min(max,Math.max(min,(+D[key]||0)+delta));
   const el=document.getElementById('sv_'+key);
-  if(el)el.textContent=D[key];
+  if(el&&delta!==0){el.value!==undefined?el.value=D[key]:el.textContent=D[key];}
   if(['bytu','vytahu','cerpadla','pater'].includes(key)){
     const sp=spSp(D.bytu,D.pater,D.vytahu,D.tuv,D.tc,D.ev,D.cerpadla);
     const z=D.zarizeni;let sVT=0,sNT=0;
@@ -399,7 +399,7 @@ async function submitReg(){
     ev:D.ev,
   };
   try{
-    const res=await fetch('https://aeyeepckmbejdcotdss.supabase.co/rest/v1/leads',{
+    const res=await fetch('https://aeypeepckmbejdcotdss.supabase.co/rest/v1/leads',{
       method:'POST',
       headers:{
         'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFleXBlZXBja21iZWpkY290ZHNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTkyNjAsImV4cCI6MjA5Mjk3NTI2MH0.JjYiI3bcL1ds1vAkFq59Z0WhNCLAd8oekX6GF4Zq5bA',
