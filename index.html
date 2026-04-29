@@ -206,7 +206,7 @@ function calcCf(kwp,bytu,zarizeni,sazba,dist){dist=dist||'ČEZ Distribuce';const
 function genProfile(hh){const s=hh/100,w=1-s;return Array.from({length:24},(_,h)=>{const wv=w*(h>=7&&h<=8?2.0:h>=18&&h<=22?2.4:h>=9&&h<=17?0.2:0.4),sv=s*(h>=8&&h<=11?1.9:h>=13&&h<=16?1.6:h>=19&&h<=21?2.0:h>=22||h<=6?0.25:0.7);return wv+sv;});}
 function getHhLabel(v){return v<25?'Převážně pracující':v>75?'Převážně senioři / homeoffice':v<50?'Spíše pracující':v>50?'Spíše senioři':'Vyvážený mix';}
 
-const D={lokace:'',lat:null,lon:null,bytu:12,vchodu:1,pater:4,vytahu:1,tuv:true,cerpadla:2,zatepleno:false,okna:'dvojsklo',topeni:'plyn',tc:false,ev:0,zarizeni:['zaklad'],hhSlider:50,sklon:35,azimut:0,dist:'ČEZ Distribuce'};
+const D={lokace:'',lat:null,lon:null,bytu:12,vchodu:1,pater:4,vytahu:1,tuv:true,cerpadla:2,zatepleno:false,okna:'dvojsklo',topeni:'plyn',tc:false,ev:0,zarizeni:['zaklad'],hhSlider:50,sklon:35,azimut:0,strTyp:'sedelova',dist:'ČEZ Distribuce'};
 let cur=0;
 const LABELS=['Dům','Budova','Investice','Domácnosti','Střecha','Výsledky'];
 
@@ -245,9 +245,70 @@ function s4(){const z=D.zarizeni,sazba=doporucenaSazba(z),jistic=doporucenyJisti
 function togZar(k){if(k==='zaklad')return;if(D.zarizeni.includes(k))D.zarizeni=D.zarizeni.filter(z=>z!==k);else D.zarizeni.push(k);if(!D.zarizeni.includes('zaklad'))D.zarizeni.unshift('zaklad');render();}
 
 // STEP 5
-function s5(){const kwp=optimKwp(D.bytu,D.zarizeni,D.ev,D.tc);const kwpB=Math.round((kwp+2)*10)/10,kwpJ=Math.round(kwp*1.35*10)/10;const ors=[{v:-90,n:'Východ',p:70},{v:-45,n:'Jihovýchod',p:88},{v:0,n:'Jih',p:100},{v:45,n:'Jihozápad',p:92},{v:90,n:'Západ',p:72},{v:999,n:'Východ / Západ',p:82,sp:true},{v:998,n:'JV / JZ',p:90,sp:true}];return`<div class="card"><h2 class="ctitle">Střecha a solární systém</h2><p class="csub">Reálná data slunečního záření načteme z EU databáze PVGIS pro: <strong>${D.lokace||'zadaná adresa'}</strong></p><div class="g2" style="margin-bottom:12px"><div><label>Sklon střechy (°)</label><input type="number" id="fSkl" value="${D.sklon}" min="0" max="90" oninput="D.sklon=+this.value"></div><div><label>Typ střechy</label><select><option>Sedlová</option><option>Plochá</option><option>Mansardová</option><option>Valbová</option></select></div></div><div class="slabel">Orientace / konfigurace střechy</div><div class="chip-grid c3">${ors.map(o=>`<div class="chip${D.azimut===o.v?' on':''}" onclick="D.azimut=${o.v};render()"><div class="chip-name">${o.n}</div><div class="chip-sub">${o.p} %${o.sp?' · split':''}</div></div>`).join('')}</div><div class="slabel">Navržené varianty <span class="badge b-blue" style="margin-left:6px">PVGIS · OTE 2026</span></div><div class="var-grid"><div class="var-card best"><div class="var-badge">Doporučeno</div><div class="var-name">Bez baterie</div><div class="var-kwp">${kwp}<span> kWp</span></div><div class="var-save">+${Math.round(kwp*18*D.bytu/100/100)*100} Kč/rok</div><div class="var-roi">návratnost ~${Math.round(12-kwp*0.08)} let</div></div><div class="var-card blurred"><div class="var-name">S baterií</div><div class="var-kwp">${kwpB}<span> kWp</span></div><div class="var-save">vyšší pokrytí</div><div class="var-roi">po registraci</div></div><div class="var-card blurred"><div class="var-name">JOM sdílení</div><div class="var-kwp">${kwpJ}<span> kWp</span></div><div class="var-save">maximum úspor</div><div class="var-roi">po registraci</div></div></div><div class="tip">Navrhovaný výkon <strong>${kwp} kWp</strong> zohledňuje ${D.bytu} bytů${D.tc?' + tepelné čerpadlo':''}${D.ev>0?` + ${D.ev} EV nabíječek`:''}. Po registraci uvidíte citlivostní analýzu a variantu s baterií.</div></div><div class="nav"><button class="btn-out" onclick="goBack()">← Zpět</button><button class="btn-prim" onclick="goNext()">Zobrazit výsledky →</button></div>`;}
+function s5(){
+  const kwp=optimKwp(D.bytu,D.zarizeni,D.ev,D.tc);
+  const kwpB=Math.round((kwp+2)*10)/10,kwpJ=Math.round(kwp*1.35*10)/10;
+  const ors=[
+    {v:-90,n:'Východ',p:70},{v:-45,n:'Jihovýchod',p:88},{v:0,n:'Jih',p:100},
+    {v:45,n:'Jihozápad',p:92},{v:90,n:'Západ',p:72},
+    {v:999,n:'V / Z',p:82,sp:true},{v:998,n:'JV / JZ',p:90,sp:true}
+  ];
+  const roofs=[
+    {v:'sedelova',n:'Sedlová',sklon:35,
+     ic:'<svg width="36" height="26" viewBox="0 0 36 26" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><polygon points="18,2 34,22 2,22"/></svg>'},
+    {v:'plocha',n:'Plochá',sklon:10,
+     ic:'<svg width="36" height="26" viewBox="0 0 36 26" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="8" width="32" height="14" rx="1"/></svg>'},
+    {v:'mansarda',n:'Mansardová',sklon:70,
+     ic:'<svg width="36" height="26" viewBox="0 0 36 26" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><polyline points="18,2 28,10 28,22 8,22 8,10 18,2"/></svg>'},
+    {v:'valbova',n:'Valbová',sklon:35,
+     ic:'<svg width="36" height="26" viewBox="0 0 36 26" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><polygon points="18,2 34,14 28,22 8,22 2,14"/></svg>'},
+    {v:'pilova',n:'Pilová',sklon:15,
+     ic:'<svg width="36" height="26" viewBox="0 0 36 26" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><polyline points="2,20 12,6 12,20 22,6 22,20 34,6"/></svg>'},
+    {v:'terasa',n:'Terasa',sklon:5,
+     ic:'<svg width="36" height="26" viewBox="0 0 36 26" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="12" width="32" height="10" rx="1"/><line x1="9" y1="12" x2="9" y2="22"/><line x1="18" y1="12" x2="18" y2="22"/><line x1="27" y1="12" x2="27" y2="22"/></svg>'},
+  ];
+  const rHtml=roofs.map(r=>{
+    const on=D.strTyp===r.v;
+    const col=on?'var(--blue)':'var(--text-2)';
+    return '<div class="chip'+(on?' on':'')+'" onclick="pickRoof(\''+r.v+'\','+r.sklon+')">'
+      +'<div style="color:'+col+';margin-bottom:2px">'+r.ic+'</div>'
+      +'<div class="chip-name" style="font-size:11px">'+r.n+'</div>'
+      +'<div class="chip-sub">'+r.sklon+'°</div>'
+      +'</div>';
+  }).join('');
+  const orHtml=ors.map(o=>'<div class="chip'+(D.azimut===o.v?' on':'')+'" onclick="D.azimut='+o.v+';render()">'
+    +'<div class="chip-name">'+o.n+'</div>'
+    +'<div class="chip-sub">'+o.p+'%'+(o.sp?' split':'')+'</div>'
+    +'</div>').join('');
+  return '<div class="card">'
+    +'<h2 class="ctitle">Střecha a solární systém</h2>'
+    +'<p class="csub">Reálná data záření načteme z PVGIS pro: <strong>'+(D.lokace||'zadaná adresa')+'</strong></p>'
+    +'<div class="slabel" style="margin-top:0">Typ střechy</div>'
+    +'<div class="chip-grid c3" style="margin-bottom:14px">'+rHtml+'</div>'
+    +'<div style="display:flex;align-items:center;gap:16px;margin-bottom:14px">'
+    +'<span style="font-size:12px;color:var(--text-2);font-weight:500;white-space:nowrap">Sklon (°)</span>'
+    +stepper('sklon','',0,90,5)
+    +'</div>'
+    +'<div class="slabel">Orientace střechy</div>'
+    +'<div class="chip-grid c3">'+orHtml+'</div>'
+    +'<div class="slabel">Navržené varianty <span class="badge b-blue" style="margin-left:6px">PVGIS · OTE 2026</span></div>'
+    +'<div class="var-grid">'
+    +'<div class="var-card best"><div class="var-badge">Doporučeno</div><div class="var-name">Bez baterie</div>'
+    +'<div class="var-kwp">'+kwp+'<span> kWp</span></div>'
+    +'<div class="var-save">+'+Math.round(kwp*18*D.bytu/100/100)*100+' Kč/rok</div>'
+    +'<div class="var-roi">návratnost ~'+Math.round(12-kwp*0.08)+' let</div></div>'
+    +'<div class="var-card blurred"><div class="var-name">S baterií</div>'
+    +'<div class="var-kwp">'+kwpB+'<span> kWp</span></div><div class="var-save">vyšší pokrytí</div><div class="var-roi">po registraci</div></div>'
+    +'<div class="var-card blurred"><div class="var-name">JOM sdílení</div>'
+    +'<div class="var-kwp">'+kwpJ+'<span> kWp</span></div><div class="var-save">maximum úspor</div><div class="var-roi">po registraci</div></div>'
+    +'</div>'
+    +'<div class="tip">Navrhovaný výkon <strong>'+kwp+' kWp</strong> pro '+D.bytu+' bytů'+(D.tc?' + TČ':'')+(D.ev>0?' + '+D.ev+' EV':'')+'.</div>'
+    +'</div>'
+    +'<div class="nav"><button class="btn-out" onclick="goBack()">← Zpět</button>'
+    +'<button class="btn-prim" onclick="goNext()">Zobrazit výsledky →</button></div>';
+}
+function pickRoof(typ,sklon){D.strTyp=typ;D.sklon=sklon;render();}
 
-// STEP 6
 function s6(){const kwp=optimKwp(D.bytu,D.zarizeni,D.ev,D.tc),sazba=doporucenaSazba(D.zarizeni),cf=calcCf(kwp,D.bytu,D.zarizeni,sazba,D.dist);const kwpB=Math.round((kwp+2)*10)/10,kwpJ=Math.round(kwp*1.35*10)/10;return`<div class="res-header"><div class="res-meta">Orientační výsledky · ${D.bytu} bytů · ${kwp} kWp · ${D.lokace||'zadaná adresa'} · <span class="badge b-blue">bez registrace</span></div><div class="kpi-row"><div class="kpi"><div class="kpi-l">Roční úspora</div><div class="kpi-v">${Math.round(cf.uspora_rok/1000)}</div><div class="kpi-u">tis. Kč / rok</div></div><div class="kpi"><div class="kpi-l">Na byt / rok</div><div class="kpi-v">${Math.round(cf.uspora_byt/100)*100}</div><div class="kpi-u">Kč / rok</div></div><div class="kpi"><div class="kpi-l">Návratnost</div><div class="kpi-v">${cf.navrat}</div><div class="kpi-u">let</div></div></div><div style="font-size:11px;color:#64748B;margin-bottom:8px">Kumulativní cashflow 25 let — po registraci vidíte přesný průběh:</div><div class="cf-wrap"><canvas id="cfCanvas"></canvas><div class="cf-blur"><span class="badge b-amber">Plný graf po registraci</span></div></div><div style="display:flex;justify-content:space-between;font-size:10px;color:#94A3B8;margin-top:4px"><span>Rok 1</span><span>Rok 25</span></div></div><div class="var-grid"><div class="var-card best"><div class="var-badge">Nejlepší varianta</div><div class="var-name">Bez baterie</div><div class="var-kwp">${kwp}<span> kWp</span></div><div class="var-save">+${Math.round(cf.uspora_rok/1000)} tis. Kč/rok</div><div class="var-roi">investice ${Math.round(cf.investice/1000)} tis. Kč</div></div><div class="var-card blurred"><div class="var-name">S baterií</div><div class="var-kwp">${kwpB}<span> kWp</span></div><div class="var-save">+${Math.round(cf.uspora_rok*1.18/1000)} tis. Kč/rok</div><div class="var-roi">po registraci</div></div><div class="var-card blurred"><div class="var-name">JOM sdílení</div><div class="var-kwp">${kwpJ}<span> kWp</span></div><div class="var-save">+${Math.round(cf.uspora_rok*1.35/1000)} tis. Kč/rok</div><div class="var-roi">po registraci</div></div></div><div class="cta-box"><div class="cta-body"><div class="cta-title">Vaše SVJ ušetří přes ${Math.round(cf.uspora_rok/1000)}&nbsp;000&nbsp;Kč ročně — chcete přesná čísla pro schůzi?</div><div class="cta-desc">Plná simulace · PDF report · 3 varianty · Editace všech parametrů · Cashflow 25 let</div></div><button class="btn-cta" onclick="openModal()">Odemknout výsledky zdarma →</button></div><div class="nav"><button class="btn-out" onclick="goBack()">← Upravit parametry</button><span class="nav-hint">Investice cca ${Math.round(cf.investice/1000)} tis. Kč bez dotací</span></div>`;}
 
 // CANVAS — profil spotřeby
@@ -388,15 +449,9 @@ async function submitReg(){
     email,
     telefon:telClean,
     svj:document.getElementById('regSvj').value.trim()||null,
-    strecha:D.lokace||null,
-    lat:D.lat||null,
-    lon:D.lon||null,
-    bytu:D.bytu,
-    pater:D.pater,
+    strecha:(D.strTyp||'sedelova')+(D.lokace?' | '+D.lokace:''),
+    azimut:D.azimut,
     zarizeni:D.zarizeni.join(','),
-    kwp:optimKwp(D.bytu,D.zarizeni,D.ev,D.tc),
-    tc:D.tc,
-    ev:D.ev,
   };
   try{
     const res=await fetch('https://aeypeepckmbejdcotdss.supabase.co/rest/v1/leads',{
