@@ -411,9 +411,11 @@ async function submitReg(){
     });
     if(!res.ok){
       const err=await res.json().catch(()=>({}));
-      // Supabase CHECK constraint violation → friendly message
-      if(err.code==='23514')throw new Error('Neplatný formát telefonu — zkontrolujte číslo');
-      throw new Error(err.message||'Chyba serveru');
+      console.error('Supabase 400:', JSON.stringify(err));
+      if(err.code==='23514')throw new Error('Neplatny format telefonu');
+      if(err.code==='42703')throw new Error('DB schema: '+err.message);
+      if(err.code==='23502')throw new Error('Chybi pole: '+(err.details||err.message));
+      throw new Error((err.message||err.hint||'Chyba serveru')+' ['+err.code+']');
     }
     document.getElementById('regFormWrap').style.display='none';
     document.getElementById('regSuccess').style.display='block';
