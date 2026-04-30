@@ -199,7 +199,16 @@ input[type=range]{width:100%;accent-color:var(--blue);margin-bottom:12px;cursor:
             <input type="password" id="regPw2" placeholder="Potvrdit heslo" autocomplete="new-password">
             <button class="pw-eye" onclick="togglePw('regPw2',this)" type="button">&#128065;</button>
           </div>
-          <button class="btn-register" id="regBtn" onclick="submitReg()">
+          <!-- GDPR SOUHLAS -->
+<div id="gdprWrap" style="margin-top:14px;display:flex;align-items:flex-start;gap:10px;padding:12px 14px;background:var(--bg);border-radius:var(--rm);border:0.5px solid var(--border)">
+  <input type="checkbox" id="regGdpr" style="width:18px;height:18px;margin-top:1px;accent-color:var(--green);cursor:pointer;flex-shrink:0">
+  <label for="regGdpr" style="font-size:12px;color:var(--text-2);line-height:1.5;cursor:pointer;font-weight:400;margin-bottom:0">
+    Souhlasím se <a href="/gdpr" target="_blank" style="color:var(--blue);text-decoration:underline">zpracováním osobních údajů</a> 
+    a <a href="/podminky" target="_blank" style="color:var(--blue);text-decoration:underline">obchodními podmínkami</a>. 
+    Bez souhlasu nemůžeme vytvořit účet.
+  </label>
+</div>
+<button class="btn-register" id="regBtn" onclick="submitReg()">
             <span id="regBtnTxt">Vytvo&#345;it &uacute;&#269;et a odemknout v&yacute;sledky &rarr;</span>
           </button>
         </div>
@@ -691,6 +700,14 @@ async function supaFetch(path,method,body){
 
 // ── REGISTRACE ────────────────────────────────────────────────────
 async function submitReg(){
+  // GDPR validace
+  const gdpr = document.getElementById('regGdpr');
+  if (!gdpr || !gdpr.checked) {
+    shake(document.getElementById('gdprWrap'));
+    showFieldErr(document.getElementById('gdprWrap'), 'Pro registraci je nutný souhlas se zpracováním osobních údajů.');
+    return;
+  }
+
   const email=document.getElementById('regEmail').value.trim();
   const pw=document.getElementById('regPw').value;
   const pw2=document.getElementById('regPw2').value;
