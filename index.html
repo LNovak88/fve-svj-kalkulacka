@@ -124,6 +124,18 @@ input[type=range]{width:100%;accent-color:var(--blue);margin-bottom:12px;cursor:
 .success-icon{font-size:48px;margin-bottom:12px}
 .success-title{font-family:'DM Serif Display',serif;font-size:22px;color:var(--navy);margin-bottom:8px}
 .success-desc{font-size:13px;color:var(--text-2);line-height:1.5}
+.pw-wrap{position:relative}
+.pw-wrap input{padding-right:42px}
+.pw-eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;color:var(--text-2);padding:0;line-height:1}
+.pw-strength{height:3px;border-radius:2px;margin-top:4px;transition:all .3s;background:var(--border)}
+.pw-strength.weak{background:#F43F5E;width:33%}
+.pw-strength.ok{background:var(--amber);width:66%}
+.pw-strength.strong{background:var(--green);width:100%}
+.pw-hint{font-size:10px;color:var(--text-2);margin-top:2px}
+.modal-link{background:none;border:none;color:var(--blue);font-size:12px;cursor:pointer;padding:0;text-decoration:underline;font-family:inherit}
+.modal-tabs{display:flex;gap:0;margin-bottom:18px;border-bottom:1.5px solid var(--border)}
+.modal-tab{flex:1;padding:10px;background:none;border:none;font-size:13px;font-weight:500;cursor:pointer;color:var(--text-2);font-family:inherit;border-bottom:2px solid transparent;margin-bottom:-1.5px;transition:all .15s}
+.modal-tab.active{color:var(--blue);border-bottom-color:var(--blue)}
 .spin{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite}
 .stepper{display:flex;align-items:center;border:0.5px solid #CBD5E1;border-radius:var(--rm);overflow:hidden;background:var(--white)}
 .stepper-btn{width:36px;height:40px;border:none;background:var(--bg);cursor:pointer;font-size:18px;font-weight:400;color:var(--blue);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .1s;user-select:none;line-height:1}
@@ -156,31 +168,68 @@ input[type=range]{width:100%;accent-color:var(--blue);margin-bottom:12px;cursor:
 <div class="modal-overlay" id="regModal">
   <div class="modal">
     <button class="modal-close" onclick="closeModal()">&#x2715;</button>
-    <div class="modal-badge">&#10024; Zdarma &#8212; v&#253;sledky do 2 minut</div>
-    <h2 class="modal-title">Z&#237;skejte p&#345;esnou anal&#253;zu pro sch&#367;zi SVJ</h2>
-    <p class="modal-sub">Zadejte e&#8209;mail a okam&#382;it&#283; odemknete pln&#233; v&#253;sledky, v&#353;echny 3 varianty, editaci parametr&#367; a profesion&#225;ln&#237; PDF report.</p>
-    <div id="benefitsList">
-      <div class="benefit"><span class="benefit-icon">&#128202;</span> P&#345;esn&#225; 15minutov&#225; simulace v&#253;roby a spot&#345;eby</div>
-      <div class="benefit"><span class="benefit-icon">&#128200;</span> Cashflow 25 let &#8212; rok po roku</div>
-      <div class="benefit"><span class="benefit-icon">&#9881;&#65039;</span> Editace v&#353;ech parametr&#367; &#8212; sazba, jisti&#269;, spot&#345;eba</div>
-      <div class="benefit"><span class="benefit-icon">&#128196;</span> PDF report pro sch&#367;zi SVJ (A4, tisknout)</div>
-      <div class="benefit"><span class="benefit-icon">&#128994;</span> Varianta s baterie a JOM sd&#237;len&#237; energie</div>
-      <div class="benefit"><span class="benefit-icon">&#128190;</span> Ulo&#382;en&#237; simulace &#8212; vra&#357;te se kdykoliv</div>
+    <div class="modal-badge">&#10024; Zdarma &mdash; v&yacute;sledky ihned</div>
+    <h2 class="modal-title">Z&iacute;skejte p&#345;esnou anal&yacute;zu pro sch&#367;zi SVJ</h2>
+    <div class="modal-tabs">
+      <button class="modal-tab active" id="tabReg" onclick="switchTab('reg')">Registrace</button>
+      <button class="modal-tab" id="tabLogin" onclick="switchTab('login')">P&#345;ihl&aacute;&scaron;en&iacute;</button>
+      <button class="modal-tab" id="tabReset" onclick="switchTab('reset')">Reset hesla</button>
     </div>
     <div id="regFormWrap">
-      <div class="modal-form">
-        <input type="text" id="regJmeno" placeholder="Jm&#233;no a p&#345;&#237;jmen&#237;" autocomplete="name">
-        <input type="email" id="regEmail" placeholder="E&#8209;mailov&#225; adresa" autocomplete="email">
-        <div style="position:relative">
-          <input type="tel" id="regTel" placeholder="Telefon (např. 603 123 456)" autocomplete="tel" oninput="formatTel(this)">
-          <span id="telIcon" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none"></span>
+      <!-- REGISTRACE -->
+      <div id="panelReg">
+        <div class="modal-form">
+          <input type="text" id="regJmeno" placeholder="Jm&eacute;no a p&#345;&iacute;jmen&iacute;" autocomplete="name">
+          <input type="email" id="regEmail" placeholder="E-mailov&aacute; adresa" autocomplete="email">
+          <div style="position:relative">
+            <input type="tel" id="regTel" placeholder="Telefon (nap&#345;. 603 123 456)" autocomplete="tel" oninput="formatTel(this)">
+            <span id="telIcon" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none"></span>
+          </div>
+          <input type="text" id="regSvj" placeholder="N&aacute;zev SVJ nebo bytov&eacute;ho domu (voliteln&eacute;)">
+          <div class="pw-wrap">
+            <input type="password" id="regPw" placeholder="Heslo (min. 8 znak&#367;)" autocomplete="new-password" oninput="checkPwStrength(this.value)">
+            <button class="pw-eye" onclick="togglePw('regPw',this)" type="button">&#128065;</button>
+            <div class="pw-strength" id="pwStrength"></div>
+            <div class="pw-hint" id="pwHint"></div>
+          </div>
+          <div class="pw-wrap">
+            <input type="password" id="regPw2" placeholder="Potvrdit heslo" autocomplete="new-password">
+            <button class="pw-eye" onclick="togglePw('regPw2',this)" type="button">&#128065;</button>
+          </div>
+          <button class="btn-register" id="regBtn" onclick="submitReg()">
+            <span id="regBtnTxt">Vytvo&#345;it &uacute;&#269;et a odemknout v&yacute;sledky &rarr;</span>
+          </button>
         </div>
-        <input type="text" id="regSvj" placeholder="N&#225;zev SVJ nebo bytov&#233;ho domu (voliteln&#233;)">
-        <button class="btn-register" id="regBtn" onclick="submitReg()">
-          <span id="regBtnTxt">Odemknout v&#253;sledky zdarma &#8594;</span>
-        </button>
+        <p class="modal-note">&#128274; Bez spamu. &#381;&aacute;dn&aacute; platba. Kdykoliv odhl&aacute;sit.</p>
       </div>
-      <p class="modal-note">&#128274; Bez spamu. &#381;&#225;dn&#225; platba. Kdykoliv odhl&#225;sit.</p>
+      <!-- PŘIHLÁŠENÍ -->
+      <div id="panelLogin" style="display:none">
+        <div class="modal-form">
+          <input type="email" id="loginEmail" placeholder="E-mailov&aacute; adresa" autocomplete="email">
+          <div class="pw-wrap">
+            <input type="password" id="loginPw" placeholder="Heslo" autocomplete="current-password">
+            <button class="pw-eye" onclick="togglePw('loginPw',this)" type="button">&#128065;</button>
+          </div>
+          <button class="btn-register" id="loginBtn" onclick="submitLogin()">
+            <span id="loginBtnTxt">P&#345;ihl&aacute;sit se &rarr;</span>
+          </button>
+        </div>
+        <p class="modal-note" style="margin-top:10px">
+          <button class="modal-link" onclick="switchTab('reset')">Zapomn&#283;l jsem heslo</button>
+        </p>
+      </div>
+      <!-- RESET HESLA -->
+      <div id="panelReset" style="display:none">
+        <p style="font-size:13px;color:var(--text-2);margin-bottom:14px">
+          Zadejte e-mail &mdash; po&scaron;leme v&aacute;m odkaz pro obnovu hesla.
+        </p>
+        <div class="modal-form">
+          <input type="email" id="resetEmail" placeholder="E-mailov&aacute; adresa">
+          <button class="btn-register" id="resetBtn" onclick="submitReset()">
+            <span id="resetBtnTxt">Odeslat odkaz pro obnovu &rarr;</span>
+          </button>
+        </div>
+      </div>
     </div>
     <div id="regSuccess" style="display:none">
       <div class="success-box">
@@ -393,12 +442,10 @@ function openModal(){document.getElementById('regModal').classList.add('open');d
 function closeModal(){document.getElementById('regModal').classList.remove('open');document.body.style.overflow='';}
 document.getElementById('regModal').addEventListener('click',e=>{if(e.target===document.getElementById('regModal'))closeModal();});
 
-// Telefon — formátování a validace (CZ formáty)
+// ── TELEFON validace ─────────────────────────────────────────────
 function formatTel(el){
   let v=el.value.replace(/[^\d+]/g,'');
-  // Normalizuj +420 / 00420 prefix
   if(v.startsWith('00420'))v='+420'+v.slice(5);
-  // Formátuj jako XXX XXX XXX nebo +420 XXX XXX XXX
   let digits=v.replace(/^\+420/,'').replace(/\D/g,'');
   if(digits.length>9)digits=digits.slice(0,9);
   if(digits.length>6)digits=digits.slice(0,3)+' '+digits.slice(3,6)+' '+digits.slice(6);
@@ -408,82 +455,162 @@ function formatTel(el){
   el.style.borderColor=el.value.length>3?(ok?'var(--green)':'#F43F5E'):'';
   document.getElementById('telIcon').textContent=el.value.length>3?(ok?'✅':'❌'):'';
 }
-function isTelOk(v){
-  const clean=v.replace(/[\s\-]/g,'');
-  return /^(\+420|00420)?[0-9]{9}$/.test(clean);
-}
+function isTelOk(v){const c=v.replace(/[\s\-]/g,'');return/^(\+420|00420)?[0-9]{9}$/.test(c);}
 function telErrMsg(v){
-  const clean=v.replace(/[\s\-]/g,'');
-  if(!clean)return'Zadejte telefonní číslo';
-  if(!/^\d/.test(clean.replace('+','').replace('00','')))return'Pouze číslice';
-  if(clean.replace(/^\+420|^00420/,'').length<9)return'Číslo je příliš krátké (9 číslic)';
-  if(clean.replace(/^\+420|^00420/,'').length>9)return'Číslo je příliš dlouhé';
+  const c=v.replace(/[\s\-]/g,'');
+  if(!c)return'Zadejte telefonní číslo';
+  if(c.replace(/^\+420|^00420/,'').length<9)return'Číslo je příliš krátké (9 číslic)';
   return'Neplatný formát (př. 603 123 456)';
 }
 
+// ── HESLO strength ────────────────────────────────────────────────
+function checkPwStrength(v){
+  const bar=document.getElementById('pwStrength');
+  const hint=document.getElementById('pwHint');
+  if(!bar||!hint)return;
+  bar.className='pw-strength';
+  if(v.length===0){hint.textContent='';return;}
+  if(v.length<6){bar.classList.add('weak');hint.textContent='Příliš krátké';return;}
+  const strong=/[A-Z]/.test(v)&&/[0-9]/.test(v)&&v.length>=10;
+  const ok=/[A-Z]/.test(v)||/[0-9]/.test(v);
+  if(strong){bar.classList.add('strong');hint.textContent='Silné heslo ✓';}
+  else if(ok||v.length>=8){bar.classList.add('ok');hint.textContent='Dobré heslo';}
+  else{bar.classList.add('weak');hint.textContent='Přidejte číslo nebo velké písmeno';}
+}
+function togglePw(id,btn){
+  const el=document.getElementById(id);
+  if(!el)return;
+  el.type=el.type==='password'?'text':'password';
+  btn.textContent=el.type==='password'?'👁':'🙈';
+}
+
+// ── MODAL TABS ────────────────────────────────────────────────────
+function switchTab(tab){
+  ['reg','login','reset'].forEach(t=>{
+    document.getElementById('panel'+t.charAt(0).toUpperCase()+t.slice(1)).style.display=t===tab?'block':'none';
+    document.getElementById('tab'+t.charAt(0).toUpperCase()+t.slice(1)).classList.toggle('active',t===tab);
+  });
+}
+
+// ── SUPABASE CONFIG ───────────────────────────────────────────────
+const SUPA_URL='https://aeypeepckmbejdcotdss.supabase.co';
+const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFleXBlZXBja21iZWpkY290ZHNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTkyNjAsImV4cCI6MjA5Mjk3NTI2MH0.JjYiI3bcL1ds1vAkFq59Z0WhNCLAd8oekX6GF4Zq5bA';
+const SUPA_HEADERS={'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json'};
+
+async function supaFetch(path,method,body){
+  const r=await fetch(SUPA_URL+path,{method:method||'GET',headers:SUPA_HEADERS,body:body?JSON.stringify(body):undefined});
+  const data=await r.json().catch(()=>({}));
+  return{ok:r.ok,status:r.status,data};
+}
+
+// ── REGISTRACE ────────────────────────────────────────────────────
 async function submitReg(){
-  // Validace email
   const email=document.getElementById('regEmail').value.trim();
-  if(!email||!email.includes('@')||!email.includes('.')){
-    shake(document.getElementById('regEmail'));
-    document.getElementById('regEmail').style.borderColor='#F43F5E';
-    document.getElementById('regEmail').focus();return;
-  }
-  // Validace telefon
+  const pw=document.getElementById('regPw').value;
+  const pw2=document.getElementById('regPw2').value;
   const telEl=document.getElementById('regTel');
-  const tel=telEl.value.trim();
-  if(!isTelOk(tel)){
-    shake(telEl);
-    telEl.style.borderColor='#F43F5E';
-    telEl.focus();
-    showFieldErr(telEl, telErrMsg(tel));
-    return;
-  }
-  const btn=document.getElementById('regBtn');
-  document.getElementById('regBtnTxt').innerHTML='<span class="spin"></span> Odesílám…';
-  btn.disabled=true;
-  // Normalizuj telefon pro DB (jen číslice + volitelný +420)
-  const telClean=tel.replace(/[\s\-]/g,'');
-  const payload={
-    jmeno:document.getElementById('regJmeno').value.trim()||null,
-    email,
-    telefon:telClean,
-    svj:document.getElementById('regSvj').value.trim()||null,
-    strecha:(D.strTyp||'sedelova')+(D.lokace?' | '+D.lokace:''),
-    azimut:D.azimut,
-    zarizeni:D.zarizeni.join(','),
-  };
+  const tel=telEl?telEl.value.trim():'';
+
+  if(!email||!email.includes('@')){shake(document.getElementById('regEmail'));return;}
+  if(pw.length<8){shake(document.getElementById('regPw'));showFieldErr(document.getElementById('regPw'),'Heslo musí mít alespoň 8 znaků');return;}
+  if(pw!==pw2){shake(document.getElementById('regPw2'));showFieldErr(document.getElementById('regPw2'),'Hesla se neshodují');return;}
+  if(tel&&!isTelOk(tel)){shake(telEl);showFieldErr(telEl,telErrMsg(tel));return;}
+
+  setBtnLoading('regBtn','regBtnTxt',true);
   try{
-    const res=await fetch('https://aeypeepckmbejdcotdss.supabase.co/rest/v1/leads',{
-      method:'POST',
-      headers:{
-        'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFleXBlZXBja21iZWpkY290ZHNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTkyNjAsImV4cCI6MjA5Mjk3NTI2MH0.JjYiI3bcL1ds1vAkFq59Z0WhNCLAd8oekX6GF4Zq5bA',
-        'Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFleXBlZXBja21iZWpkY290ZHNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTkyNjAsImV4cCI6MjA5Mjk3NTI2MH0.JjYiI3bcL1ds1vAkFq59Z0WhNCLAd8oekX6GF4Zq5bA',
-        'Content-Type':'application/json',
-        'Prefer':'return=minimal',
-      },
-      body:JSON.stringify(payload),
+    // 1. Supabase signUp
+    const {ok,data}=await supaFetch('/auth/v1/signup','POST',{
+      email,password:pw,
+      options:{data:{
+        jmeno:document.getElementById('regJmeno').value.trim()||null,
+        telefon:tel.replace(/[\s\-]/g,'')||null,
+        svj:document.getElementById('regSvj').value.trim()||null,
+      },emailRedirectTo:'https://www.svjenergie.cz/kalkulator.html'}
     });
-    if(!res.ok){
-      const err=await res.json().catch(()=>({}));
-      console.error('Supabase 400:', JSON.stringify(err));
-      if(err.code==='23514')throw new Error('Neplatny format telefonu');
-      if(err.code==='42703')throw new Error('DB schema: '+err.message);
-      if(err.code==='23502')throw new Error('Chybi pole: '+(err.details||err.message));
-      throw new Error((err.message||err.hint||'Chyba serveru')+' ['+err.code+']');
+    if(!ok){
+      const msg=data.msg||data.message||data.error_description||'Chyba registrace';
+      if(msg.includes('already registered'))throw new Error('Tento e-mail je již registrován — přihlaste se');
+      throw new Error(msg);
     }
+    // 2. Uložit lead
+    await supaFetch('/rest/v1/leads','POST',{
+      jmeno:document.getElementById('regJmeno').value.trim()||null,
+      email,telefon:tel.replace(/[\s\-]/g,'')||null,
+      svj:document.getElementById('regSvj').value.trim()||null,
+      strecha:(D.strTyp||'sedelova')+(D.lokace?' | '+D.lokace:''),
+      azimut:D.azimut,zarizeni:D.zarizeni.join(','),
+    });
+    // 3. Úspěch
     document.getElementById('regFormWrap').style.display='none';
     document.getElementById('regSuccess').style.display='block';
-    setTimeout(()=>{closeModal();},2500);
+    document.getElementById('regSuccess').innerHTML='<div class="success-box">'
+      +'<div class="success-icon">📧</div>'
+      +'<div class="success-title">Zkontrolujte e-mail!</div>'
+      +'<div class="success-desc">Poslali jsme vám potvrzovací odkaz na <strong>'+email+'</strong>.<br>'
+      +'Po kliknutí na odkaz budete přihlášeni a uvidíte plné výsledky.</div></div>';
   }catch(e){
-    document.getElementById('regBtnTxt').textContent=e.message||'Chyba — zkuste znovu';
-    btn.disabled=false;
+    setBtnLoading('regBtn','regBtnTxt',false,'Vytvořit účet a odemknout výsledky →');
+    showFieldErr(document.getElementById('regEmail'),e.message);
   }
 }
 
+// ── PŘIHLÁŠENÍ ────────────────────────────────────────────────────
+async function submitLogin(){
+  const email=document.getElementById('loginEmail').value.trim();
+  const pw=document.getElementById('loginPw').value;
+  if(!email||!email.includes('@')){shake(document.getElementById('loginEmail'));return;}
+  if(!pw){shake(document.getElementById('loginPw'));return;}
+  setBtnLoading('loginBtn','loginBtnTxt',true);
+  try{
+    const {ok,data}=await supaFetch('/auth/v1/token?grant_type=password','POST',{email,password:pw});
+    if(!ok){
+      const msg=data.error_description||data.msg||'Nesprávný e-mail nebo heslo';
+      throw new Error(msg);
+    }
+    // Uložit session token
+    localStorage.setItem('supa_access_token',data.access_token);
+    document.getElementById('regFormWrap').style.display='none';
+    document.getElementById('regSuccess').style.display='block';
+    document.getElementById('regSuccess').innerHTML='<div class="success-box">'
+      +'<div class="success-icon">✅</div>'
+      +'<div class="success-title">Přihlášení úspěšné!</div>'
+      +'<div class="success-desc">Přesměrováváme vás na plné výsledky…</div></div>';
+    setTimeout(()=>{closeModal();/* TODO: odemknout premium */},1500);
+  }catch(e){
+    setBtnLoading('loginBtn','loginBtnTxt',false,'Přihlásit se →');
+    showFieldErr(document.getElementById('loginEmail'),e.message);
+  }
+}
+
+// ── RESET HESLA ───────────────────────────────────────────────────
+async function submitReset(){
+  const email=document.getElementById('resetEmail').value.trim();
+  if(!email||!email.includes('@')){shake(document.getElementById('resetEmail'));return;}
+  setBtnLoading('resetBtn','resetBtnTxt',true);
+  try{
+    const {ok,data}=await supaFetch('/auth/v1/recover','POST',{
+      email,options:{emailRedirectTo:'https://www.svjenergie.cz/kalkulator.html'}
+    });
+    if(!ok)throw new Error(data.msg||'Chyba');
+    document.getElementById('panelReset').innerHTML='<div class="success-box">'
+      +'<div class="success-icon">📧</div>'
+      +'<div class="success-title">Odkaz odeslán!</div>'
+      +'<div class="success-desc">Zkontrolujte e-mail <strong>'+email+'</strong>.</div></div>';
+  }catch(e){
+    setBtnLoading('resetBtn','resetBtnTxt',false,'Odeslat odkaz pro obnovu →');
+    showFieldErr(document.getElementById('resetEmail'),e.message);
+  }
+}
 // UI helpers
-function shake(el){el.animate([{transform:'translateX(-4px)'},{transform:'translateX(4px)'},{transform:'translateX(-4px)'},{transform:'translateX(0)'}],{duration:300,easing:'ease-out'});}
-function showFieldErr(el,msg){let e=el.parentElement.querySelector('.field-err');if(!e){e=document.createElement('div');e.className='field-err';e.style.cssText='font-size:11px;color:#F43F5E;margin-top:3px';el.parentElement.appendChild(e);}e.textContent=msg;setTimeout(()=>e.remove(),3000);}
+function shake(el){if(!el)return;el.animate([{transform:'translateX(-4px)'},{transform:'translateX(4px)'},{transform:'translateX(-4px)'},{transform:'translateX(0)'}],{duration:300,easing:'ease-out'});}
+function showFieldErr(el,msg){if(!el)return;let e=el.parentElement.querySelector('.field-err');if(!e){e=document.createElement('div');e.className='field-err';e.style.cssText='font-size:11px;color:#F43F5E;margin-top:3px';el.parentElement.appendChild(e);}e.textContent=msg;setTimeout(()=>e.remove(),4000);}
+function setBtnLoading(btnId,txtId,loading,label){
+  const btn=document.getElementById(btnId);
+  const txt=document.getElementById(txtId);
+  if(!btn||!txt)return;
+  btn.disabled=loading;
+  txt.innerHTML=loading?'<span class="spin"></span> Odesílám…':(label||'Zkusit znovu');
+}
 
 render();
 </script>
