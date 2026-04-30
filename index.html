@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SVJ Energie — FVE kalkulačka pro bytové domy | Ušetřete na elektřině</title>
+<meta name="description" content="Zjistěte za 2 minuty, kolik ušetří váš bytový dům na fotovoltaice. Bezplatná kalkulačka FVE pro SVJ a správce bytových domů. Reálná data, přesné výpočty.">
+<meta name="keywords" content="FVE SVJ, fotovoltaika bytový dům, solární panely SVJ, kalkulačka FVE, úspory elektřiny SVJ, JOM sdílení energie">
+<link rel="canonical" href="https://www.svjenergie.cz">
+<meta property="og:title" content="SVJ Energie — Kolik ušetří váš bytový dům na FVE?">
+<meta property="og:description" content="Bezplatná kalkulačka fotovoltaiky pro bytové domy. Výsledky za 2 minuty, reálná data PVGIS.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://www.svjenergie.cz">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"SVJ Energie","url":"https://www.svjenergie.cz","description":"FVE kalkulačka pro bytové domy a SVJ","serviceType":"Energetické poradenství"}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy: #1E3A5F;
+  --navy-d: #152c49;
+  --blue: #1B6CA8;
+  --blue-l: #E3F0FA;
+  --blue-ll: #F0F7FD;
+  --green: #2E8B4A;
+  --green-l: #E3F4E9;
+  --green-d: #1f6b36;
+  --amber: #F59E0B;
+  --amber-l: #FEF3C7;
+  --rose: #F43F5E;
+  --text: #1E293B;
+  --text-2: #64748B;
+  --border: #E2E8F0;
+  --bg: #F8FAFB;
+  --white: #ffffff;
+  --r: 14px;
+  --rm: 8px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--white);color:var(--text);line-height:1.6;overflow-x:hidden}
+
+/* ── NAV ── */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 5vw;height:64px;background:rgba(255,255,255,0.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);transition:box-shadow .3s}
+nav.scrolled{box-shadow:0 2px 20px rgba(30,58,95,0.1)}
+.nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.nav-logo-box{width:36px;height:36px;background:var(--blue);border-radius:var(--rm);display:flex;align-items:center;justify-content:center}
+.nav-logo-t{font-size:16px;font-weight:600;color:var(--navy);letter-spacing:-.3px}
+.nav-logo-s{font-size:11px;color:var(--text-2)}
+.nav-links{display:flex;align-items:center;gap:8px}
+.btn-nav-ghost{background:transparent;border:1.5px solid var(--border);color:var(--text-2);border-radius:var(--rm);padding:8px 16px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;text-decoration:none;transition:all .15s}
+.btn-nav-ghost:hover{border-color:var(--blue);color:var(--blue)}
+.btn-nav-cta{background:var(--green);color:#fff;border:none;border-radius:var(--rm);padding:9px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;text-decoration:none;transition:all .15s;box-shadow:0 2px 8px rgba(46,139,74,0.3)}
+.btn-nav-cta:hover{background:var(--green-d);transform:translateY(-1px)}
+
+/* ── HERO ── */
+.hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:100px 5vw 60px;position:relative;overflow:hidden;background:linear-gradient(160deg,#f0f7fd 0%,#fff 50%,#e8f5f0 100%)}
+.hero-bg{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.hero-orb{position:absolute;border-radius:50%;filter:blur(80px);opacity:.35}
+.hero-orb-1{width:600px;height:600px;background:var(--blue-l);top:-200px;right:-100px}
+.hero-orb-2{width:400px;height:400px;background:var(--green-l);bottom:-100px;left:-50px}
+.hero-inner{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;position:relative;z-index:1}
+.hero-badge{display:inline-flex;align-items:center;gap:6px;background:var(--green-l);color:var(--green);border-radius:20px;padding:5px 14px;font-size:12px;font-weight:600;margin-bottom:20px;border:1px solid rgba(46,139,74,0.2)}
+.hero-h1{font-family:'DM Serif Display',serif;font-size:clamp(2rem,4vw,3.2rem);color:var(--navy);line-height:1.15;margin-bottom:20px}
+.hero-h1 em{font-style:italic;color:var(--blue)}
+.hero-sub{font-size:17px;color:var(--text-2);margin-bottom:32px;line-height:1.7;max-width:480px}
+.hero-ctas{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:40px}
+.btn-hero{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,var(--green),var(--green-d));color:#fff;border:none;border-radius:var(--r);padding:14px 28px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;text-decoration:none;box-shadow:0 4px 20px rgba(46,139,74,0.4);transition:all .2s}
+.btn-hero:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(46,139,74,0.5)}
+.btn-hero-out{display:inline-flex;align-items:center;gap:8px;background:transparent;border:1.5px solid var(--navy);color:var(--navy);border-radius:var(--r);padding:13px 24px;font-size:15px;font-weight:500;cursor:pointer;font-family:inherit;text-decoration:none;transition:all .2s}
+.btn-hero-out:hover{background:var(--navy);color:#fff}
+.hero-trust{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.hero-trust-item{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-2)}
+.hero-trust-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0}
+
+/* Hero right — mock kalkulačka */
+.hero-visual{background:var(--white);border-radius:20px;box-shadow:0 20px 60px rgba(30,58,95,0.15);overflow:hidden;border:1px solid var(--border);animation:floatUp .8s ease both}
+@keyframes floatUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.hv-header{background:var(--navy);padding:14px 18px;display:flex;align-items:center;gap:10px}
+.hv-logo{width:28px;height:28px;background:var(--blue);border-radius:6px;display:flex;align-items:center;justify-content:center}
+.hv-title{color:#fff;font-size:13px;font-weight:500}
+.hv-sub{color:#8BA8C4;font-size:11px}
+.hv-body{padding:18px}
+.hv-label{font-size:10px;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.hv-kpis{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px}
+.hv-kpi{background:var(--blue-ll);border-radius:8px;padding:10px 12px;border:0.5px solid #C8DFF2}
+.hv-kpi-l{font-size:10px;color:#4A7BA8;margin-bottom:2px}
+.hv-kpi-v{font-size:20px;font-weight:600;color:var(--navy);line-height:1}
+.hv-kpi-u{font-size:9px;color:#4A7BA8}
+.hv-bars{display:flex;align-items:flex-end;gap:3px;height:60px;padding:0 2px;border-bottom:0.5px solid var(--border);margin-bottom:6px}
+.hv-bar{flex:1;border-radius:2px 2px 0 0;transition:height .5s ease}
+.hv-bar-labels{display:flex;justify-content:space-between;font-size:9px;color:#94A3B8}
+.hv-cta{background:var(--navy);border-radius:8px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;margin-top:12px}
+.hv-cta-t{font-size:12px;font-weight:500;color:#fff}
+.hv-cta-s{font-size:10px;color:#8BA8C4}
+.hv-btn{background:var(--green);color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap}
+
+/* ── STATS ── */
+.stats{background:var(--navy);padding:48px 5vw}
+.stats-inner{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:24px}
+.stat{text-align:center}
+.stat-v{font-family:'DM Serif Display',serif;font-size:2.2rem;color:#fff;line-height:1}
+.stat-l{font-size:12px;color:#8BA8C4;margin-top:4px}
+
+/* ── HOW IT WORKS ── */
+.how{padding:80px 5vw;background:var(--bg)}
+.section-header{text-align:center;margin-bottom:56px}
+.section-tag{display:inline-block;background:var(--blue-l);color:var(--blue);border-radius:20px;padding:4px 14px;font-size:12px;font-weight:600;margin-bottom:12px}
+.section-h2{font-family:'DM Serif Display',serif;font-size:clamp(1.6rem,3vw,2.4rem);color:var(--navy);line-height:1.2}
+.section-sub{font-size:15px;color:var(--text-2);margin-top:10px;max-width:520px;margin-left:auto;margin-right:auto}
+.how-steps{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:32px}
+.how-step{background:var(--white);border-radius:var(--r);padding:32px 28px;border:0.5px solid var(--border);position:relative;transition:transform .2s,box-shadow .2s}
+.how-step:hover{transform:translateY(-4px);box-shadow:0 12px 40px rgba(30,58,95,0.1)}
+.how-num{width:40px;height:40px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;margin-bottom:16px}
+.how-icon{font-size:28px;margin-bottom:12px}
+.how-h3{font-size:16px;font-weight:600;color:var(--navy);margin-bottom:8px}
+.how-p{font-size:13px;color:var(--text-2);line-height:1.6}
+.how-arrow{position:absolute;right:-20px;top:50%;transform:translateY(-50%);color:var(--border);font-size:24px;z-index:1}
+
+/* ── FEATURES ── */
+.features{padding:80px 5vw;background:var(--white)}
+.features-inner{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center}
+.features-list{display:flex;flex-direction:column;gap:20px}
+.feat{display:flex;gap:14px;align-items:flex-start}
+.feat-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.feat-icon.blue{background:var(--blue-l)}
+.feat-icon.green{background:var(--green-l)}
+.feat-icon.amber{background:var(--amber-l)}
+.feat-h{font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px}
+.feat-p{font-size:13px;color:var(--text-2);line-height:1.5}
+.features-visual{background:linear-gradient(135deg,var(--navy) 0%,#2a4f7a 100%);border-radius:20px;padding:32px;color:#fff;position:relative;overflow:hidden}
+.features-visual::before{content:'';position:absolute;top:-40px;right:-40px;width:200px;height:200px;background:radial-gradient(circle,rgba(27,108,168,.4),transparent);border-radius:50%}
+.fv-title{font-family:'DM Serif Display',serif;font-size:1.4rem;margin-bottom:6px}
+.fv-sub{font-size:12px;color:#8BA8C4;margin-bottom:24px}
+.fv-items{display:flex;flex-direction:column;gap:10px}
+.fv-item{display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.08);border-radius:8px;border:0.5px solid rgba(255,255,255,.12)}
+.fv-item-icon{font-size:16px;flex-shrink:0}
+.fv-item-t{font-size:13px;color:#fff;font-weight:500}
+.fv-item-s{font-size:11px;color:#8BA8C4}
+.fv-lock{display:flex;align-items:center;gap:6px;padding:10px 14px;background:rgba(245,158,11,.1);border-radius:8px;border:0.5px solid rgba(245,158,11,.3);margin-top:4px}
+.fv-lock-t{font-size:12px;color:#F59E0B;font-weight:500}
+
+/* ── PRICING ── */
+.pricing{padding:80px 5vw;background:var(--bg)}
+.pricing-inner{max-width:800px;margin:0 auto}
+.pricing-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:48px}
+.plan{background:var(--white);border-radius:var(--r);padding:32px;border:0.5px solid var(--border)}
+.plan.featured{border:2px solid var(--green);position:relative}
+.plan-badge{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;border-radius:20px;padding:3px 16px;font-size:11px;font-weight:600;white-space:nowrap}
+.plan-name{font-size:13px;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.plan-price{font-family:'DM Serif Display',serif;font-size:2.4rem;color:var(--navy);line-height:1;margin-bottom:4px}
+.plan-price span{font-size:14px;font-weight:400;color:var(--text-2);font-family:'DM Sans',sans-serif}
+.plan-desc{font-size:13px;color:var(--text-2);margin-bottom:24px;line-height:1.5}
+.plan-features{display:flex;flex-direction:column;gap:10px;margin-bottom:28px}
+.plan-feat{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text)}
+.plan-feat-icon{font-size:14px;flex-shrink:0}
+.plan-feat.locked{color:var(--text-2);opacity:.6}
+.btn-plan{width:100%;padding:12px;border-radius:var(--rm);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;border:none;transition:all .2s;text-align:center;text-decoration:none;display:block}
+.btn-plan.free{background:var(--blue-l);color:var(--blue)}
+.btn-plan.free:hover{background:var(--blue);color:#fff}
+.btn-plan.premium{background:linear-gradient(135deg,var(--green),var(--green-d));color:#fff;box-shadow:0 4px 14px rgba(46,139,74,.35)}
+.btn-plan.premium:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(46,139,74,.45)}
+
+/* ── FAQ ── */
+.faq{padding:80px 5vw;background:var(--white)}
+.faq-inner{max-width:720px;margin:0 auto}
+.faq-list{margin-top:48px;display:flex;flex-direction:column;gap:2px}
+.faq-item{border:0.5px solid var(--border);border-radius:var(--rm);overflow:hidden}
+.faq-q{width:100%;display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--white);border:none;font-size:14px;font-weight:500;color:var(--text);cursor:pointer;font-family:inherit;text-align:left;transition:background .15s}
+.faq-q:hover{background:var(--bg)}
+.faq-q.open{background:var(--blue-ll)}
+.faq-arrow{font-size:12px;color:var(--text-2);transition:transform .2s;flex-shrink:0}
+.faq-q.open .faq-arrow{transform:rotate(180deg)}
+.faq-a{display:none;padding:0 20px 16px;font-size:13px;color:var(--text-2);line-height:1.7;background:var(--blue-ll)}
+.faq-a.open{display:block}
+
+/* ── CTA BAND ── */
+.cta-band{padding:80px 5vw;background:linear-gradient(135deg,var(--navy) 0%,#1a4a7a 100%);position:relative;overflow:hidden}
+.cta-band::before{content:'☀';position:absolute;right:5vw;top:50%;transform:translateY(-50%);font-size:200px;opacity:.04;pointer-events:none}
+.cta-band-inner{max-width:700px;margin:0 auto;text-align:center;position:relative;z-index:1}
+.cta-band-h{font-family:'DM Serif Display',serif;font-size:clamp(1.6rem,3vw,2.4rem);color:#fff;margin-bottom:12px;line-height:1.2}
+.cta-band-sub{font-size:15px;color:#8BA8C4;margin-bottom:32px;line-height:1.6}
+.btn-cta-band{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,var(--green),var(--green-d));color:#fff;border:none;border-radius:var(--r);padding:15px 32px;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit;text-decoration:none;box-shadow:0 4px 24px rgba(46,139,74,.5);transition:all .2s}
+.btn-cta-band:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(46,139,74,.6)}
+.cta-band-note{font-size:12px;color:#64748B;margin-top:14px}
+
+/* ── FOOTER ── */
+footer{background:var(--navy);padding:40px 5vw 24px;color:#8BA8C4}
+.footer-inner{max-width:1100px;margin:0 auto}
+.footer-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px;flex-wrap:wrap;gap:24px}
+.footer-brand{max-width:280px}
+.footer-logo{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.footer-logo-t{color:#fff;font-size:15px;font-weight:600}
+.footer-desc{font-size:12px;color:#64748B;line-height:1.6}
+.footer-links{display:flex;gap:48px;flex-wrap:wrap}
+.footer-col h4{font-size:12px;font-weight:600;color:#fff;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
+.footer-col a{display:block;font-size:13px;color:#64748B;text-decoration:none;margin-bottom:8px;transition:color .15s}
+.footer-col a:hover{color:#fff}
+.footer-bottom{border-top:1px solid rgba(255,255,255,.08);padding-top:20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;font-size:12px;color:#475569}
+
+/* ── COOKIE BANNER ── */
+.cookie-banner{position:fixed;bottom:0;left:0;right:0;z-index:1000;background:var(--white);border-top:1px solid var(--border);padding:16px 5vw;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;box-shadow:0 -4px 24px rgba(0,0,0,.08);transform:translateY(100%);transition:transform .4s ease}
+.cookie-banner.visible{transform:translateY(0)}
+.cookie-text{font-size:13px;color:var(--text-2);flex:1;min-width:200px}
+.cookie-text a{color:var(--blue);text-decoration:none}
+.cookie-btns{display:flex;gap:8px;flex-shrink:0}
+.btn-cookie-accept{background:var(--green);color:#fff;border:none;border-radius:var(--rm);padding:9px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+.btn-cookie-reject{background:transparent;border:1.5px solid var(--border);color:var(--text-2);border-radius:var(--rm);padding:8px 16px;font-size:13px;cursor:pointer;font-family:inherit;transition:border-color .15s}
+.btn-cookie-reject:hover{border-color:var(--text-2)}
+
+/* ── ANIMATIONS ── */
+.fade-up{opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease}
+.fade-up.visible{opacity:1;transform:translateY(0)}
+
+@media(max-width:768px){
+  .hero-inner{grid-template-columns:1fr;gap:32px}
+  .hero-visual{display:none}
+  .stats-inner{grid-template-columns:1fr 1fr;gap:16px}
+  .how-steps{grid-template-columns:1fr}
+  .how-arrow{display:none}
+  .features-inner{grid-template-columns:1fr}
+  .pricing-grid{grid-template-columns:1fr}
+  .footer-top{flex-direction:column}
+  .footer-links{gap:24px}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="mainNav">
+  <a href="/" class="nav-logo">
+    <div class="nav-logo-box">
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+        <path d="M7 19L14 9L21 19" stroke="#2E8B4A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <rect x="8" y="17" width="12" height="2" rx="1" fill="#2E8B4A" opacity=".7"/>
+      </svg>
+    </div>
+    <div>
+      <div class="nav-logo-t">svjenergie</div>
+      <div class="nav-logo-s">fve kalkulačka pro bytové domy</div>
+    </div>
+  </a>
+  <div class="nav-links">
+    <a href="#jak-to-funguje" class="btn-nav-ghost">Jak to funguje</a>
+    <a href="#cenik" class="btn-nav-ghost">Ceník</a>
+    <a href="kalkulator.html" class="btn-nav-cta">Spočítat zdarma →</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-bg">
+    <div class="hero-orb hero-orb-1"></div>
+    <div class="hero-orb hero-orb-2"></div>
+  </div>
+  <div class="hero-inner">
+    <div class="hero-content">
+      <div class="hero-badge">☀ Nezávislá kalkulačka · Zdarma · Data OTE + PVGIS 2026</div>
+      <h1 class="hero-h1">Kolik ušetří<br>váš bytový dům<br><em>na fotovoltaice?</em></h1>
+      <p class="hero-sub">Zjistěte to za 2 minuty. Zadáte adresu, počet bytů a spotřebiče — kalkulačka spočítá úspory, návratnost a cashflow na 25 let.</p>
+      <div class="hero-ctas">
+        <a href="kalkulator.html" class="btn-hero">⚡ Spočítat úspory zdarma</a>
+        <a href="#jak-to-funguje" class="btn-hero-out">Jak to funguje</a>
+      </div>
+      <div class="hero-trust">
+        <div class="hero-trust-item"><div class="hero-trust-dot"></div>Reálná data z EU databáze PVGIS</div>
+        <div class="hero-trust-item"><div class="hero-trust-dot"></div>Výpočty dle OTE 2026</div>
+        <div class="hero-trust-item"><div class="hero-trust-dot"></div>Bez registrace</div>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="hv-header">
+        <div class="hv-logo">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path d="M4 14L10 6L16 14" stroke="#2E8B4A" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div>
+          <div class="hv-title">svjenergie · Výsledky</div>
+          <div class="hv-sub">Praha 4 · 24 bytů · 26 kWp</div>
+        </div>
+      </div>
+      <div class="hv-body">
+        <div class="hv-label">Orientační výsledky</div>
+        <div class="hv-kpis">
+          <div class="hv-kpi"><div class="hv-kpi-l">Roční úspora</div><div class="hv-kpi-v">134</div><div class="hv-kpi-u">tis. Kč / rok</div></div>
+          <div class="hv-kpi"><div class="hv-kpi-l">Na byt</div><div class="hv-kpi-v">5 583</div><div class="hv-kpi-u">Kč / rok</div></div>
+          <div class="hv-kpi"><div class="hv-kpi-l">Návratnost</div><div class="hv-kpi-v">8,2</div><div class="hv-kpi-u">let</div></div>
+        </div>
+        <div class="hv-label">Čistý přínos / byt / rok (25 let)</div>
+        <div class="hv-bars" id="heroBars"></div>
+        <div class="hv-bar-labels"><span>rok 1</span><span>rok 10</span><span>rok 25</span></div>
+        <div class="hv-cta">
+          <div>
+            <div class="hv-cta-t">Chcete přesná čísla pro schůzi?</div>
+            <div class="hv-cta-s">PDF report · 3 varianty · Editace parametrů</div>
+          </div>
+          <button class="hv-btn" onclick="window.location.href='kalkulator.html'">Spočítat →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<section class="stats">
+  <div class="stats-inner">
+    <div class="stat fade-up">
+      <div class="stat-v" id="statDomy">0</div>
+      <div class="stat-l">spočítaných bytových domů</div>
+    </div>
+    <div class="stat fade-up">
+      <div class="stat-v">68 000 Kč</div>
+      <div class="stat-l">průměrná úspora / rok</div>
+    </div>
+    <div class="stat fade-up">
+      <div class="stat-v">8,5 let</div>
+      <div class="stat-l">průměrná návratnost FVE</div>
+    </div>
+    <div class="stat fade-up">
+      <div class="stat-v">100%</div>
+      <div class="stat-l">nezávislé poradenství</div>
+    </div>
+  </div>
+</section>
+
+<!-- JAK TO FUNGUJE -->
+<section class="how" id="jak-to-funguje">
+  <div class="section-header fade-up">
+    <div class="section-tag">Jak to funguje</div>
+    <h2 class="section-h2">Výsledky za 2 minuty,<br>žádná registrace</h2>
+    <p class="section-sub">Celý proces je navržen tak, aby ho zvládl každý správce SVJ bez technických znalostí.</p>
+  </div>
+  <div class="how-steps">
+    <div class="how-step fade-up">
+      <div class="how-num">1</div>
+      <div class="how-icon">🏠</div>
+      <h3 class="how-h3">Zadáte základní údaje</h3>
+      <p class="how-p">Adresa domu, počet bytů, vchodů a pater. Zbytek — spotřeba, sazba, jistič — dopočítáme automaticky.</p>
+      <div class="how-arrow">→</div>
+    </div>
+    <div class="how-step fade-up">
+      <div class="how-num">2</div>
+      <div class="how-icon">☀</div>
+      <h3 class="how-h3">Načteme reálná data záření</h3>
+      <p class="how-p">Z EU databáze PVGIS načteme hodinová data slunečního záření přímo pro vaši adresu. Žádné průměry, reálná čísla.</p>
+      <div class="how-arrow">→</div>
+    </div>
+    <div class="how-step fade-up">
+      <div class="how-num">3</div>
+      <div class="how-icon">📊</div>
+      <h3 class="how-h3">Dostanete přesné výsledky</h3>
+      <p class="how-p">Úspora na byt, návratnost investice, cashflow 25 let s inflací cen energií. Vše co potřebujete pro schůzi SVJ.</p>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features">
+  <div class="features-inner">
+    <div>
+      <div class="section-tag">Co kalkulačka umí</div>
+      <h2 class="section-h2" style="margin:12px 0 32px">Víc než jen orientační odhad</h2>
+      <div class="features-list">
+        <div class="feat fade-up">
+          <div class="feat-icon blue">📍</div>
+          <div>
+            <div class="feat-h">Reálná solární data z PVGIS</div>
+            <p class="feat-p">EU Joint Research Centre poskytuje hodinová data záření pro každou adresu v ČR. Žádné přibližné průměry.</p>
+          </div>
+        </div>
+        <div class="feat fade-up">
+          <div class="feat-icon green">⚡</div>
+          <div>
+            <div class="feat-h">Výpočet společných prostor</div>
+            <p class="feat-p">Výtahy, oběhová čerpadla, osvětlení, TUV, nabíječky EV — vše zahrnuto v optimalizaci výkonu FVE.</p>
+          </div>
+        </div>
+        <div class="feat fade-up">
+          <div class="feat-icon amber">📈</div>
+          <div>
+            <div class="feat-h">Cashflow s inflací 3 % ročně</div>
+            <p class="feat-p">Výpočet zohledňuje růst cen energií, degradaci panelů i splátky případného úvěru. Rok po roku, 25 let.</p>
+          </div>
+        </div>
+        <div class="feat fade-up">
+          <div class="feat-icon blue">🏦</div>
+          <div>
+            <div class="feat-h">3 varianty — bez baterie, s baterií, JOM</div>
+            <p class="feat-p">Porovnání variant včetně Jednotného odběrného místa (sdílení energie v domě) dle nového energetického zákona.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="features-visual fade-up">
+      <div class="fv-title">Co dostanete po registraci</div>
+      <div class="fv-sub">Zdarma · Bez platební karty</div>
+      <div class="fv-items">
+        <div class="fv-item">
+          <span class="fv-item-icon">📊</span>
+          <div><div class="fv-item-t">Přesná 15min simulace</div><div class="fv-item-s">Výroba vs. spotřeba hodinu po hodině</div></div>
+        </div>
+        <div class="fv-item">
+          <span class="fv-item-icon">⚙️</span>
+          <div><div class="fv-item-t">Editace všech parametrů</div><div class="fv-item-s">Sazba, jistič, spotřeba, distributor</div></div>
+        </div>
+        <div class="fv-item">
+          <span class="fv-item-icon">📈</span>
+          <div><div class="fv-item-t">Cashflow rok po roku</div><div class="fv-item-s">25 let, s inflací a degradací</div></div>
+        </div>
+        <div class="fv-item">
+          <span class="fv-item-icon">🔋</span>
+          <div><div class="fv-item-t">Varianty s baterií a JOM</div><div class="fv-item-s">Porovnání návratnosti</div></div>
+        </div>
+        <div class="fv-lock">
+          <span>📄</span>
+          <div class="fv-lock-t">PDF report pro schůzi SVJ — Premium</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="pricing" id="cenik">
+  <div class="pricing-inner">
+    <div class="section-header fade-up">
+      <div class="section-tag">Ceník</div>
+      <h2 class="section-h2">Začněte zdarma</h2>
+      <p class="section-sub">Základní kalkulace je vždy bez poplatku. Premium odemkne přesnou analýzu a PDF report.</p>
+    </div>
+    <div class="pricing-grid">
+      <div class="plan fade-up">
+        <div class="plan-name">Zdarma</div>
+        <div class="plan-price">0 Kč <span>/ navždy</span></div>
+        <p class="plan-desc">Orientační výsledky bez registrace. Ideální pro první odhad.</p>
+        <div class="plan-features">
+          <div class="plan-feat"><span class="plan-feat-icon">✅</span> Wizard kalkulačka (5 kroků)</div>
+          <div class="plan-feat"><span class="plan-feat-icon">✅</span> Reálná data PVGIS z vaší adresy</div>
+          <div class="plan-feat"><span class="plan-feat-icon">✅</span> Orientační úspora a návratnost</div>
+          <div class="plan-feat"><span class="plan-feat-icon">✅</span> Graf čistého přínosu</div>
+          <div class="plan-feat locked"><span class="plan-feat-icon">🔒</span> Editace parametrů</div>
+          <div class="plan-feat locked"><span class="plan-feat-icon">🔒</span> PDF report pro schůzi</div>
+          <div class="plan-feat locked"><span class="plan-feat-icon">🔒</span> Varianta s baterií a JOM</div>
+        </div>
+        <a href="kalkulator.html" class="btn-plan free">Spočítat zdarma →</a>
+      </div>
+      <div class="plan featured fade-up">
+        <div class="plan-badge">Nejoblíbenější</div>
+        <div class="plan-name">Registrace zdarma</div>
+        <div class="plan-price">0 Kč <span>/ navždy</span></div>
+        <p class="plan-desc">Plná analýza po bezplatné registraci. Připraveno pro schůzi SVJ.</p>
+        <div class="plan-features">
+          <div class="plan-feat"><span class="plan-feat-icon">✅</span> Vše ze Zdarma</div>
+          <div class="plan-feat"><span class="plan-feat-icon">✅</span> Editace všech parametrů</div>
+          <div class="plan-feat"><span class="plan-feat-icon">✅</span> Cashflow 25 let přesně</div>
+          <div class="plan-feat"><span class="plan-feat-icon">✅</span> 3 varianty (bez bat., s bat., JOM)</div>
+          <div class="plan-feat"><span class="plan-feat-icon">✅</span> PDF report pro schůzi SVJ</div>
+          <div class="plan-feat"><span class="plan-feat-icon">✅</span> Uložení simulace</div>
+          <div class="plan-feat"><span class="plan-feat-icon">✅</span> Bezplatná konzultace s odborníkem</div>
+        </div>
+        <a href="kalkulator.html" class="btn-plan premium">Zaregistrovat se zdarma →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="faq">
+  <div class="faq-inner">
+    <div class="section-header fade-up">
+      <div class="section-tag">Časté otázky</div>
+      <h2 class="section-h2">Co SVJ správci nejčastěji řeší</h2>
+    </div>
+    <div class="faq-list">
+      <div class="faq-item fade-up">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Musí s FVE souhlasit všichni vlastníci v SVJ?
+          <span class="faq-arrow">▼</span>
+        </button>
+        <div class="faq-a">Pro instalaci FVE na společné části domu stačí souhlas nadpoloviční většiny vlastníků (dle § 1214 NOZ). Výsledky z naší kalkulačky vám pomohou přesvědčit ostatní — čísla mluví za sebe.</div>
+      </div>
+      <div class="faq-item fade-up">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Co je JOM (Jednotné odběrné místo) a jak pomáhá?
+          <span class="faq-arrow">▼</span>
+        </button>
+        <div class="faq-a">JOM umožňuje sdílet vyrobenou elektřinu mezi byty a společnými prostory v rámci jednoho domu. Každý byt dostane poměrný díl výroby přímo na svůj elektroměr. Zvyšuje vlastní spotřebu FVE a tím i úspory.</div>
+      </div>
+      <div class="faq-item fade-up">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Jak přesná je kalkulačka bez zadání skutečné spotřeby?
+          <span class="faq-arrow">▼</span>
+        </button>
+        <div class="faq-a">Odhad spotřeby vychází ze statistik ERÚ a OTE pro domy podobného složení. Přesnost je ±15–20 %. Po registraci můžete zadat skutečné hodnoty ze složenek nebo z ČEPS — přesnost se zvýší na ±5 %.</div>
+      </div>
+      <div class="faq-item fade-up">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Lze FVE kombinovat s tepelným čerpadlem nebo EV nabíječkami?
+          <span class="faq-arrow">▼</span>
+        </button>
+        <div class="faq-a">Ano, a velmi výhodně. Tepelné čerpadlo a EV nabíječky zvyšují vlastní spotřebu FVE a tím snižují přetoky do sítě. Kalkulačka s tím počítá — zadáte počty EV stání a plánované TČ, výkon FVE se optimalizuje automaticky.</div>
+      </div>
+      <div class="faq-item fade-up">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Zajišťujete i realizaci nebo jen poradenství?
+          <span class="faq-arrow">▼</span>
+        </button>
+        <div class="faq-a">Jsme nezávislá kalkulačka — nenavazujeme na žádného konkrétního dodavatele. Po registraci vás může kontaktovat naše obchodní oddělení s nabídkou bezplatného měření střechy a nezávazné cenové nabídky od prověřených instalatérů.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA BAND -->
+<section class="cta-band">
+  <div class="cta-band-inner">
+    <h2 class="cta-band-h">Spočítejte úspory<br>vašeho bytového domu</h2>
+    <p class="cta-band-sub">Průměrný bytový dům s 12 byty ušetří 68 000 Kč ročně. Zjistěte přesné číslo pro váš dům za 2 minuty.</p>
+    <a href="kalkulator.html" class="btn-cta-band">⚡ Spočítat zdarma →</a>
+    <p class="cta-band-note">Bez registrace · Bez platební karty · Výsledky ihned</p>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <div class="footer-logo">
+          <div class="nav-logo-box">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M4 14L10 6L16 14" stroke="#2E8B4A" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <span class="footer-logo-t">svjenergie</span>
+        </div>
+        <p class="footer-desc">Nezávislá FVE kalkulačka pro bytové domy a SVJ. Reálná data, přesné výpočty, bez závazků.</p>
+      </div>
+      <div class="footer-links">
+        <div class="footer-col">
+          <h4>Kalkulačka</h4>
+          <a href="kalkulator.html">Spočítat zdarma</a>
+          <a href="kalkulator.html">Registrace</a>
+          <a href="#cenik">Ceník</a>
+        </div>
+        <div class="footer-col">
+          <h4>Informace</h4>
+          <a href="#jak-to-funguje">Jak to funguje</a>
+          <a href="#faq">FAQ</a>
+          <a href="#">Blog</a>
+        </div>
+        <div class="footer-col">
+          <h4>Právní</h4>
+          <a href="#">Zásady ochrany osobních údajů</a>
+          <a href="#">Cookies</a>
+          <a href="#">Obchodní podmínky</a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 SVJ Energie · Nezávislé energetické poradenství</span>
+      <span>Data: PVGIS (EU JRC) · OTE · ERÚ</span>
+    </div>
+  </div>
+</footer>
+
+<!-- COOKIE BANNER -->
+<div class="cookie-banner" id="cookieBanner">
+  <p class="cookie-text">
+    Používáme cookies pro analytiku návštěvnosti (Google Analytics). Vaše data nezpracováváme pro reklamní účely.
+    <a href="#">Více informací</a>
+  </p>
+  <div class="cookie-btns">
+    <button class="btn-cookie-reject" onclick="rejectCookies()">Odmítnout</button>
+    <button class="btn-cookie-accept" onclick="acceptCookies()">Přijmout</button>
+  </div>
+</div>
+
+<script>
+// ── NAV scroll effect ──
+window.addEventListener('scroll',function(){
+  document.getElementById('mainNav').classList.toggle('scrolled',window.scrollY>20);
+});
+
+// ── Fade up on scroll ──
+var observer=new IntersectionObserver(function(entries){
+  entries.forEach(function(e){if(e.isIntersecting)e.target.classList.add('visible');});
+},{threshold:0.15});
+document.querySelectorAll('.fade-up').forEach(function(el){observer.observe(el);});
+
+// ── Hero bars animation ──
+(function(){
+  var bars=document.getElementById('heroBars');
+  if(!bars)return;
+  var data=[12,18,24,32,40,48,57,67,78,90,103,117,132,148,165,183,202,222,243,265,288,312,338,365,393];
+  var maxV=Math.max.apply(null,data);
+  var html='';
+  data.forEach(function(v,i){
+    var h=Math.round(v/maxV*100);
+    var col=i<20?'rgba(27,108,168,0.7)':'rgba(27,108,168,0.95)';
+    html+='<div class="hv-bar" style="height:0;background:'+col+';border-radius:2px 2px 0 0" data-h="'+h+'%"></div>';
+  });
+  bars.innerHTML=html;
+  setTimeout(function(){
+    bars.querySelectorAll('.hv-bar').forEach(function(b,i){
+      setTimeout(function(){b.style.height=b.dataset.h;},i*30);
+    });
+  },600);
+})();
+
+// ── Stats counter animation ──
+function animateCounter(el,target,suffix){
+  var start=0,dur=1800,startTime=null;
+  suffix=suffix||'';
+  function step(ts){
+    if(!startTime)startTime=ts;
+    var progress=Math.min((ts-startTime)/dur,1);
+    var ease=1-Math.pow(1-progress,3);
+    el.textContent=Math.round(start+(target-start)*ease)+suffix;
+    if(progress<1)requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+var statsObserver=new IntersectionObserver(function(entries){
+  entries.forEach(function(e){
+    if(e.isIntersecting){
+      animateCounter(document.getElementById('statDomy'),1247,'');
+      statsObserver.disconnect();
+    }
+  });
+},{threshold:0.5});
+var statEl=document.getElementById('statDomy');
+if(statEl)statsObserver.observe(statEl.closest('.stats'));
+
+// ── FAQ ──
+function toggleFaq(btn){
+  var a=btn.nextElementSibling;
+  var isOpen=btn.classList.contains('open');
+  document.querySelectorAll('.faq-q').forEach(function(b){
+    b.classList.remove('open');
+    b.nextElementSibling.classList.remove('open');
+  });
+  if(!isOpen){btn.classList.add('open');a.classList.add('open');}
+}
+
+// ── COOKIES ──
+function initCookies(){
+  var consent=localStorage.getItem('cookie_consent');
+  if(!consent){
+    setTimeout(function(){
+      document.getElementById('cookieBanner').classList.add('visible');
+    },2000);
+  } else if(consent==='accepted'){
+    loadGA();
+  }
+}
+function acceptCookies(){
+  localStorage.setItem('cookie_consent','accepted');
+  document.getElementById('cookieBanner').classList.remove('visible');
+  loadGA();
+}
+function rejectCookies(){
+  localStorage.setItem('cookie_consent','rejected');
+  document.getElementById('cookieBanner').classList.remove('visible');
+}
+function loadGA(){
+  // TODO: nahradit G-XXXXXXXXXX vaším GA4 měřicím ID
+  // Získáte na analytics.google.com → Admin → Datový proud
+  var GA_ID='G-XXXXXXXXXX';
+  if(GA_ID==='G-XXXXXXXXXX')return; // placeholder, GA se nenačte
+  var s=document.createElement('script');
+  s.src='https://www.googletagmanager.com/gtag/js?id='+GA_ID;
+  s.async=true;
+  document.head.appendChild(s);
+  window.dataLayer=window.dataLayer||[];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js',new Date());
+  gtag('config',GA_ID);
+}
+initCookies();
+</script>
+</body>
+</html>
