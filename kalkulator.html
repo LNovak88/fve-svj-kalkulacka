@@ -66,7 +66,7 @@ input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blu
 .hh-wrap{margin:8px 0 14px}.hh-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
 .hh-label{font-size:11px;color:var(--text-2)}.hh-center{font-size:13px;font-weight:600;color:var(--rose)}
 input[type=range]{width:100%;accent-color:var(--blue);margin-bottom:12px;cursor:pointer}
-.chart-wrap{position:relative;height:90px;margin-bottom:4px}.chart-wrap canvas{width:100%;height:90px;display:block}
+.chart-wrap{position:relative;height:130px;margin-bottom:4px}.chart-wrap canvas{width:100%!important;height:130px;display:block}
 .chart-hours{display:flex;justify-content:space-between;font-size:10px;color:#94A3B8;margin-top:3px}
 .lock-row{display:flex;align-items:center;gap:8px;padding:10px 13px;background:var(--bg);border:0.5px solid var(--border);border-radius:var(--rm);margin-bottom:6px}
 .lock-l{flex:1;font-size:13px;color:var(--text-2)}.lock-v{font-size:13px;font-weight:600;color:var(--text)}.lock-ico{font-size:13px;color:#CBD5E1}
@@ -92,7 +92,7 @@ input[type=range]{width:100%;accent-color:var(--blue);margin-bottom:12px;cursor:
 .kpi.green .kpi-l,.kpi.green .kpi-u{color:#2E6B40}.kpi.green .kpi-v{color:#1A5C32}
 /* Cashflow graf */
 .cf-outer{position:relative;margin-bottom:6px}
-.cf-wrap{height:110px}.cf-wrap canvas{width:100%!important;height:110px;display:block}
+.cf-wrap{height:160px}.cf-wrap canvas{width:100%!important;height:160px;display:block}
 .cf-blur{position:absolute;top:0;right:0;bottom:0;width:55%;background:linear-gradient(to right,transparent 0%,rgba(240,247,253,.97) 35%);display:flex;align-items:center;justify-content:flex-end;padding-right:14px;border-radius:var(--rm)}
 /* Scénáře — skryté za registrací */
 .scenare-wrap{position:relative;margin-bottom:14px}
@@ -346,6 +346,16 @@ function doporucenaSazba(z){
   if(z.includes('ev') && !z.includes('bojler')) return 'D27d';
   if(z.includes('bojler') || z.includes('ev')) return 'D25d';
   return 'D02d';
+}
+
+// Jistič jednoho bytu — typické hodnoty dle spotřebičů
+function jisticBytAmpery(zarizeni){
+  const z=zarizeni;
+  if(z.includes('tc')) return 25;
+  if(z.includes('akum')) return 25;
+  if(z.includes('bojler')&&z.includes('sporak')) return 20;
+  if(z.includes('bojler')||z.includes('sporak')) return 16;
+  return 10;
 }
 
 // Tabulka jističů dle počtu bytů a zařízení (z app.py _jistic_dum_ampery)
@@ -728,9 +738,9 @@ function s4(){
   const z=D.zarizeni;
   const sazba=doporucenaSazba(z);
   const amp=jisticDumAmpery(D.bytu,z);
+  const ampByt=jisticBytAmpery(z);
   let sVT=0,sNT=0;
   z.forEach(k=>{if(SP_ZAR[k]){sVT+=SP_ZAR[k].vt*D.bytu;sNT+=SP_ZAR[k].nt*D.bytu;}});
-  const mwh=((sVT+sNT)/1000).toFixed(1);
   const sp=spSpVypocet(D.bytu,D.pater,D.vytahu>0,D.vytahu,D.tuv,D.tc,D.ev,D.cerpadla);
   const lbl=getHhLabel(D.hhSlider);
   return`<div class="card">
@@ -757,7 +767,7 @@ function s4(){
   <div class="slabel">Odhadované parametry</div>
   <div class="lock-row"><span class="lock-l">Spotřeba bytů</span><span class="lock-v" id="lv_sp">${((sVT+sNT)/1000).toFixed(1)} MWh/rok (${Math.round(sVT+sNT).toLocaleString('cs-CZ')} kWh)</span><span class="lock-ico">📊</span></div>
   <div class="lock-row"><span class="lock-l">Odhadovaná sazba bytu</span><span class="lock-v" id="lv_sazba">${sazba}</span><span class="lock-ico">📊</span></div>
-  <div class="lock-row"><span class="lock-l">Odhadovaný jistič bytu</span><span class="lock-v" id="lv_jistic">3×${amp}A</span><span class="lock-ico">📊</span></div>
+  <div class="lock-row"><span class="lock-l">Odhadovaný jistič bytu</span><span class="lock-v" id="lv_jistic">1×${ampByt}A</span><span class="lock-ico">📊</span></div>
   <div class="lock-row"><span class="lock-l">Spotřeba společných prostor</span><span class="lock-v" id="lv_spmwh">${sp.sp_mwh.toFixed(1)} MWh/rok (${Math.round(sp.sp_mwh*1000).toLocaleString('cs-CZ')} kWh)</span><span class="lock-ico">📊</span></div>
   <div class="lock-row"><span class="lock-l">Odhadovaná sazba spol. prostor</span><span class="lock-v" id="lv_spsazba">${sp.sazba_sp}</span><span class="lock-ico">📊</span></div>
   <div class="lock-row"><span class="lock-l">Odhadovaný jistič spol. prostor</span><span class="lock-v" id="lv_jisticsp">3×${sp.jistic_sp_a}A</span><span class="lock-ico">📊</span></div>
@@ -830,47 +840,50 @@ async function fetchPvgis(lat, lon, kwp, sklon, azimut){
   const key=`${lat},${lon},${kwp},${sklon},${azimut}`;
   if(_pvgisCache&&_pvgisParams===key) return _pvgisCache;
   _pvgisParams=key;
-  try{
-    const az1=azimut===999?-90:azimut===998?-45:azimut;
-    const az2=azimut===999?90:azimut===998?45:null;
-    const kwp1=az2?kwp/2:kwp;
-    // Správné parametry PVGIS v5.2 — bez tmy (způsobuje jiný výstup), browser:1 pro CORS
-    const params1=new URLSearchParams({
-      lat, lon, peakpower:kwp1, loss:14,
-      angle:sklon, aspect:az1,
+
+  const az1=azimut===999?-90:azimut===998?-45:azimut;
+  const az2=azimut===999?90:azimut===998?45:null;
+  const kwp1=az2?kwp/2:kwp;
+
+  async function pvgisCall(peakpower, aspect){
+    const params=new URLSearchParams({
+      lat, lon, peakpower, loss:14,
+      angle:sklon, aspect,
       outputformat:'json', browser:1,
       pvcalculation:1, pvtechchoice:'crystSi',
       mountingplace:'building', trackingtype:0,
-      usehorizon:1, startyear:2020, endyear:2023
+      usehorizon:1, startyear:2020, endyear:2020
     });
-    const r1=await fetch('https://re.jrc.ec.europa.eu/api/v5_2/seriescalc?'+params1.toString());
-    if(!r1.ok) throw new Error('PVGIS HTTP '+r1.status);
-    const d1=await r1.json();
-    // PVGIS vrací outputs.hourly jako pole objektů s klíčem 'P' (W)
-    const hourly1=d1?.outputs?.hourly;
-    if(!hourly1||!hourly1.length) throw new Error('PVGIS: prázdná data hourly');
-    let arr=hourly1.map(h=>parseFloat(h.P||0)/1000.0).slice(0,8760);
-    // Pokud split systém — druhý azimut
+    const baseUrl='https://re.jrc.ec.europa.eu/api/v5_2/seriescalc?'+params.toString();
+    // Zkusíme přímé volání, pak CORS proxy
+    const urls=[
+      baseUrl,
+      'https://corsproxy.io/?'+encodeURIComponent(baseUrl)
+    ];
+    for(const url of urls){
+      try{
+        const r=await fetch(url,{signal:AbortSignal.timeout(10000)});
+        if(!r.ok) continue;
+        const d=await r.json();
+        const h=d?.outputs?.hourly;
+        if(h&&h.length>100) return h.map(x=>parseFloat(x.P||0)/1000.0).slice(0,8760);
+      }catch(e){ continue; }
+    }
+    return null;
+  }
+
+  try{
+    const arr1=await pvgisCall(kwp1, az1);
+    if(!arr1) throw new Error('Oba PVGIS endpointy selhaly');
+    let arr=arr1;
     if(az2!==null){
-      const params2=new URLSearchParams({
-        lat, lon, peakpower:kwp/2, loss:14,
-        angle:sklon, aspect:az2,
-        outputformat:'json', browser:1,
-        pvcalculation:1, pvtechchoice:'crystSi',
-        mountingplace:'building', trackingtype:0,
-        usehorizon:1, startyear:2020, endyear:2023
-      });
-      const r2=await fetch('https://re.jrc.ec.europa.eu/api/v5_2/seriescalc?'+params2.toString());
-      if(r2.ok){
-        const d2=await r2.json();
-        const h2=d2?.outputs?.hourly;
-        if(h2&&h2.length) arr=arr.map((v,i)=>v+(parseFloat(h2[i]?.P||0)/1000.0));
-      }
+      const arr2=await pvgisCall(kwp/2, az2);
+      if(arr2) arr=arr.map((v,i)=>v+(arr2[i]||0));
     }
     _pvgisCache=arr;
     return arr;
   }catch(e){
-    console.warn('PVGIS nedostupné, použit fallback:',e.message);
+    console.warn('PVGIS nedostupné:', e.message);
     return null;
   }
 }
@@ -1023,15 +1036,7 @@ function renderResults(R){
     <div class="kpi">
       <div class="kpi-l">Investice / NZÚ úvěr</div>
       <div class="kpi-v">${Math.round(R.investice).toLocaleString('cs-CZ')} <span style="font-size:14px;font-weight:400">Kč</span></div>
-      <div class="kpi-u">splátka ${Math.round(nzu_splatka).toLocaleString('cs-CZ')} Kč/rok</div>
-    </div>
-  </div>
-  <!-- Doporučená baterie -->
-  <div style="background:var(--amber-l);border:1px solid #F6D860;border-radius:var(--rm);padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px">
-    <span style="font-size:22px">🔋</span>
-    <div>
-      <div style="font-size:13px;font-weight:600;color:#7C5300">Doporučená baterie: ${Math.round(R.kwp*1.4*10)/10} kWh</div>
-      <div style="font-size:11px;color:#92400E;margin-top:2px">Zvýší vlastní spotřebu o ~15–20 % · orientační cena ${Math.round(R.kwp*1.4*8000).toLocaleString('cs-CZ')} Kč · návratnost se prodlouží o 1–2 roky</div>
+      <div class="kpi-u">splátka ${Math.round(nzu_splatka/D.bytu/12).toLocaleString('cs-CZ')} Kč/byt/měs</div>
     </div>
   </div>
 
@@ -1044,7 +1049,10 @@ function renderResults(R){
       <div class="var-kwp">${R.kwp}<span> kWp</span></div>
       <div class="var-save">+${Math.round(R.uspora_rok).toLocaleString('cs-CZ')} Kč/rok</div>
       <div class="var-roi">návratnost ${R.nav||'>25'} let</div>
-      <div style="font-size:10px;color:var(--green);margin-top:4px">Max. využití výroby</div>
+      <div style="margin-top:8px;padding:6px 8px;background:rgba(245,158,11,0.1);border-radius:6px;border:1px solid rgba(245,158,11,0.3)">
+        <div style="font-size:11px;font-weight:600;color:#92400E">🔋 + baterie ${Math.round(R.kwp*1.4*10)/10} kWh</div>
+        <div style="font-size:10px;color:#92400E;margin-top:1px">~${Math.round(R.kwp*1.4*8000).toLocaleString('cs-CZ')} Kč · +15–20 % vlastní spotřeby</div>
+      </div>
     </div>
     <div class="var-card${premium?'':' blurred'}">
       ${!premium?'<div class="var-badge" style="background:var(--text-2)">🔒 Po registraci</div>':''}
@@ -1117,78 +1125,130 @@ function renderResults(R){
 function drawProfile(){
   const c=document.getElementById('profCanvas');
   if(!c)return;
-  c.width=c.offsetWidth*2; c.height=180;
+  const dpr=window.devicePixelRatio||1;
+  const W=c.offsetWidth, H=130;
+  c.width=W*dpr; c.height=H*dpr;
+  c.style.width=W+'px'; c.style.height=H+'px';
   const ctx=c.getContext('2d');
-  ctx.scale(2,1);
-  const W=c.offsetWidth, H=90;
+  ctx.scale(dpr,dpr);
   ctx.clearRect(0,0,W,H);
   const pSen=D.hhSlider/100, pPrac=1-pSen;
   const uprava=Array(24).fill(0).map((_,h)=>pPrac*UPRAVY.pracujici[h]+pSen*UPRAVY.seniori[h]);
   const uMean=uprava.reduce((a,b)=>a+b)/24;
   const raw=uprava.map(v=>v/uMean);
   const max=Math.max(...raw);
-  const pad=10;
-  // Pomocná funkce pro hladkou Catmull-Rom křivku
-  function smoothPath(ctx, pts){
-    ctx.moveTo(pts[0].x, pts[0].y);
+  const pad={l:6,r:6,t:12,b:8};
+  const iW=W-pad.l-pad.r, iH=H-pad.t-pad.b;
+  const scX=i=>pad.l+i/23*iW;
+  const scY=v=>pad.t+iH-(v/max)*iH;
+  // Mřížka — vodorovné linky
+  ctx.strokeStyle='rgba(0,0,0,0.05)'; ctx.lineWidth=1;
+  [0.5,1.0,1.5].forEach(g=>{
+    if(g>max) return;
+    ctx.beginPath(); ctx.moveTo(pad.l,scY(g)); ctx.lineTo(W-pad.r,scY(g)); ctx.stroke();
+  });
+  // Catmull-Rom body
+  const pts=raw.map((v,i)=>({x:scX(i),y:scY(v)}));
+  function smoothPath(ctx,pts){
+    ctx.moveTo(pts[0].x,pts[0].y);
     for(let i=0;i<pts.length-1;i++){
-      const p0=pts[Math.max(i-1,0)], p1=pts[i], p2=pts[i+1], p3=pts[Math.min(i+2,pts.length-1)];
-      const cp1x=p1.x+(p2.x-p0.x)/6;
-      const cp1y=p1.y+(p2.y-p0.y)/6;
-      const cp2x=p2.x-(p3.x-p1.x)/6;
-      const cp2y=p2.y-(p3.y-p1.y)/6;
-      ctx.bezierCurveTo(cp1x,cp1y,cp2x,cp2y,p2.x,p2.y);
+      const p0=pts[Math.max(i-1,0)],p1=pts[i],p2=pts[i+1],p3=pts[Math.min(i+2,pts.length-1)];
+      ctx.bezierCurveTo(p1.x+(p2.x-p0.x)/6,p1.y+(p2.y-p0.y)/6,p2.x-(p3.x-p1.x)/6,p2.y-(p3.y-p1.y)/6,p2.x,p2.y);
     }
   }
-  const pts=raw.map((v,i)=>({x:pad+(i/23)*(W-2*pad), y:H-pad-(v/max)*(H-2*pad)}));
   // Gradient výplň
-  const grad=ctx.createLinearGradient(0,0,0,H);
-  grad.addColorStop(0,'rgba(244,63,94,0.25)');
+  const grad=ctx.createLinearGradient(0,pad.t,0,H-pad.b);
+  grad.addColorStop(0,'rgba(244,63,94,0.22)');
   grad.addColorStop(1,'rgba(244,63,94,0.02)');
   ctx.fillStyle=grad;
-  ctx.beginPath();
-  smoothPath(ctx,pts);
-  ctx.lineTo(pts[pts.length-1].x, H-pad);
-  ctx.lineTo(pts[0].x, H-pad);
-  ctx.closePath();
-  ctx.fill();
-  // Červená hladká křivka
+  ctx.beginPath(); smoothPath(ctx,pts);
+  ctx.lineTo(pts[pts.length-1].x,H-pad.b); ctx.lineTo(pts[0].x,H-pad.b);
+  ctx.closePath(); ctx.fill();
+  // Křivka
   ctx.strokeStyle='#F43F5E'; ctx.lineWidth=2.5; ctx.lineJoin='round';
-  ctx.beginPath();
-  smoothPath(ctx,pts);
-  ctx.stroke();
+  ctx.beginPath(); smoothPath(ctx,pts); ctx.stroke();
+  // Průměrná linka
+  ctx.strokeStyle='rgba(244,63,94,0.3)'; ctx.lineWidth=1; ctx.setLineDash([4,4]);
+  ctx.beginPath(); ctx.moveTo(pad.l,scY(1)); ctx.lineTo(W-pad.r,scY(1)); ctx.stroke();
+  ctx.setLineDash([]);
 }
 
 function drawCf(cf){
   if(!cf) return;
   const c=document.getElementById('cfCanvas');
   if(!c)return;
-  c.width=c.offsetWidth*2; c.height=200;
+  const dpr=window.devicePixelRatio||1;
+  const W=c.offsetWidth, H=160;
+  c.width=W*dpr; c.height=H*dpr;
+  c.style.width=W+'px'; c.style.height=H+'px';
   const ctx=c.getContext('2d');
-  ctx.scale(2,1);
-  const W=c.offsetWidth, H=100;
+  ctx.scale(dpr,dpr);
+  ctx.clearRect(0,0,W,H);
   const vals=cf.map(r=>r.kumulativni);
-  const min=Math.min(...vals,0), max=Math.max(...vals);
-  const range=Math.max(max-min,1);
-  const pad={l:10,r:10,t:10,b:10};
+  const min=Math.min(...vals,0), max=Math.max(...vals,1);
+  const range=max-min;
+  const pad={l:52,r:16,t:14,b:28};
   const iW=W-pad.l-pad.r, iH=H-pad.t-pad.b;
-  const scX=(i)=>pad.l+i/(cf.length-1)*iW;
-  const scY=(v)=>pad.t+iH-(v-min)/range*iH;
-  // Plocha
-  ctx.fillStyle='rgba(46,139,74,0.12)';
-  ctx.beginPath(); ctx.moveTo(scX(0),scY(0));
-  vals.forEach((v,i)=>ctx.lineTo(scX(i),scY(v)));
-  ctx.lineTo(scX(vals.length-1),scY(0)); ctx.lineTo(scX(0),scY(0));
-  ctx.closePath(); ctx.fill();
+  const scX=i=>pad.l+i/(cf.length-1)*iW;
+  const scY=v=>pad.t+iH-(v-min)/range*iH;
+  // Mřížka vodorovná
+  const steps=4;
+  ctx.font=`10px DM Sans,system-ui,sans-serif`;
+  ctx.textAlign='right'; ctx.fillStyle='#94A3B8';
+  for(let s=0;s<=steps;s++){
+    const v=min+range/steps*s;
+    const y=scY(v);
+    ctx.strokeStyle='rgba(0,0,0,0.06)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(W-pad.r,y); ctx.stroke();
+    const label=Math.round(v/1000)===0?'0':Math.round(v/1000)+'k';
+    ctx.fillText(label+' Kč',pad.l-4,y+3.5);
+  }
+  // Svislé značky roků
+  ctx.textAlign='center'; ctx.fillStyle='#CBD5E1';
+  [5,10,15,20,25].forEach(rok=>{
+    const i=rok-1;
+    const x=scX(i);
+    ctx.beginPath(); ctx.moveTo(x,pad.t); ctx.lineTo(x,H-pad.b); ctx.stroke();
+    ctx.fillStyle='#94A3B8';
+    ctx.fillText(rok,x,H-pad.b+10);
+    ctx.fillStyle='#CBD5E1';
+  });
   // Nulová osa
-  if(min<0&&max>0){ctx.strokeStyle='rgba(0,0,0,0.15)';ctx.lineWidth=1;ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(pad.l,scY(0));ctx.lineTo(W-pad.r,scY(0));ctx.stroke();ctx.setLineDash([]);}
+  if(min<0&&max>0){
+    ctx.strokeStyle='rgba(30,58,95,0.2)'; ctx.lineWidth=1.5; ctx.setLineDash([5,4]);
+    ctx.beginPath(); ctx.moveTo(pad.l,scY(0)); ctx.lineTo(W-pad.r,scY(0)); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  // Gradient plocha
+  const gradFill=ctx.createLinearGradient(0,pad.t,0,H-pad.b);
+  gradFill.addColorStop(0,'rgba(46,139,74,0.2)');
+  gradFill.addColorStop(1,'rgba(46,139,74,0.02)');
+  ctx.fillStyle=gradFill;
+  ctx.beginPath(); ctx.moveTo(scX(0),scY(Math.max(vals[0],0)));
+  vals.forEach((v,i)=>ctx.lineTo(scX(i),scY(v)));
+  ctx.lineTo(scX(vals.length-1),scY(0)); ctx.lineTo(scX(0),scY(Math.max(vals[0],0)));
+  ctx.closePath(); ctx.fill();
   // Čára
-  ctx.strokeStyle='var(--green)'; ctx.lineWidth=2.5; ctx.lineJoin='round';
+  ctx.strokeStyle='#2E8B4A'; ctx.lineWidth=2.5; ctx.lineJoin='round'; ctx.lineCap='round';
   ctx.beginPath(); vals.forEach((v,i)=>i===0?ctx.moveTo(scX(i),scY(v)):ctx.lineTo(scX(i),scY(v)));
   ctx.stroke();
   // Bod návratnosti
-  const nav=cf.findIndex(r=>r.kumulativni>=0);
-  if(nav>0){ctx.fillStyle='var(--green)';ctx.beginPath();ctx.arc(scX(nav),scY(0),5,0,Math.PI*2);ctx.fill();ctx.fillStyle='var(--green)';ctx.font='bold 11px DM Sans,sans-serif';ctx.textAlign='center';ctx.fillText(`rok ${nav+1}`,scX(nav),scY(0)-9);}
+  const navIdx=vals.findIndex(v=>v>=0);
+  if(navIdx>0){
+    const nx=scX(navIdx), ny=scY(0);
+    // Pulzující kruh
+    ctx.fillStyle='rgba(46,139,74,0.15)';
+    ctx.beginPath(); ctx.arc(nx,ny,10,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#2E8B4A';
+    ctx.beginPath(); ctx.arc(nx,ny,5,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#fff';
+    ctx.beginPath(); ctx.arc(nx,ny,2.5,0,Math.PI*2); ctx.fill();
+    // Popis
+    ctx.fillStyle='#1A5C32'; ctx.font=`bold 11px DM Sans,system-ui,sans-serif`;
+    ctx.textAlign='center';
+    const lblY=ny-14;
+    ctx.fillText(`✓ rok ${navIdx+1}`,nx,lblY);
+  }
 }
 
 // ================================================================
