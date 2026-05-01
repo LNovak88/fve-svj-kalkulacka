@@ -624,7 +624,8 @@ function stepper(key,label,min,max,step){
 function stepDirect(key,mn,mx){
   const el=document.getElementById('sv_'+key);
   if(!el)return;
-  D[key]=Math.min(mx,Math.max(mn,parseInt(el.value)||0));
+  const val=parseInt(el.value);
+  D[key]=Math.min(mx,Math.max(mn,isNaN(val)?mn:val));
   el.value=D[key];
   stepChange(key,0,mn,mx);
 }
@@ -691,7 +692,7 @@ function s1(){
   <div class="autocomplete-wrap"><input type="text" id="fLok" placeholder="Např. Praha 4, Nuselská 12" value="${D.lokace}" autocomplete="off"><div class="ac-list" id="acList"></div></div>
   <div class="tip">☀️ Stačí napsat město nebo ulici — adresu ověříme přes OpenStreetMap a načteme reálná solární data z EU databáze PVGIS. Výpočet bude přesný pro vaši konkrétní polohu.</div>
   <div class="slabel">Základní údaje domu</div>
-  <div style="display:flex;flex-direction:column;gap:10px">${stepper('bytu','Počet bytů',2,300)}${stepper('vchodu','Počet vchodů',1,20)}${stepper('pater','Počet pater',1,30)}</div>
+  <div style="display:flex;flex-direction:column;gap:10px">${stepper('bytu','Počet bytů',1,300)}${stepper('vchodu','Počet vchodů',1,20)}${stepper('pater','Počet pater',1,30)}</div>
   </div>
   <div class="nav"><span class="step-lbl">Krok 1 z 5</span><button class="btn-prim" onclick="goNext()">Pokračovat →</button></div>`;
 }
