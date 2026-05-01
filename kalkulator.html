@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FVE Kalkulačka pro SVJ a bytové domy | svjenergie.cz</title>
 <meta name="description" content="Zdarma spočítejte úspory z fotovoltaiky pro váš bytový dům nebo SVJ. Reálná data PVGIS, výpočet návratnosti, cashflow 25 let.">
-<meta name="keywords" content="FVE kalkulačka SVJ, fotovoltaika bytový dům, solární panely SVJ, úspory elektřiny SVJ, JOM sdílení energie, návratnost FVE">
 <link rel="canonical" href="https://www.svjenergie.cz/kalkulator">
 <meta property="og:title" content="FVE Kalkulačka pro SVJ — kolik ušetří váš bytový dům?">
 <meta property="og:description" content="Bezplatná kalkulačka fotovoltaiky pro bytové domy a SVJ. Výpočet úspor, návratnosti a cashflow za 2 minuty.">
@@ -74,21 +73,48 @@ input[type=range]{width:100%;accent-color:var(--blue);margin-bottom:12px;cursor:
 .badge{display:inline-flex;align-items:center;border-radius:20px;padding:2px 10px;font-size:10px;font-weight:600;white-space:nowrap}
 .b-amber{background:var(--amber-l);color:#92400E}.b-blue{background:var(--blue-l);color:#0C4A7C}.b-green{background:var(--green-l);color:#1A5C32}.b-always{background:#F1F5F9;color:#475569}
 .tip{font-size:12px;color:#4A7BA8;padding:10px 14px;background:var(--blue-ll);border-radius:var(--rm);border-left:3px solid var(--blue);margin-top:12px;line-height:1.5}
+/* VÝSLEDKY */
 .var-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px}
-.var-card{border:0.5px solid var(--border);border-radius:var(--r);padding:16px 12px;text-align:center;position:relative;background:var(--white)}
+.var-card{border:0.5px solid var(--border);border-radius:var(--r);padding:16px 12px;text-align:center;position:relative;background:var(--white);transition:box-shadow .2s}
 .var-card.best{border:2px solid var(--blue);box-shadow:0 0 0 4px rgba(27,108,168,.08)}
-.var-card.blurred{filter:blur(2.5px);pointer-events:none;opacity:.5;user-select:none}
+.var-card.blurred{filter:blur(3px);pointer-events:none;opacity:.6;user-select:none}
 .var-badge{position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:var(--blue);color:#fff;font-size:10px;font-weight:600;padding:3px 12px;border-radius:10px;white-space:nowrap}
 .var-name{font-size:11px;color:var(--text-2);margin-bottom:8px}
 .var-kwp{font-size:24px;font-weight:600;color:var(--navy);line-height:1}
 .var-kwp span{font-size:13px;font-weight:400;color:var(--text-2)}
-.var-save{font-size:13px;color:var(--green);font-weight:600;margin-top:6px}
+.var-save{font-size:15px;color:var(--green);font-weight:600;margin-top:6px}
 .var-roi{font-size:11px;color:var(--text-2);margin-top:3px}
+.var-lock-msg{font-size:11px;color:var(--blue);margin-top:8px;font-weight:500}
 .kpi-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px}
 .kpi{background:var(--blue-ll);border-radius:var(--rm);padding:14px 16px;border:0.5px solid #C8DFF2}
 .kpi-l{font-size:11px;color:#4A7BA8;margin-bottom:4px}.kpi-v{font-size:26px;font-weight:600;color:var(--navy);line-height:1}.kpi-u{font-size:11px;color:#4A7BA8;margin-top:3px}
-.cf-wrap{position:relative;height:90px;margin-bottom:6px}.cf-wrap canvas{width:100%;height:90px;display:block}
-.cf-blur{position:absolute;inset:0;background:linear-gradient(to right,transparent 35%,rgba(240,247,253,.96) 70%);display:flex;align-items:center;justify-content:flex-end;padding-right:14px;border-radius:var(--rm)}
+.kpi.green{background:var(--green-l);border-color:#A3D8B8}
+.kpi.green .kpi-l,.kpi.green .kpi-u{color:#2E6B40}.kpi.green .kpi-v{color:#1A5C32}
+.cf-wrap{position:relative;height:100px;margin-bottom:6px}.cf-wrap canvas{width:100%;height:100px;display:block}
+.cf-blur{position:absolute;inset:0;background:linear-gradient(to right,transparent 40%,rgba(240,247,253,.97) 65%);display:flex;align-items:center;justify-content:flex-end;padding-right:14px;border-radius:var(--rm)}
+/* Scénáře — skryté za registrací */
+.scenare-wrap{position:relative;margin-bottom:14px}
+.scenare-blur{filter:blur(4px);pointer-events:none;user-select:none}
+.scenare-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:rgba(240,247,253,0.85);border-radius:var(--r);border:1.5px dashed var(--blue)}
+.scenar-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.scenar-card{border:0.5px solid var(--border);border-radius:var(--rm);padding:14px;text-align:center;background:var(--white)}
+.scenar-title{font-size:11px;font-weight:600;color:var(--text-2);margin-bottom:8px}
+.scenar-v{font-size:18px;font-weight:700;color:var(--navy)}
+.scenar-sub{font-size:11px;color:var(--text-2);margin-top:3px}
+/* NZÚ highlight */
+.nzu-box{background:linear-gradient(135deg,#E3F4E9 0%,#F0FAF4 100%);border:1px solid #A3D8B8;border-radius:var(--r);padding:18px 20px;margin-bottom:12px}
+.nzu-title{font-size:14px;font-weight:600;color:#1A5C32;margin-bottom:8px}
+.nzu-row{display:flex;align-items:center;gap:10px;margin-bottom:6px;font-size:13px;color:#2E6B40}
+/* Verdikt */
+.verdikt{border-radius:var(--r);padding:16px 20px;margin-bottom:12px;font-size:14px;line-height:1.6}
+.verdikt.ok{background:var(--green-l);border:1px solid #A3D8B8;color:#1A5C32}
+.verdikt.warn{background:var(--amber-l);border:1px solid #F6D860;color:#7C5300}
+.verdikt.err{background:#FEE2E2;border:1px solid #FCA5A5;color:#991B1B}
+/* Načítání PVGIS */
+.pvgis-loading{display:flex;align-items:center;gap:12px;padding:16px 20px;background:var(--blue-ll);border-radius:var(--rm);border:0.5px solid #C8DFF2;margin-bottom:12px;font-size:13px;color:#4A7BA8}
+.pvgis-spinner{width:20px;height:20px;border:2.5px solid #C8DFF2;border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* Modals */
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,.75);z-index:1000;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
 .modal-overlay.open{display:flex}
 .modal{background:var(--white);border-radius:16px;padding:32px;max-width:480px;width:calc(100% - 2rem);box-shadow:0 24px 80px rgba(0,0,0,.25);animation:slideUp .3s ease;position:relative}
@@ -124,13 +150,10 @@ input[type=range]{width:100%;accent-color:var(--blue);margin-bottom:12px;cursor:
 .success-icon{font-size:48px;margin-bottom:12px}
 .success-title{font-family:'DM Serif Display',serif;font-size:22px;color:var(--navy);margin-bottom:8px}
 .success-desc{font-size:13px;color:var(--text-2);line-height:1.5}
-.pw-wrap{position:relative}
-.pw-wrap input{padding-right:42px}
+.pw-wrap{position:relative}.pw-wrap input{padding-right:42px}
 .pw-eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;color:var(--text-2);padding:0;line-height:1}
 .pw-strength{height:3px;border-radius:2px;margin-top:4px;transition:all .3s;background:var(--border)}
-.pw-strength.weak{background:#F43F5E;width:33%}
-.pw-strength.ok{background:var(--amber);width:66%}
-.pw-strength.strong{background:var(--green);width:100%}
+.pw-strength.weak{background:#F43F5E;width:33%}.pw-strength.ok{background:var(--amber);width:66%}.pw-strength.strong{background:var(--green);width:100%}
 .pw-hint{font-size:10px;color:var(--text-2);margin-top:2px}
 .modal-link{background:none;border:none;color:var(--blue);font-size:12px;cursor:pointer;padding:0;text-decoration:underline;font-family:inherit}
 .modal-tabs{display:flex;gap:0;margin-bottom:18px;border-bottom:1.5px solid var(--border)}
@@ -141,8 +164,9 @@ input[type=range]{width:100%;accent-color:var(--blue);margin-bottom:12px;cursor:
 .stepper-btn{width:36px;height:40px;border:none;background:var(--bg);cursor:pointer;font-size:18px;font-weight:400;color:var(--blue);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .1s;user-select:none;line-height:1}
 .stepper-btn:hover{background:var(--blue-l)}.stepper-btn:active{background:var(--blue-l)}
 .stepper-val{flex:1;text-align:center;font-size:15px;font-weight:600;color:var(--text);border:none;outline:none;background:transparent;min-width:32px;padding:0;-moz-appearance:textfield;width:48px}
-@keyframes spin{to{transform:rotate(360deg)}}
-@media(max-width:560px){.g3{grid-template-columns:1fr 1fr}.tog-grid{grid-template-columns:1fr}.var-grid{grid-template-columns:1fr}.kpi-row{grid-template-columns:1fr 1fr}.cta-box{flex-direction:column;text-align:center}.hdr-steps{display:none}}
+@media(max-width:560px){.g3{grid-template-columns:1fr 1fr}.tog-grid{grid-template-columns:1fr}.var-grid{grid-template-columns:1fr}.kpi-row{grid-template-columns:1fr 1fr}.cta-box{flex-direction:column;text-align:center}.hdr-steps{display:none}.scenar-grid{grid-template-columns:1fr}}
+/* Supabase */
+.field-err{font-size:11px;color:#F43F5E;margin-top:3px}
 </style>
 </head>
 <body>
@@ -157,133 +181,428 @@ input[type=range]{width:100%;accent-color:var(--blue);margin-bottom:12px;cursor:
         <text x="20" y="35" text-anchor="middle" font-size="8" font-weight="700" fill="white" font-family="system-ui" letter-spacing="0.5">SVJ</text>
       </svg>
     </div>
-    <div><div class="logo-t">svjenergie</div><div class="logo-s">fve kalkulačka pro bytov&#233; domy</div></div>
+    <div><div class="logo-t">svjenergie</div><div class="logo-s">fve kalkulačka pro bytové domy</div></div>
   </a>
   <div style="display:flex;align-items:center;gap:10px">
-      <button onclick="openModal();switchTab('login')" style="background:transparent;border:1.5px solid rgba(255,255,255,0.35);color:#fff;border-radius:var(--rm);padding:7px 14px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">Přihlásit se</button>
-      <nav class="hdr-steps" id="stepDots"></nav>
-    </div>
+    <button onclick="openModal();switchTab('login')" style="background:transparent;border:1.5px solid rgba(255,255,255,0.35);color:#fff;border-radius:var(--rm);padding:7px 14px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">Přihlásit se</button>
+    <nav class="hdr-steps" id="stepDots"></nav>
+  </div>
 </header>
 <div class="prog"><div class="prog-f" id="progBar" style="width:16.6%"></div></div>
 <main id="content"></main>
 </div>
 
+<!-- MODAL -->
 <div class="modal-overlay" id="regModal">
   <div class="modal">
     <button class="modal-close" onclick="closeModal()">&#x2715;</button>
-    <div class="modal-badge">&#10024; Zdarma &mdash; v&yacute;sledky ihned</div>
-    <h2 class="modal-title">Z&iacute;skejte p&#345;esnou anal&yacute;zu pro sch&#367;zi SVJ</h2>
+    <div class="modal-badge">✨ Zdarma — výsledky ihned</div>
+    <h2 class="modal-title">Získejte přesnou analýzu pro schůzi SVJ</h2>
     <div class="modal-tabs">
       <button class="modal-tab active" id="tabReg" onclick="switchTab('reg')">Registrace</button>
-      <button class="modal-tab" id="tabLogin" onclick="switchTab('login')">P&#345;ihl&aacute;&scaron;en&iacute;</button>
+      <button class="modal-tab" id="tabLogin" onclick="switchTab('login')">Přihlášení</button>
       <button class="modal-tab" id="tabReset" onclick="switchTab('reset')">Reset hesla</button>
     </div>
     <div id="regFormWrap">
-      <!-- REGISTRACE -->
       <div id="panelReg">
+        <div class="benefit"><span class="benefit-icon">📊</span>25letý cashflow ve 3 scénářích vývoje cen</div>
+        <div class="benefit"><span class="benefit-icon">⚡</span>Porovnání modelů sdílení — podružná měřidla vs EDC</div>
+        <div class="benefit"><span class="benefit-icon">🏛️</span>Detail NZÚ: bezúročný úvěr + bonus za zranitelné domácnosti</div>
+        <div class="benefit"><span class="benefit-icon">📋</span>PDF shrnutí pro schůzi SVJ</div>
         <div class="modal-form">
-          <input type="text" id="regJmeno" placeholder="Jm&eacute;no a p&#345;&iacute;jmen&iacute;" autocomplete="name">
-          <input type="email" id="regEmail" placeholder="E-mailov&aacute; adresa" autocomplete="email">
+          <input type="text" id="regJmeno" placeholder="Jméno a příjmení" autocomplete="name">
+          <input type="email" id="regEmail" placeholder="E-mailová adresa" autocomplete="email">
           <div style="position:relative">
-            <input type="tel" id="regTel" placeholder="Telefon (nap&#345;. 603 123 456)" autocomplete="tel" oninput="formatTel(this)">
+            <input type="tel" id="regTel" placeholder="Telefon (např. 603 123 456)" autocomplete="tel" oninput="formatTel(this)">
             <span id="telIcon" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none"></span>
           </div>
-          <input type="text" id="regSvj" placeholder="N&aacute;zev SVJ nebo bytov&eacute;ho domu (voliteln&eacute;)">
+          <input type="text" id="regSvj" placeholder="Název SVJ nebo bytového domu (volitelné)">
           <div class="pw-wrap">
-            <input type="password" id="regPw" placeholder="Heslo (min. 8 znak&#367;)" autocomplete="new-password" oninput="checkPwStrength(this.value)">
-            <button class="pw-eye" onclick="togglePw('regPw',this)" type="button">&#128065;</button>
+            <input type="password" id="regPw" placeholder="Heslo (min. 8 znaků)" autocomplete="new-password" oninput="checkPwStrength(this.value)">
+            <button class="pw-eye" onclick="togglePw('regPw',this)" type="button">👁</button>
             <div class="pw-strength" id="pwStrength"></div>
             <div class="pw-hint" id="pwHint"></div>
           </div>
           <div class="pw-wrap">
             <input type="password" id="regPw2" placeholder="Potvrdit heslo" autocomplete="new-password">
-            <button class="pw-eye" onclick="togglePw('regPw2',this)" type="button">&#128065;</button>
+            <button class="pw-eye" onclick="togglePw('regPw2',this)" type="button">👁</button>
           </div>
           <button class="btn-register" id="regBtn" onclick="submitReg()">
-            <span id="regBtnTxt">Vytvo&#345;it &uacute;&#269;et a odemknout v&yacute;sledky &rarr;</span>
+            <span id="regBtnTxt">Vytvořit účet a odemknout výsledky →</span>
           </button>
         </div>
-        <p class="modal-note" style="display:none">&#128274; Bez spamu. Žádná platba. Kdykoliv odhlásit.</p>
         <div style="margin-top:12px;padding:10px 14px;background:var(--green-l);border-radius:var(--rm);border-left:3px solid var(--green);font-size:12px;color:#1A5C32;line-height:1.5">
           <strong>Co se stane po registraci?</strong><br>
           Naše obchodní oddělení vás bude kontaktovat s nabídkou osobní schůzky, bezplatného měření střechy a nezávazné cenové nabídky na míru.
         </div>
       </div>
-      <!-- PŘIHLÁŠENÍ -->
       <div id="panelLogin" style="display:none">
         <div class="modal-form">
-          <input type="email" id="loginEmail" placeholder="E-mailov&aacute; adresa" autocomplete="email">
+          <input type="email" id="loginEmail" placeholder="E-mailová adresa" autocomplete="email">
           <div class="pw-wrap">
             <input type="password" id="loginPw" placeholder="Heslo" autocomplete="current-password">
-            <button class="pw-eye" onclick="togglePw('loginPw',this)" type="button">&#128065;</button>
+            <button class="pw-eye" onclick="togglePw('loginPw',this)" type="button">👁</button>
           </div>
           <button class="btn-register" id="loginBtn" onclick="submitLogin()">
-            <span id="loginBtnTxt">P&#345;ihl&aacute;sit se &rarr;</span>
+            <span id="loginBtnTxt">Přihlásit se →</span>
           </button>
         </div>
-        <p class="modal-note" style="margin-top:10px">
-          <button class="modal-link" onclick="switchTab('reset')">Zapomn&#283;l jsem heslo</button>
-        </p>
+        <p class="modal-note" style="margin-top:10px"><button class="modal-link" onclick="switchTab('reset')">Zapomněl jsem heslo</button></p>
       </div>
-      <!-- RESET HESLA -->
       <div id="panelReset" style="display:none">
-        <p style="font-size:13px;color:var(--text-2);margin-bottom:14px">
-          Zadejte e-mail &mdash; po&scaron;leme v&aacute;m odkaz pro obnovu hesla.
-        </p>
+        <p style="font-size:13px;color:var(--text-2);margin-bottom:14px">Zadejte e-mail — pošleme vám odkaz pro obnovu hesla.</p>
         <div class="modal-form">
-          <input type="email" id="resetEmail" placeholder="E-mailov&aacute; adresa">
+          <input type="email" id="resetEmail" placeholder="E-mailová adresa">
           <button class="btn-register" id="resetBtn" onclick="submitReset()">
-            <span id="resetBtnTxt">Odeslat odkaz pro obnovu &rarr;</span>
+            <span id="resetBtnTxt">Odeslat odkaz pro obnovu →</span>
           </button>
         </div>
       </div>
     </div>
     <div id="regSuccess" style="display:none">
       <div class="success-box">
-        <div class="success-icon">&#127881;</div>
-        <div class="success-title">V&#253;sledky jsou odemknuty!</div>
-        <div class="success-desc">Potvrzen&#237; jsme poslali na v&#225;&#353; e&#8209;mail.<br>Pln&#225; anal&#253;za se na&#269;&#237;t&#225;&#8230;</div>
+        <div class="success-icon">🎉</div>
+        <div class="success-title">Výsledky jsou odemknuty!</div>
+        <div class="success-desc">Potvrzení jsme poslali na váš e‑mail.<br>Plná analýza se načítá…</div>
       </div>
     </div>
   </div>
 </div>
 
 <script>
+// ================================================================
+// KONSTANTY — z app.py (ceníky 2026)
+// ================================================================
+const CENY_VT={
+  "ČEZ Distribuce":{D01d:7320,D02d:6610,D25d:6920,D26d:5650,D27d:6920,D35d:5410,D45d:5410,D56d:5410,D57d:5410,D61d:8050},
+  "EG.D (E.ON)":   {D01d:7050,D02d:6550,D25d:6650,D26d:5430,D27d:6650,D35d:4270,D45d:4270,D56d:4270,D57d:4270,D61d:7720},
+  "PREdistribuce": {D01d:5980,D02d:5570,D25d:5620,D26d:4840,D27d:5620,D35d:3910,D45d:3910,D56d:3910,D57d:3910,D61d:6770}
+};
+const CENY_NT={
+  "ČEZ Distribuce":{D25d:4070,D26d:4070,D27d:4020,D35d:4390,D45d:4390,D56d:4390,D57d:4390,D61d:4200},
+  "EG.D (E.ON)":   {D25d:3830,D26d:3830,D27d:3830,D35d:3830,D45d:3830,D56d:3830,D57d:3830,D61d:3830},
+  "PREdistribuce": {D25d:3590,D26d:3590,D27d:3590,D35d:3590,D45d:3590,D56d:3590,D57d:3590,D61d:3590}
+};
 
-const CENY_VT={"ČEZ Distribuce":{D01d:7320,D02d:6610,D25d:6920,D26d:5650,D27d:6920,D35d:5410,D45d:5410,D56d:5410,D57d:5410,D61d:8050},"EG.D (E.ON)":{D01d:7050,D02d:6550,D25d:6650,D26d:5430,D27d:6650,D35d:4270,D45d:4270,D56d:4270,D57d:4270,D61d:7720},"PREdistribuce":{D01d:5980,D02d:5570,D25d:5620,D26d:4840,D27d:5620,D35d:3910,D45d:3910,D56d:3910,D57d:3910,D61d:6770}};
-const CENY_NT={"ČEZ Distribuce":{D25d:4070,D26d:4070,D27d:4020,D35d:4390,D45d:4390,D56d:4390,D57d:4390,D61d:4200},"EG.D (E.ON)":{D25d:3830,D26d:3830,D27d:3830,D35d:3830,D45d:3830,D56d:3830,D57d:3830,D61d:3830},"PREdistribuce":{D25d:3590,D26d:3590,D27d:3590,D35d:3590,D45d:3590,D56d:3590,D57d:3590,D61d:3590}};
-const SP_ZAR={zaklad:{vt:1200,nt:0},sporak:{vt:400,nt:0},bojler:{vt:0,nt:800},klima:{vt:400,nt:0},akumul:{vt:0,nt:2000}};
+// Spotřeba na byt/rok dle zařízení (kWh)
+const SP_ZAR={
+  zaklad:{vt:1200,nt:0},
+  sporak:{vt:400,nt:0},
+  bojler:{vt:0,nt:800},
+  klima:{vt:400,nt:0},
+  akum:{vt:0,nt:2000},
+  tc:{vt:0,nt:3000},
+  ev:{vt:0,nt:1500}
+};
 
-function doporucenaSazba(z){if(z.includes('tc'))return'D57d';if(z.includes('akumul'))return'D26d';if(z.includes('bojler'))return'D25d';if(z.includes('klima'))return'D25d';return'D02d';}
-function doporucenyJistic(b,z){const pb=parseInt(b);const hasTc=z.includes('tc'),hasA=z.includes('akumul'),hasS=z.includes('sporak'),hasB=z.includes('bojler');if(hasTc||hasA){return pb<=8?'3x50A':pb<=16?'3x63A':'3x63A';}if(hasS&&hasB){return pb<=8?'3x32A':pb<=16?'3x40A':'3x50A';}if(hasS||hasB){return pb<=12?'3x32A':pb<=24?'3x40A':'3x50A';}return pb<=10?'3x25A':pb<=20?'3x32A':pb<=40?'3x40A':'3x50A';}
-function spSp(bytu,pater,vytahu,tuv,tc,ev,cerpadla){const pb=+bytu||0,pp=+pater||0,pv=+vytahu||0,pc=+cerpadla||0;const osv=pp*200+pb*2+100,vyt=pv>0?3000*pv*(1+pp/20):0,crp=pc>0?536*pc*(1+pp/30):0;const spVt=osv+vyt+crp,spTuv=tuv?800*pb:0,spTc=tc?3000*pb:0,spEv=parseInt(ev)*1500,spNt=spTuv+spTc+spEv;let sazba=tc?'D57d':tuv?'D25d':'D02d';let Pkw=pv*7.5+pc*0.25+1;if(tc)Pkw+=pb*3;else if(tuv)Pkw+=pb*0.5;Pkw+=parseInt(ev)*7.4;const I=Pkw*1000/(Math.sqrt(3)*400),std=[25,32,40,50,63,80,100],amp=std.find(j=>j>=I)||100;return{mwh:(spVt+spNt)/1000,sazba,jistic:`3x${amp}A`};}
-function cenaKwp(k){return k<=5?40000:k<=10?36000:k<=20?33000:k<=50?30000:27000;}
-function optimKwp(b,z,ev,tc){let k=(+b||0)*0.55;if(tc)k*=1.35;if(+ev>0)k*=1.15;return Math.round(k*10)/10;}
-function calcCf(kwp,bytu,zarizeni,sazba,dist){dist=dist||'ČEZ Distribuce';const pb=+bytu,vt=(CENY_VT[dist]?.[sazba]||6920),nt=(CENY_NT[dist]?.[sazba]||4070),cpr=1200;let sVT=0,sNT=0;zarizeni.forEach(z=>{if(SP_ZAR[z]){sVT+=SP_ZAR[z].vt*pb;sNT+=SP_ZAR[z].nt*pb;}});const vyr=kwp*1050/1000,vlastni=Math.min(vyr*0.62,(sVT+sNT)/1000),pretoky=vyr-vlastni;const uspora=vlastni*(vt/1000)+pretoky*cpr,inv=kwp*cenaKwp(kwp),navrat=inv/uspora;const cf=[];let kum=-inv;for(let r=1;r<=25;r++){kum+=uspora*Math.pow(0.995,r)*1.03;cf.push(Math.round(kum/1000));}return{uspora_rok:Math.round(uspora),uspora_byt:Math.round(uspora/pb),investice:Math.round(inv),navrat:Math.round(navrat*10)/10,cashflow:cf};}
-function genProfile(hh){const s=hh/100,w=1-s;return Array.from({length:24},(_,h)=>{const wv=w*(h>=7&&h<=8?2.0:h>=18&&h<=22?2.4:h>=9&&h<=17?0.2:0.4),sv=s*(h>=8&&h<=11?1.9:h>=13&&h<=16?1.6:h>=19&&h<=21?2.0:h>=22||h<=6?0.25:0.7);return wv+sv;});}
-function getHhLabel(v){return v<25?'Převážně pracující':v>75?'Převážně senioři / homeoffice':v<50?'Spíše pracující':v>50?'Spíše senioři':'Vyvážený mix';}
+// NT hodiny dle sazby
+const NT_HODINY={
+  D25d:[22,23,0,1,2,3,4,5],
+  D26d:[22,23,0,1,2,3,4,5],
+  D27d:[22,23,0,1,2,3,4,5],
+  D35d:[22,23,0,1,2,3,4,5,10,11,12,13],
+  D45d:[...Array(24).keys()],
+  D56d:[...Array(24).keys()],
+  D57d:[22,23,0,1,2,3,4,5,10,11,12,13],
+  D61d:[22,23,0,1,2,3,4,5,6,7]
+};
 
-const D={lokace:'',lat:null,lon:null,bytu:12,vchodu:1,pater:4,vytahu:1,tuv:false,cerpadla:2,zatepleno:true,okna:'dvojsklo',topeni:'dalkoveTeplo',tc:false,ev:0,zarizeni:['zaklad'],hhSlider:50,sklon:25,azimut:0,strTyp:'sedelova',dist:'ČEZ Distribuce'};
+// TDD4 profily (OTE ČR) — normalizované
+const TDD4={
+  zima_prac:[0.412,0.371,0.348,0.339,0.343,0.377,0.524,0.784,0.883,0.819,0.762,0.741,0.758,0.738,0.717,0.739,0.820,1.118,1.284,1.222,1.082,0.917,0.718,0.551],
+  prechodne_prac:[0.395,0.355,0.333,0.325,0.329,0.366,0.500,0.730,0.822,0.768,0.719,0.699,0.717,0.697,0.676,0.698,0.778,1.037,1.181,1.119,0.989,0.837,0.648,0.496],
+  leto_prac:[0.378,0.339,0.319,0.311,0.316,0.356,0.476,0.676,0.761,0.718,0.676,0.657,0.676,0.656,0.636,0.657,0.737,0.957,1.079,1.017,0.897,0.757,0.578,0.441],
+  zima_vikend:[0.451,0.404,0.375,0.364,0.366,0.384,0.420,0.552,0.752,0.901,0.950,0.938,0.901,0.860,0.820,0.820,0.879,1.047,1.148,1.098,0.978,0.818,0.648,0.521],
+  prechodne_vikend:[0.423,0.379,0.352,0.341,0.343,0.360,0.398,0.524,0.713,0.858,0.904,0.893,0.858,0.819,0.780,0.780,0.838,0.997,1.094,1.044,0.929,0.778,0.615,0.490],
+  leto_vikend:[0.396,0.355,0.329,0.319,0.321,0.337,0.377,0.497,0.675,0.816,0.859,0.848,0.816,0.778,0.741,0.741,0.797,0.948,1.040,0.991,0.881,0.738,0.582,0.458]
+};
+// Normalizace TDD4
+for(const k in TDD4){const m=TDD4[k].reduce((a,b)=>a+b)/24;TDD4[k]=TDD4[k].map(v=>v/m);}
+
+// Profily domácností (úpravové koeficienty)
+const UPRAVY={
+  mix:Array(24).fill(1.0),
+  seniori:[0.7,0.6,0.6,0.6,0.6,0.7,0.8,1.0,1.2,1.4,1.5,1.5,1.4,1.4,1.3,1.3,1.2,1.2,1.3,1.2,1.1,1.0,0.9,0.8],
+  pracujici:[0.8,0.7,0.7,0.7,0.7,0.8,1.1,1.4,0.6,0.4,0.4,0.4,0.4,0.4,0.4,0.6,0.9,1.4,1.6,1.5,1.3,1.1,0.9,0.8],
+  rodiny:[0.8,0.7,0.7,0.7,0.7,0.8,1.1,1.3,0.9,0.7,0.7,0.8,0.9,0.8,0.9,1.1,1.2,1.3,1.4,1.3,1.2,1.0,0.9,0.8]
+};
+for(const k in UPRAVY){const m=UPRAVY[k].reduce((a,b)=>a+b)/24;UPRAVY[k]=UPRAVY[k].map(v=>v/m);}
+
+// ================================================================
+// VÝPOČETNÍ MOTOR — portováno z app.py
+// ================================================================
+
+function doporucenaSazba(z){
+  if(z.includes('tc')) return 'D57d';
+  if(z.includes('akum')) return 'D26d';
+  if(z.includes('ev') && !z.includes('bojler')) return 'D27d';
+  if(z.includes('bojler') || z.includes('ev')) return 'D25d';
+  return 'D02d';
+}
+
+// Tabulka jističů dle počtu bytů a zařízení (z app.py _jistic_dum_ampery)
+function jisticDumAmpery(pocetBytu, zarizeni){
+  const pb=parseInt(pocetBytu);
+  const hasEk=zarizeni.includes('primotop')||zarizeni.includes('akum');
+  const hasTc=zarizeni.includes('tc');
+  const hasBoj=zarizeni.includes('bojler');
+  const hasSp=zarizeni.includes('sporak');
+  const TAB=[
+    [10, 32,40,40,63,80],
+    [20, 40,50,63,80,100],
+    [30, 50,63,80,100,125],
+    [50, 63,80,100,125,160],
+    [100,80,100,125,160,200],
+    [150,100,125,160,200,250],
+    [200,125,160,200,250,315],
+    [999,160,200,250,315,400]
+  ];
+  for(const [maxB,z,sp,boj,tc,ek] of TAB){
+    if(pb<=maxB){
+      if(hasEk) return ek;
+      if(hasTc) return tc;
+      if(hasBoj) return boj;
+      if(hasSp) return sp;
+      return z;
+    }
+  }
+  return 63;
+}
+
+// Cena jističe domu (Kč/měs) — lineární interpolace
+function cenaJistice(dist, ampery){
+  const TAB_D={
+    "ČEZ Distribuce":{10:121,16:191,20:240,25:309,32:383,40:479,50:600,63:751,80:869,100:989},
+    "EG.D (E.ON)":   {10:116,16:186,20:232,25:290,32:373,40:465,50:581,63:729,80:845,100:961},
+    "PREdistribuce": {10:106,16:169,20:213,25:266,32:339,40:424,50:530,63:667,80:773,100:879}
+  };
+  const AMP_A={"ČEZ Distribuce":5.99,"EG.D (E.ON)":5.81,"PREdistribuce":5.30};
+  const tab=TAB_D[dist]||TAB_D["ČEZ Distribuce"];
+  const ampA=AMP_A[dist]||5.99;
+  const klice=Object.keys(tab).map(Number).sort((a,b)=>a-b);
+  for(const k of klice) if(ampery<=k) return tab[k];
+  const maxK=klice[klice.length-1];
+  return Math.round(tab[maxK]+(ampery-maxK)*ampA);
+}
+
+// Spotřeba společných prostor
+function spSpVypocet(bytu, pater, ma_vytah, vytahu, ma_tuv, ma_tc, ev_nabijec, cerpadla){
+  const pb=parseInt(bytu)||0, pp=parseInt(pater)||0;
+  const pv=ma_vytah?parseInt(vytahu)||0:0;
+  const pc=parseInt(cerpadla)||0;
+  const sp_osv=pp*200+pb*2+100;
+  const sp_vytah=pv>0?3000*pv*(1+pp/20.0):0;
+  const sp_cerp=pc>0?536*pc*(1+pp/30.0):0;
+  const sp_vt=sp_osv+sp_vytah+sp_cerp;
+  const sp_tuv=ma_tuv?800*pb:0;
+  const sp_tc=ma_tc?3000*pb:0;
+  const sp_ev=parseInt(ev_nabijec)*1500;
+  const sp_nt=sp_tuv+sp_tc+sp_ev;
+  let sazba_sp='D02d';
+  if(ma_tc) sazba_sp='D57d';
+  else if(ma_tuv||ev_nabijec>0) sazba_sp='D25d';
+  const P_kw=(pv*7.5)+(pc*0.25)+1+(ma_tc?pb*3:0)+(ma_tuv?pb*0.5:0)+(ev_nabijec*7.4);
+  const I_sp=P_kw*1000/(Math.sqrt(3)*400);
+  const std_a=[25,32,40,50,63,80,100];
+  const jistic_a=std_a.find(j=>j>=I_sp)||100;
+  return{sp_vt_mwh:sp_vt/1000,sp_nt_mwh:sp_nt/1000,sp_mwh:(sp_vt+sp_nt)/1000,sazba_sp,jistic_sp_a:jistic_a};
+}
+
+// Optimální výkon FVE (portováno z app.py)
+function optimKwp(bytu, zarizeni, ev, tc, sp_mwh){
+  let base=(parseFloat(bytu)||0)*0.55;
+  // Navýšení dle zařízení v bytech
+  if(zarizeni.includes('tc')) base*=1.35;
+  if(zarizeni.includes('akum')) base*=1.25;
+  if(parseInt(ev)>0) base*=1.15;
+  // Přidat SP spotřebu (cca 20% navýšení výkonu kvůli SP)
+  if(sp_mwh>0) base+=sp_mwh*0.05;
+  // Zaokrouhlení na 0.5 kWp
+  return Math.round(base*2)/2;
+}
+
+// Cena FVE dle výkonu
+function cenaKwp(kwp){
+  if(kwp<=5) return 40000;
+  if(kwp<=10) return 36000;
+  if(kwp<=20) return 33000;
+  if(kwp<=50) return 30000;
+  return 27000;
+}
+
+// Sezona dle měsíce
+function sezona(m){
+  if([11,0,1].includes(m)) return 'zima';
+  if([4,5,6,7].includes(m)) return 'leto';
+  return 'prechodne';
+}
+
+// TDD klíč
+function tddKlic(sz, vikend){
+  return sz+'_'+(vikend?'vikend':'prac');
+}
+
+// Generování profilu spotřeby (hodinový, 8760 hodnot)
+function genProfilVt(kwh_rok, hh_slider){
+  // Smíšený profil dle slideru (0=pracující, 100=senioři)
+  const pSen=hh_slider/100, pPrac=1-pSen;
+  const uprava=Array(24).fill(0).map((_,h)=>
+    pPrac*UPRAVY.pracujici[h]+pSen*UPRAVY.seniori[h]
+  );
+  const uMean=uprava.reduce((a,b)=>a+b)/24;
+  const uprNorm=uprava.map(v=>v/uMean);
+  const profile=[];
+  const start=new Date(2026,0,1);
+  for(let d=0;d<365;d++){
+    const dt=new Date(start); dt.setDate(dt.getDate()+d);
+    const sz=sezona(dt.getMonth());
+    const vi=dt.getDay()===0||dt.getDay()===6;
+    const tdd=TDD4[tddKlic(sz,vi)]||TDD4.prechodne_prac;
+    for(let h=0;h<24;h++){
+      profile.push(tdd[h]*uprNorm[h]);
+    }
+  }
+  const total=profile.reduce((a,b)=>a+b,0);
+  return profile.map(v=>v*(kwh_rok/total));
+}
+
+// Generování profilu NT spotřeby
+function genProfilNt(kwh_rok, sazba){
+  const nt_h=new Set(NT_HODINY[sazba]||[]);
+  if(!nt_h.size||kwh_rok<=0) return Array(8760).fill(0);
+  const profile=[];
+  for(let d=0;d<365;d++){
+    for(let h=0;h<24;h++) profile.push(nt_h.has(h)?1:0);
+  }
+  const total=profile.reduce((a,b)=>a+b,0);
+  return total>0?profile.map(v=>v*(kwh_rok/total)):Array(8760).fill(0);
+}
+
+// Jednoduchý fallback profil výroby (pokud PVGIS nedostupné)
+function genVyrobaFallback(kwp, sklon=25, azimut=0){
+  const vh=[];
+  for(let d=0;d<365;d++){
+    const uhel=2*Math.PI*(d-80)/365;
+    const delka=12+4.5*Math.sin(uhel);
+    const vychod=12-delka/2, zapad=12+delka/2;
+    const sezon=Math.max(0.3,Math.min(1.0,0.5+0.5*Math.sin(uhel+Math.PI/2)));
+    const koef=1.0+0.15*Math.sin(Math.PI*sklon/90);
+    let az_kor=1.0;
+    if(Math.abs(azimut)===90) az_kor=0.72;
+    else if(Math.abs(azimut)===45) az_kor=0.90;
+    for(let h=0;h<24;h++){
+      if(h>=vychod&&h<=zapad){
+        const t=(h-vychod)/delka;
+        const elev=Math.sin(Math.PI*t);
+        vh.push(kwp*elev*sezon*koef*az_kor*0.85);
+      } else vh.push(0);
+    }
+  }
+  const sum=vh.reduce((a,b)=>a+b,0);
+  const target=kwp*1050;
+  return sum>0?vh.map(v=>v*(target/sum)):vh;
+}
+
+// Simulace (zjednodušená — bez 15min kroku, hodinová)
+function simuluj(vyroba8760, sp_vt8760, sp_nt8760, bat=0, model='edc'){
+  let vl_vt=0, vl_nt=0, pretoky=0;
+  let bkwh=bat*0.5, bmin=bat*0.1, bmax=bat*0.9;
+  const eta=0.92;
+  const n=Math.min(vyroba8760.length, sp_vt8760.length, sp_nt8760.length);
+  for(let i=0;i<n;i++){
+    let vi=vyroba8760[i]||0;
+    let svti=(model==='spolecne'?0:sp_vt8760[i])||sp_vt8760[i]||0;
+    let snti=model==='spolecne'?0:(sp_nt8760[i]||0);
+    // Pro model "spolecne" — jen SP spotřeba
+    if(model==='spolecne'){svti=sp_vt8760[i]||0; snti=0;}
+    // 1. FVE → VT spotřeba
+    const prime=Math.min(vi,svti);
+    vl_vt+=prime;
+    let zb_v=vi-prime;
+    let zb_svt=svti-prime;
+    // 2. Přebytek → baterie
+    if(zb_v>0&&bat>0){
+      const nab=Math.min(zb_v*eta, bmax-bkwh);
+      bkwh+=nab; zb_v-=nab/eta;
+    }
+    // 3. Přetoky
+    pretoky+=zb_v;
+    // 4. Zbylá VT → z baterie
+    if(zb_svt>0&&bat>0){
+      const dos=(bkwh-bmin)*eta;
+      const vyb=Math.min(zb_svt,dos);
+      bkwh-=vyb/eta; zb_svt-=vyb; vl_vt+=vyb;
+    }
+    // 5. NT → z baterie
+    if(snti>0&&bat>0){
+      const dos=(bkwh-bmin)*eta;
+      const vyb=Math.min(snti,dos);
+      bkwh-=vyb/eta; vl_nt+=vyb;
+    }
+  }
+  const vyroba_kwh=vyroba8760.reduce((a,b)=>a+b,0);
+  return{vlastni_vt_kwh:vl_vt, vlastni_nt_kwh:vl_nt, vlastni_kwh:vl_vt+vl_nt, pretoky_kwh:pretoky, vyroba_kwh};
+}
+
+// Cashflow 25 let
+function cashflow(sim, cvt, cnt, cpr, investice, bonus, uver, splatnost, rust=3.0, deg=0.5){
+  const vlastni_cast=investice-bonus-uver;
+  const rocni_spl=uver>0?uver/splatnost:0;
+  const cf=[];
+  let kum=-(vlastni_cast);
+  for(let rok=1;rok<=25;rok++){
+    const d=Math.pow(1-deg/100, rok-1);
+    const c=Math.pow(1+rust/100, rok-1);
+    const u_vt=sim.vlastni_vt_kwh*d*cvt/1000*c;
+    const u_nt=sim.vlastni_nt_kwh*d*cnt/1000*c;
+    const u_pr=sim.pretoky_kwh*d*(cpr/1000)*c;
+    const uspora=u_vt+u_nt+u_pr;
+    const splatka=rok<=splatnost?rocni_spl:0;
+    kum+=uspora-splatka;
+    cf.push({rok, uspora_celkem:Math.round(uspora), splatka:Math.round(splatka), cisty_prinos:Math.round(uspora-splatka), kumulativni:Math.round(kum)});
+  }
+  // Návratnost
+  let nav=null;
+  for(const r of cf) if(r.kumulativni>=0&&!nav) nav=r.rok;
+  return{cf, nav, kum25:Math.round(kum)};
+}
+
+// NZÚ — bezúročný úvěr a bonus
+function nzuVypocet(investice, bytu){
+  // Bezúročný úvěr NZÚ — max investice, splatnost 15 let
+  const uver=Math.min(investice, 5000000);
+  const bonus=parseInt(bytu)*0; // bonus dle zranitelných domácností — 0 pokud neznáme
+  return{uver, bonus, splatnost:15};
+}
+
+// ================================================================
+// STAV A NAVIGACE
+// ================================================================
+const D={
+  lokace:'',lat:null,lon:null,
+  bytu:12,vchodu:1,pater:4,vytahu:1,cerpadla:2,
+  tuv:false,zatepleno:true,okna:'dvojsklo',topeni:'dalkoveTeplo',
+  tc:false,ev:0,zarizeni:['zaklad'],hhSlider:50,
+  sklon:25,azimut:0,strTyp:'sedelova',
+  dist:'ČEZ Distribuce',
+  // PVGIS výsledky
+  pvgis_data:null, pvgis_loaded:false, pvgis_loading:false
+};
 let cur=0;
+
+const LABELS=['Dům','Budova','Investice','Domácnosti','Střecha','Výsledky'];
 
 function stepper(key,label,min,max,step){
   step=step||1;
   const v=D[key]||0;
-  const lbl=label?'<label style="display:block;font-size:12px;color:var(--text-2);margin-bottom:4px;font-weight:500">'+label+'</label>':'';
-  return '<div>'+lbl
-    +'<div class="stepper">'
-    +'<button class="stepper-btn" type="button" data-key="'+key+'" data-d="'+(- step)+'" data-min="'+min+'" data-max="'+max+'" onclick="stepBtn(this)">&#x2212;</button>'
-    +'<input class="stepper-val" id="sv_'+key+'" type="number" value="'+v+'" min="'+min+'" max="'+max+'" data-key="'+key+'" data-min="'+min+'" data-max="'+max+'" onchange="stepInp(this)">'
-    +'<button class="stepper-btn" type="button" data-key="'+key+'" data-d="'+step+'" data-min="'+min+'" data-max="'+max+'" onclick="stepBtn(this)">+</button>'
-    +'</div></div>';
+  const lbl=label?`<label style="display:block;font-size:12px;color:var(--text-2);margin-bottom:4px;font-weight:500">${label}</label>`:'';
+  return`${lbl}<div class="stepper"><button class="stepper-btn" onclick="stepChange('${key}',-${step},${min},${max})">−</button><input class="stepper-val" id="sv_${key}" type="number" value="${v}" min="${min}" max="${max}" oninput="stepDirect('${key}',${min},${max})"><button class="stepper-btn" onclick="stepChange('${key}',${step},${min},${max})">+</button></div>`;
 }
-function stepBtn(el){
-  var key=el.dataset.key,d=+el.dataset.d,mn=+el.dataset.min,mx=+el.dataset.max;
-  stepChange(key,d,mn,mx);
-}
-function stepInp(el){
-  var key=el.dataset.key,mn=+el.dataset.min,mx=+el.dataset.max;
-  D[key]=Math.min(mx,Math.max(mn,+el.value||mn));
+
+function stepDirect(key,mn,mx){
+  const el=document.getElementById('sv_'+key);
+  if(!el)return;
+  D[key]=Math.min(mx,Math.max(mn,parseInt(el.value)||0));
   el.value=D[key];
   stepChange(key,0,mn,mx);
 }
@@ -291,22 +610,35 @@ function stepInp(el){
 function stepChange(key,delta,min,max){
   D[key]=Math.min(max,Math.max(min,(+D[key]||0)+delta));
   const el=document.getElementById('sv_'+key);
-  if(el&&delta!==0){el.value!==undefined?el.value=D[key]:el.textContent=D[key];}
-  if(['bytu','vytahu','cerpadla','pater'].includes(key)){
-    const sp=spSp(D.bytu,D.pater,D.vytahu,D.tuv,D.tc,D.ev,D.cerpadla);
-    const z=D.zarizeni;let sVT=0,sNT=0;
-    z.forEach(k=>{if(SP_ZAR[k]){sVT+=SP_ZAR[k].vt*D.bytu;sNT+=SP_ZAR[k].nt*D.bytu;}});
-    const mwh=Math.round((sVT+sNT)/100)/10;
-    [['lv_sp',mwh+' MWh/rok'],['lv_spsazba',sp.sazba+' / '+sp.jistic],
-     ['lv_sazba',doporucenaSazba(z)],['lv_jistic',doporucenyJistic(D.bytu,z)],
-     ['lv_spmwh',sp.mwh.toFixed(1)+' MWh/rok']
-    ].forEach(([id,v])=>{const e=document.getElementById(id);if(e)e.textContent=v;});
-  }
+  if(el&&delta!==0) el.value=D[key];
+  // Aktualizovat live hodnoty
+  if(['bytu','vytahu','cerpadla','pater'].includes(key)) updateLockRows();
 }
 
-const LABELS=['Dům','Budova','Investice','Domácnosti','Střecha','Výsledky'];
+function updateLockRows(){
+  const z=D.zarizeni;
+  let sVT=0,sNT=0;
+  z.forEach(k=>{if(SP_ZAR[k]){sVT+=SP_ZAR[k].vt*D.bytu;sNT+=SP_ZAR[k].nt*D.bytu;}});
+  const sazba=doporucenaSazba(z);
+  const amp=jisticDumAmpery(D.bytu,z);
+  const sp=spSpVypocet(D.bytu,D.pater,D.vytahu>0,D.vytahu,D.tuv,D.tc,D.ev,D.cerpadla);
+  [['lv_sp',((sVT+sNT)/1000).toFixed(1)+' MWh/rok'],
+   ['lv_sazba',sazba],
+   ['lv_jistic',`3×${amp}A`],
+   ['lv_spmwh',sp.sp_mwh.toFixed(1)+' MWh/rok'],
+   ['lv_spsazba',`${sp.sazba_sp} / 3×${sp.jistic_sp_a}A`]
+  ].forEach(([id,v])=>{const e=document.getElementById(id);if(e)e.textContent=v;});
+}
 
-function renderDots(){const c=document.getElementById('stepDots');c.innerHTML=LABELS.map((l,i)=>{const cls=i<cur?'done':i===cur?'active':'todo';const line=i<LABELS.length-1?`<div class="sl${i<cur?' done':''}"></div>`:'';return`<div class="sd ${cls}" title="${l}" onclick="jumpStep(${i})">${i<cur?'✓':i+1}</div>${line}`;}).join('');}
+function renderDots(){
+  const c=document.getElementById('stepDots');
+  c.innerHTML=LABELS.map((l,i)=>{
+    const cls=i<cur?'done':i===cur?'active':'todo';
+    const line=i<LABELS.length-1?`<div class="sl${i<cur?' done':''}"></div>`:'';
+    return`<div class="sd ${cls}" title="${l}" onclick="jumpStep(${i})">${i<cur?'✓':i+1}</div>${line}`;
+  }).join('');
+}
+
 function jumpStep(n){if(n<cur){cur=n;render();}}
 function goNext(){if(cur<5){cur++;render();window.scrollTo(0,0);}}
 function goBack(){if(cur>0){cur--;render();window.scrollTo(0,0);}}
@@ -322,559 +654,602 @@ function render(){
 function afterRender(){
   const lok=document.getElementById('fLok');
   if(lok){lok.addEventListener('input',onLokInput);lok.addEventListener('blur',()=>setTimeout(()=>{const l=document.getElementById('acList');if(l)l.classList.remove('open');},200));}
-  if(cur===3)setTimeout(drawProfile,50);
-  if(cur===5)setTimeout(drawCf,50);
+  if(cur===3) setTimeout(drawProfile,50);
+  if(cur===5) setTimeout(()=>{drawCf();},50);
 }
 
-// STEP 1
-function s1(){return`<div class="card"><h1 class="ctitle">Kde stojí váš bytový dům?</h1><p class="csub">Adresa slouží pro výpočet reálného slunečního záření (PVGIS, EU JRC) a distribuční oblasti</p><div class="slabel">Adresa domu</div><div class="autocomplete-wrap"><input type="text" id="fLok" placeholder="Např. Praha 4, Nuselská 12" value="${D.lokace}" autocomplete="off"><div class="ac-list" id="acList"></div></div><div class="tip">Stačí napsat město nebo ulici — adresu ověříme přes OpenStreetMap a načteme reálná solární data z EU databáze PVGIS.</div><div class="slabel">Základní údaje domu</div><div class="g3">${stepper('bytu','Počet bytů',2,300)}${stepper('vchodu','Počet vchodů',1,20)}${stepper('pater','Počet pater',1,30)}</div></div><div class="nav"><span class="step-lbl">Krok 1 z 5</span><button class="btn-prim" onclick="goNext()">Pokračovat →</button></div>`;}
+// ================================================================
+// KROKY
+// ================================================================
+function s1(){
+  return`<div class="card">
+  <h1 class="ctitle">Kde stojí váš bytový dům?</h1>
+  <p class="csub">Adresa slouží pro výpočet reálného slunečního záření z evropské databáze PVGIS (EU JRC) a určení distribuční oblasti.</p>
+  <div class="slabel">Adresa domu</div>
+  <div class="autocomplete-wrap"><input type="text" id="fLok" placeholder="Např. Praha 4, Nuselská 12" value="${D.lokace}" autocomplete="off"><div class="ac-list" id="acList"></div></div>
+  <div class="tip">☀️ Stačí napsat město nebo ulici — adresu ověříme přes OpenStreetMap a načteme reálná solární data z EU databáze PVGIS. Výpočet bude přesný pro vaši konkrétní polohu.</div>
+  <div class="slabel">Základní údaje domu</div>
+  <div class="g3">${stepper('bytu','Počet bytů',2,300)}${stepper('vchodu','Počet vchodů',1,20)}${stepper('pater','Počet pater',1,30)}</div>
+  </div>
+  <div class="nav"><span class="step-lbl">Krok 1 z 5</span><button class="btn-prim" onclick="goNext()">Pokračovat →</button></div>`;
+}
 
-// STEP 2
-function s2(){const top=[{v:'plyn',ic:'🔥',n:'Zemní plyn'},{v:'dalkoveTeplo',ic:'🏭',n:'Dálkové teplo'},{v:'tc',ic:'♨️',n:'Tep. čerpadlo'},{v:'tuhaPaliva',ic:'🪵',n:'Tuhá paliva'},{v:'elektrina',ic:'⚡',n:'Elektřina'},{v:'jine',ic:'❓',n:'Jiné'}];return`<div class="card"><h2 class="ctitle">Technické vybavení budovy</h2><p class="csub">Ovlivňuje spotřebu společných prostor a optimální výkon FVE systému</p><div class="slabel">Výtahy a technologie</div><div class="g2" style="margin-bottom:10px">${stepper('vytahu','Počet výtahů',0,10)}${stepper('cerpadla','Oběhová čerpadla (ks)',0,20)}</div><div class="tog-grid"><div class="tog${D.tuv?' on':''}" onclick="D.tuv=!D.tuv;render()"><span class="tog-icon">🚿</span><div class="tog-body"><div class="tog-name">Centrální TUV</div><div class="tog-sub">společná příprava TUV</div></div><div class="tog-chk">✓</div></div><div class="tog${D.zatepleno?' on':''}" onclick="D.zatepleno=!D.zatepleno;render()"><span class="tog-icon">🧱</span><div class="tog-body"><div class="tog-name">Zateplená budova</div><div class="tog-sub">ETICS nebo lepší</div></div><div class="tog-chk">✓</div></div></div><div class="slabel">Typ oken</div><div class="chip-grid c3">${[['jednosklo','Jednosklo','U≥3.0'],['dvojsklo','Dvojsklo','U≈1.2'],['trojsklo','Trojsklo','U≈0.7']].map(([v,n,u])=>`<div class="chip${D.okna===v?' on':''}" onclick="D.okna='${v}';render()"><div class="chip-name">${n}</div><div class="chip-sub">${u} W/m²K</div></div>`).join('')}</div><div class="slabel">Zdroj vytápění</div><div class="chip-grid c6">${top.map(t=>`<div class="chip${D.topeni===t.v?' on':''}" onclick="D.topeni='${t.v}';render()"><div class="chip-icon">${t.ic}</div><div class="chip-name">${t.n}</div></div>`).join('')}</div></div><div class="nav"><button class="btn-out" onclick="goBack()">← Zpět</button><button class="btn-prim" onclick="goNext()">Pokračovat →</button></div>`;}
+function s2(){
+  const top=[{v:'plyn',ic:'🔥',n:'Zemní plyn'},{v:'dalkoveTeplo',ic:'🏭',n:'Dálkové teplo'},{v:'tc',ic:'♨️',n:'Tep. čerpadlo'},{v:'tuhaPaliva',ic:'🪵',n:'Tuhá paliva'},{v:'elektrina',ic:'⚡',n:'Elektřina'},{v:'jine',ic:'❓',n:'Jiné'}];
+  return`<div class="card">
+  <h2 class="ctitle">Technické vybavení budovy</h2>
+  <p class="csub">Ovlivňuje spotřebu společných prostor a optimální výkon FVE systému.</p>
+  <div class="slabel">Výtahy a technologie</div>
+  <div class="g2" style="margin-bottom:10px">${stepper('vytahu','Počet výtahů',0,10)}${stepper('cerpadla','Oběhová čerpadla (ks)',0,20)}</div>
+  <div class="tog-grid">
+    <div class="tog${D.tuv?' on':''}" onclick="D.tuv=!D.tuv;render()"><span class="tog-icon">🚿</span><div class="tog-body"><div class="tog-name">Centrální TUV</div><div class="tog-sub">společná příprava TUV</div></div><div class="tog-chk">✓</div></div>
+    <div class="tog${D.zatepleno?' on':''}" onclick="D.zatepleno=!D.zatepleno;render()"><span class="tog-icon">🧱</span><div class="tog-body"><div class="tog-name">Zateplená budova</div><div class="tog-sub">ETICS nebo lepší</div></div><div class="tog-chk">✓</div></div>
+  </div>
+  <div class="slabel">Typ oken</div>
+  <div class="chip-grid c3">${[['jednosklo','Jednosklo','U≥3.0'],['dvojsklo','Dvojsklo','U≈1.2'],['trojsklo','Trojsklo','U≈0.7']].map(([v,n,u])=>`<div class="chip${D.okna===v?' on':''}" onclick="D.okna='${v}';render()"><div class="chip-name">${n}</div><div class="chip-sub">${u} W/m²K</div></div>`).join('')}</div>
+  <div class="slabel">Zdroj vytápění</div>
+  <div class="chip-grid c6">${top.map(t=>`<div class="chip${D.topeni===t.v?' on':''}" onclick="D.topeni='${t.v}';render()"><div class="chip-icon">${t.ic}</div><div class="chip-name">${t.n}</div></div>`).join('')}</div>
+  </div>
+  <div class="nav"><button class="btn-out" onclick="goBack()">← Zpět</button><button class="btn-prim" onclick="goNext()">Pokračovat →</button></div>`;
+}
 
-// STEP 3
 function s3(){
-  return '<div class="card">'
-    +'<h2 class="ctitle">Plánované investice</h2>'
-    +'<p class="csub">Uvažujete o dalších technologiích? Zahrneme je do optimalizace výkonu FVE.</p>'
-    +'<div class="inv'+(D.tc?' on':'')+'" onclick="D.tc=!D.tc;render()">'
-    +'<span class="inv-icon">♨️</span>'
-    +'<div class="inv-body"><div class="inv-title">Tepelné čerpadlo domu</div>'
-    +'<div class="inv-desc">Vytápění nebo chlazení bytu</div></div>'
-    +'<div class="inv-chk">✓</div></div>'
-    +'<div class="inv" style="cursor:default" onclick="event.stopPropagation()">'
-    +'<span class="inv-icon">🔌</span>'
-    +'<div class="inv-body"><div class="inv-title">Nabíjecí stanice EV</div>'
-    +'<div class="inv-desc">Počet stání: '
-    +stepper('ev','',0,50,1)
-    +'</div></div>'
-    +'</div>'
-    +'<div class="tip">Tepelné čerpadlo výrazně zvýší zimní spotřebu — FVE systém se dimenzuje na větší výkon.</div>'
-    +'</div>'
-    +'<div class="nav"><button class="btn-out" onclick="goBack()">← Zpět</button>'
-    +'<button class="btn-prim" onclick="goNext()">Pokračovat →</button></div>';
+  return`<div class="card">
+  <h2 class="ctitle">Plánované investice</h2>
+  <p class="csub">Uvažujete o dalších technologiích? Zahrneme je do optimalizace výkonu FVE.</p>
+  <div class="inv${D.tc?' on':''}" onclick="D.tc=!D.tc;D.zarizeni=D.tc?[...D.zarizeni,'tc'].filter((v,i,a)=>a.indexOf(v)===i):D.zarizeni.filter(z=>z!=='tc');render()">
+    <span class="inv-icon">♨️</span>
+    <div class="inv-body"><div class="inv-title">Tepelné čerpadlo domu</div><div class="inv-desc">Vytápění celého domu nebo bytů — výrazně zvýší spotřebu i úspory z FVE</div></div>
+    <div class="inv-chk">✓</div>
+  </div>
+  <div class="inv" style="cursor:default" onclick="event.stopPropagation()">
+    <span class="inv-icon">🔌</span>
+    <div class="inv-body"><div class="inv-title">Nabíjecí stanice EV</div><div class="inv-desc">Počet stání: ${stepper('ev','',0,50,1)}</div></div>
+  </div>
+  <div class="tip">💡 Tepelné čerpadlo a EV nabíječky výrazně zvýší spotřebu domu — FVE se tak lépe využije a zkrátí se návratnost.</div>
+  </div>
+  <div class="nav"><button class="btn-out" onclick="goBack()">← Zpět</button><button class="btn-prim" onclick="goNext()">Pokračovat →</button></div>`;
 }
 
-function s4(){const z=D.zarizeni,sazba=doporucenaSazba(z),jistic=doporucenyJistic(D.bytu,z),sp=spSp(D.bytu,D.pater,D.vytahu,D.tuv,D.tc,D.ev,D.cerpadla);let sVT=0,sNT=0;z.forEach(k=>{if(SP_ZAR[k]){sVT+=SP_ZAR[k].vt*D.bytu;sNT+=SP_ZAR[k].nt*D.bytu;}});const mwh=Math.round((sVT+sNT)/100)/10;const lbl=getHhLabel(D.hhSlider);return`<div class="card"><h2 class="ctitle">Domácnosti</h2><p class="csub">Spotřebiče a složení domácností — automaticky odhadneme spotřebu, sazbu a jistič</p><div class="slabel">Spotřebiče v bytech</div><div class="tog-grid"><div class="tog on locked"><span class="tog-icon">🏠</span><div class="tog-body"><div class="tog-name">Domácí spotřebiče</div><div class="tog-sub">pračka, TV, lednice, sušička…</div></div><span class="badge b-always">vždy</span></div><div class="tog on locked"><span class="tog-icon">💡</span><div class="tog-body"><div class="tog-name">Osvětlení bytů</div><div class="tog-sub">LED nebo starší žárovky</div></div><span class="badge b-always">vždy</span></div>${[['sporak','🍳','El. sporák / indukce','cca +400 kWh/byt/rok'],['klima','❄️','Klimatizace','cca +400 kWh/byt/rok'],['bojler','🛁','Bojler / ohřev TUV','cca +800 kWh/byt/rok'],['akumul','🔋','Akumulační kamna','cca +2000 kWh/byt/rok']].map(([k,ic,n,s])=>`<div class="tog${z.includes(k)?' on':''}" onclick="togZar('${k}')"><span class="tog-icon">${ic}</span><div class="tog-body"><div class="tog-name">${n}</div><div class="tog-sub">${s}</div></div><div class="tog-chk">✓</div></div>`).join('')}</div><div class="slabel">Složení domácností</div><div class="hh-wrap"><div class="hh-row"><span class="hh-label">Pracující</span><span class="hh-center" id="hhLbl">${lbl}</span><span class="hh-label">Senioři / homeoffice</span></div><input type="range" min="0" max="100" value="${D.hhSlider}" id="hhSl" oninput="D.hhSlider=+this.value;document.getElementById('hhLbl').textContent=getHhLabel(+this.value);drawProfile()"><div style="font-size:11px;color:var(--text-2);margin-bottom:8px">Průběh spotřeby přes den:</div><div class="chart-wrap"><canvas id="profCanvas"></canvas></div><div class="chart-hours"><span>0:00</span><span>6:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div></div><div class="slabel">Odhadované parametry <span class="badge b-amber" style="margin-left:6px">Po registraci — editace</span></div><div class="lock-row"><span class="lock-l">Spotřeba bytů</span><span class="lock-v" id="lv_sp">${mwh} MWh/rok</span><span class="lock-ico">🔒</span></div><div class="lock-row"><span class="lock-l">Doporučená sazba bytu</span><span class="lock-v" id="lv_sazba">${sazba}</span><span class="lock-ico">🔒</span></div><div class="lock-row"><span class="lock-l">Jistič bytu</span><span class="lock-v" id="lv_jistic">${jistic}</span><span class="lock-ico">🔒</span></div><div class="lock-row"><span class="lock-l">Spotřeba společných prostor</span><span class="lock-v" id="lv_spmwh">${sp.mwh.toFixed(1)} MWh/rok</span><span class="lock-ico">🔒</span></div><div class="lock-row"><span class="lock-l">Sazba SP / jistič SP</span><span class="lock-v" id="lv_spsazba">${sp.sazba} / ${sp.jistic}</span><span class="lock-ico">🔒</span></div></div><div class="nav"><button class="btn-out" onclick="goBack()">← Zpět</button><button class="btn-prim" onclick="goNext()">Střecha →</button></div>`;}
-
-function togZar(k){if(k==='zaklad')return;if(D.zarizeni.includes(k))D.zarizeni=D.zarizeni.filter(z=>z!==k);else D.zarizeni.push(k);if(!D.zarizeni.includes('zaklad'))D.zarizeni.unshift('zaklad');render();}
-
-// STEP 5
-function s5(){
-  const kwp=optimKwp(D.bytu,D.zarizeni,D.ev,D.tc);
-  const kwpB=Math.round((kwp+2)*10)/10,kwpJ=Math.round(kwp*1.35*10)/10;
-  const ors=[
-    {v:0,n:'Jih',p:100},
-    {v:-45,n:'Jihovýchod',p:88},
-    {v:45,n:'Jihozápad',p:92},
-    {v:-90,n:'Východ',p:70},
-    {v:90,n:'Západ',p:72},
-    {v:999,n:'Východ / Západ',p:82,sp:true},
-    {v:998,n:'Jihovýchod / Jihozápad',p:90,sp:true}
-  ];
-  const roofs=[
-    {v:'sedelova',n:'Sedlová',sklon:25,
-     ic:'<svg width="44" height="32" viewBox="0 0 44 32" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"><polygon points="22,3 41,27 3,27"/><line x1="3" y1="27" x2="41" y2="27" stroke-width="2"/></svg>'},
-    {v:'plocha',n:'Plochá',sklon:10,
-     ic:'<svg width="44" height="32" viewBox="0 0 44 32" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="10" width="38" height="16" rx="2"/><line x1="3" y1="10" x2="41" y2="10" stroke-width="2.5"/></svg>'},
-    {v:'kolma',n:'Kolmá stěna',sklon:90,
-     ic:'<svg width="44" height="32" viewBox="0 0 44 32" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"><polyline points="3,27 14,8 14,27 25,8 25,27 41,8"/></svg>'},
-  ];
-  const rHtml=roofs.map(r=>{
-    const on=D.strTyp===r.v;
-    const col=on?'var(--blue)':'var(--text-2)';
-    return '<div class="chip'+(on?' on':'')+'" onclick="pickRoof(\''+r.v+'\','+r.sklon+')">'
-      +'<div style="color:'+col+';margin-bottom:2px">'+r.ic+'</div>'
-      +'<div class="chip-name" style="font-size:11px">'+r.n+'</div>'
-      +'<div class="chip-sub">'+r.sklon+'°</div>'
-      +'</div>';
-  }).join('');
-  const orHtml=ors.map(o=>'<div class="chip'+(D.azimut===o.v?' on':'')+'" onclick="D.azimut='+o.v+';render()">'
-    +'<div class="chip-name">'+o.n+'</div>'
-    +'<div class="chip-sub">'+(o.sp?'split systém':'')+'</div>'
-    +'</div>').join('');
-  return '<div class="card">'
-    +'<h2 class="ctitle">Střecha a solární systém</h2>'
-    +'<p class="csub">Reálná data záření načteme z PVGIS pro: <strong>'+(D.lokace||'zadaná adresa')+'</strong></p>'
-    +'<div class="slabel" style="margin-top:0">Typ střechy</div>'
-    +'<div class="chip-grid c3" style="margin-bottom:14px">'+rHtml+'</div>'
-    +'<div style="display:flex;align-items:center;gap:16px;margin-bottom:14px">'
-    +'<span style="font-size:12px;color:var(--text-2);font-weight:500;white-space:nowrap">Sklon panelu (°)</span>'
-    +stepper('sklon','',0,90,5)
-    +'</div>'
-    +'<div class="slabel">Orientace panelu</div>'
-    +'<div class="chip-grid c3">'+orHtml+'</div>'
-    +'<div class="slabel">Navržené varianty <span class="badge b-blue" style="margin-left:6px">PVGIS · OTE 2026</span></div>'
-    +'<div class="var-grid">'
-    +'<div class="var-card best"><div class="var-badge">Doporučeno</div><div class="var-name">Bez baterie</div>'
-    +'<div class="var-kwp">'+kwp+'<span> kWp</span></div>'
-    +'<div class="var-save">+'+Math.round(kwp*18*D.bytu/100/100)*100+' Kč/rok</div>'
-    +'<div class="var-roi">návratnost ~'+Math.round(12-kwp*0.08)+' let</div></div>'
-    +'<div class="var-card blurred"><div class="var-name">Sdílení v domě s podružným měřením</div>'
-    +'<div class="var-kwp">'+kwpJ+'<span> kWp</span></div><div class="var-save">maximum úspor</div><div class="var-roi">po registraci</div></div>'
-    +'<div class="var-card blurred"><div class="var-name">Sdílení energie s EDC</div>'
-    +'<div class="var-kwp">'+kwpB+'<span> kWp</span></div><div class="var-save">flexibilní řešení</div><div class="var-roi">po registraci</div></div>'
-    +'</div>'
-    +'<div class="tip">Navrhovaný výkon <strong>'+kwp+' kWp</strong> pro '+D.bytu+' bytů'+(D.tc?' + TČ':'')+(D.ev>0?' + '+D.ev+' EV':'')+'.</div>'
-    +'</div>'
-    +'<div class="nav"><button class="btn-out" onclick="goBack()">← Zpět</button>'
-    +'<button class="btn-prim" onclick="goNext()">Zobrazit výsledky →</button></div>';
+function s4(){
+  const z=D.zarizeni;
+  const sazba=doporucenaSazba(z);
+  const amp=jisticDumAmpery(D.bytu,z);
+  let sVT=0,sNT=0;
+  z.forEach(k=>{if(SP_ZAR[k]){sVT+=SP_ZAR[k].vt*D.bytu;sNT+=SP_ZAR[k].nt*D.bytu;}});
+  const mwh=((sVT+sNT)/1000).toFixed(1);
+  const sp=spSpVypocet(D.bytu,D.pater,D.vytahu>0,D.vytahu,D.tuv,D.tc,D.ev,D.cerpadla);
+  const lbl=getHhLabel(D.hhSlider);
+  return`<div class="card">
+  <h2 class="ctitle">Domácnosti</h2>
+  <p class="csub">Spotřebiče a složení domácností — automaticky odhadneme spotřebu, sazbu a jistič.</p>
+  <div class="slabel">Spotřebiče v bytech</div>
+  <div class="tog-grid">
+    <div class="tog on locked"><span class="tog-icon">🏠</span><div class="tog-body"><div class="tog-name">Domácí spotřebiče</div><div class="tog-sub">pračka, TV, lednice, sušička…</div></div><span class="badge b-always">vždy</span></div>
+    <div class="tog on locked"><span class="tog-icon">💡</span><div class="tog-body"><div class="tog-name">Osvětlení bytů</div><div class="tog-sub">LED nebo starší žárovky</div></div><span class="badge b-always">vždy</span></div>
+    ${[['sporak','🍳','El. sporák / indukce','cca +400 kWh/byt/rok'],['klima','❄️','Klimatizace','cca +400 kWh/byt/rok'],['bojler','🛁','Bojler / ohřev TUV','cca +800 kWh/byt/rok'],['akum','🔋','Akumulační kamna','cca +2000 kWh/byt/rok']].map(([k,ic,n,s])=>`<div class="tog${z.includes(k)?' on':''}" onclick="togZar('${k}')"><span class="tog-icon">${ic}</span><div class="tog-body"><div class="tog-name">${n}</div><div class="tog-sub">${s}</div></div><div class="tog-chk">✓</div></div>`).join('')}
+  </div>
+  <div class="slabel">Složení domácností</div>
+  <div class="hh-wrap">
+    <div class="hh-row"><span class="hh-label">Pracující</span><span class="hh-center" id="hhLbl">${lbl}</span><span class="hh-label">Senioři / homeoffice</span></div>
+    <input type="range" min="0" max="100" value="${D.hhSlider}" id="hhSl" oninput="D.hhSlider=+this.value;document.getElementById('hhLbl').textContent=getHhLabel(+this.value);drawProfile()">
+    <div style="font-size:11px;color:var(--text-2);margin-bottom:8px">Průběh spotřeby přes den:</div>
+    <div class="chart-wrap"><canvas id="profCanvas"></canvas></div>
+    <div class="chart-hours"><span>0:00</span><span>6:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>
+  </div>
+  <div class="slabel">Distribuční oblast</div>
+  <select onchange="D.dist=this.value;render()" style="margin-bottom:12px">
+    ${['ČEZ Distribuce','EG.D (E.ON)','PREdistribuce'].map(d=>`<option${D.dist===d?' selected':''}>${d}</option>`).join('')}
+  </select>
+  <div class="slabel">Odhadované parametry</div>
+  <div class="lock-row"><span class="lock-l">Spotřeba bytů</span><span class="lock-v" id="lv_sp">${mwh} MWh/rok</span><span class="lock-ico">📊</span></div>
+  <div class="lock-row"><span class="lock-l">Doporučená sazba bytu</span><span class="lock-v" id="lv_sazba">${sazba}</span><span class="lock-ico">📊</span></div>
+  <div class="lock-row"><span class="lock-l">Jistič domu (JOM)</span><span class="lock-v" id="lv_jistic">3×${amp}A</span><span class="lock-ico">📊</span></div>
+  <div class="lock-row"><span class="lock-l">Spotřeba spol. prostor</span><span class="lock-v" id="lv_spmwh">${sp.sp_mwh.toFixed(1)} MWh/rok</span><span class="lock-ico">📊</span></div>
+  <div class="lock-row"><span class="lock-l">Sazba SP / jistič SP</span><span class="lock-v" id="lv_spsazba">${sp.sazba_sp} / 3×${sp.jistic_sp_a}A</span><span class="lock-ico">📊</span></div>
+  </div>
+  <div class="nav"><button class="btn-out" onclick="goBack()">← Zpět</button><button class="btn-prim" onclick="goNext()">Střecha →</button></div>`;
 }
-function pickRoof(typ,sklon){
-  D.strTyp=typ;
-  D.sklon=sklon;
-  // Auto-set orientation based on roof type
-  if(typ==='sedelova'){D.azimut=0;}       // Jih
-  else if(typ==='plocha'){D.azimut=999;}  // V/Z split
-  else if(typ==='kolma'){D.azimut=0;}     // Jih (default for vertical)
+
+function togZar(k){
+  if(k==='zaklad')return;
+  if(D.zarizeni.includes(k)) D.zarizeni=D.zarizeni.filter(z=>z!==k);
+  else D.zarizeni.push(k);
+  if(!D.zarizeni.includes('zaklad')) D.zarizeni.unshift('zaklad');
   render();
 }
 
-function s6(){
-  const kwp=optimKwp(D.bytu,D.zarizeni,D.ev,D.tc);
-  const sazba=doporucenaSazba(D.zarizeni);
-  const cf=calcCf(kwp,D.bytu,D.zarizeni,sazba,D.dist);
-  const kwpB=Math.round((kwp+2)*10)/10;
-  const kwpJ=Math.round(kwp*1.35*10)/10;
-  const cfB=calcCf(kwpB,D.bytu,D.zarizeni,sazba,D.dist);
-  const cfJ=calcCf(kwpJ,D.bytu,D.zarizeni,sazba,D.dist);
-
-  // Splátka FVE — předpokládáme úvěr 20 let, 5 % p.a.
-  function splatkaRok(inv){
-    const r=0.05/12, n=240;
-    const mes=inv*(r*Math.pow(1+r,n))/(Math.pow(1+r,n)-1);
-    return Math.round(mes*12);
-  }
-  const spl=splatkaRok(cf.investice);
-  const splB=splatkaRok(cfB.investice);
-  const splJ=splatkaRok(cfJ.investice);
-
-  const uspora=cf.uspora_rok;
-  const rozdil=uspora-spl;
-  const usporaBytu=Math.round(uspora/D.bytu/100)*100;
-  const splatkaBytu=Math.round(spl/D.bytu/100)*100;
-  const rozdilBytu=Math.round(rozdil/D.bytu/100)*100;
-
-  function varCard(label,best,blurred,kwpV,usporaV,splatkaV,investiceV){
-    const rozdilV=usporaV-splatkaV;
-    const usporaBytuV=Math.round(usporaV/D.bytu/100)*100;
-    const splatkaBytuV=Math.round(splatkaV/D.bytu/100)*100;
-    const rozdilBytuV=Math.round(rozdilV/D.bytu/100)*100;
-    const cls='var-card'+(best?' best':blurred?' blurred':'');
-    return '<div class="'+cls+'">'
-      +(best?'<div class="var-badge">Doporučeno</div>':'')
-      +'<div class="var-name">'+label+'</div>'
-      +'<div class="var-kwp">'+kwpV+'<span> kWp</span></div>'
-      +'<div style="margin-top:10px;display:flex;flex-direction:column;gap:5px">'
-      +'<div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--text-2)">Úspora FVE</span><span style="color:var(--green);font-weight:600">+'+usporaBytuV+' Kč/byt</span></div>'
-      +'<div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--text-2)">Splátka FVE</span><span style="color:var(--rose);font-weight:600">−'+splatkaBytuV+' Kč/byt</span></div>'
-      +'<div style="height:0.5px;background:var(--border);margin:2px 0"></div>'
-      +'<div style="display:flex;justify-content:space-between;font-size:13px"><span style="font-weight:500">Čistý přínos</span><span style="color:'+(rozdilBytuV>=0?'var(--blue)':'#F43F5E')+';font-weight:700">'+(rozdilBytuV>=0?'+':'')+rozdilBytuV+' Kč/byt</span></div>'
-      +'</div>'
-      +'<div class="var-roi" style="margin-top:8px">investice '+Math.round(investiceV/1000)+' tis. Kč · navrat '+Math.round(investiceV/usporaV)+' let</div>'
-      +'</div>';
-  }
-
-  return '<div class="res-header">'
-    +'<div class="res-meta">Orientační výsledky · '+D.bytu+' bytů · '+kwp+' kWp · '+(D.lokace||'zadaná adresa')+' · <span class="badge b-blue">bez registrace</span></div>'
-    +'<div class="kpi-row">'
-    +'<div class="kpi"><div class="kpi-l">Roční úspora</div><div class="kpi-v">'+Math.round(cf.uspora_rok/1000)+'</div><div class="kpi-u">tis. Kč / rok</div></div>'
-    +'<div class="kpi"><div class="kpi-l">Úspora / byt</div><div class="kpi-v">'+usporaBytu+'</div><div class="kpi-u">Kč / rok</div></div>'
-    +'<div class="kpi"><div class="kpi-l">Čistý přínos / byt</div><div class="kpi-v" style="color:'+(rozdilBytu>=0?'var(--green)':'var(--rose)')+'">'+(rozdilBytu>=0?'+':'')+rozdilBytu+'</div><div class="kpi-u">Kč / rok</div></div>'
-    +'</div></div>'
-
-    +'<div class="var-grid">'
-    +varCard('Bez baterie',true,false,kwp,uspora,spl,cf.investice)
-    +varCard('Sdílení v domě s podružným měřením',false,true,kwpJ,cfJ.uspora_rok,splJ,cfJ.investice)
-    +varCard('Sdílení energie s EDC',false,true,kwpB,cfB.uspora_rok,splB,cfB.investice)
-    +'</div>'
-
-    +'<div class="card" style="margin-bottom:12px">'
-    +'<div style="font-size:13px;font-weight:500;color:var(--navy);margin-bottom:4px">Vývoj přínosů v čase (varianta bez baterie)</div>'
-    +'<div style="font-size:12px;color:var(--text-2);margin-bottom:10px">Rok po roce — splátka FVE, úspora a čistý přínos na byt</div>'
-    +'<div style="display:flex;gap:16px;margin-bottom:10px;flex-wrap:wrap">'
-    +'<span style="font-size:11px;display:flex;align-items:center;gap:5px"><span style="width:12px;height:3px;background:var(--rose);border-radius:2px;display:inline-block"></span>Splátka FVE</span>'
-    +'<span style="font-size:11px;display:flex;align-items:center;gap:5px"><span style="width:12px;height:3px;background:var(--green);border-radius:2px;display:inline-block"></span>Úspora FVE</span>'
-    +'<span style="font-size:11px;display:flex;align-items:center;gap:5px"><span style="width:12px;height:3px;background:var(--blue);border-radius:2px;display:inline-block"></span>Čistý přínos</span>'
-    +'</div>'
-    +'<div class="cf-wrap" style="height:160px"><canvas id="cfCanvas" style="height:160px"></canvas>'
-    +'<div class="cf-blur" style="background:linear-gradient(to right,transparent 45%,rgba(255,255,255,0.96) 72%)"><span class="badge b-amber">Plný graf po registraci</span></div>'
-    +'</div>'
-    +'<div style="display:flex;justify-content:space-between;font-size:10px;color:#94A3B8;margin-top:4px"><span>Rok 1</span><span>Rok 10</span><span>Rok 20</span><span>Rok 25</span></div>'
-    +'</div>'
-
-    +'<div class="cta-box" style="margin-bottom:12px">'
-    +'<div class="cta-body">'
-    +'<div class="cta-title">Čistý přínos '+(rozdilBytu>=0?'+':'')+rozdilBytu+' Kč/byt/rok — chcete přesná čísla pro schůzi SVJ?</div>'
-    +'<div class="cta-desc">Plná simulace · PDF report · 3 varianty · Editace všech parametrů · Bezplatná schůzka s měřením</div>'
-    +'</div>'
-    +'<button class="btn-cta" onclick="openModal()">Odemknout výsledky zdarma →</button>'
-    +'</div>'
-    +'<div class="nav"><button class="btn-out" onclick="goBack()">← Upravit parametry</button>'
-    +'<span class="nav-hint">Investice cca '+Math.round(cf.investice/1000)+' tis. Kč bez dotací</span></div>';
+function s5(){
+  const z=D.zarizeni;
+  const sp=spSpVypocet(D.bytu,D.pater,D.vytahu>0,D.vytahu,D.tuv,D.tc,D.ev,D.cerpadla);
+  const kwp=optimKwp(D.bytu,z,D.ev,D.tc,sp.sp_mwh);
+  const roofs=[
+    {v:'sedelova',n:'Sedlová',sklon:25,ic:'<svg width="44" height="32" viewBox="0 0 44 32" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"><polygon points="22,3 41,27 3,27"/><line x1="3" y1="27" x2="41" y2="27" stroke-width="2"/></svg>'},
+    {v:'plocha',n:'Plochá',sklon:10,ic:'<svg width="44" height="32" viewBox="0 0 44 32" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="10" width="38" height="16" rx="2"/><line x1="3" y1="10" x2="41" y2="10" stroke-width="2.5"/></svg>'},
+    {v:'kolma',n:'Kolmá stěna',sklon:90,ic:'<svg width="44" height="32" viewBox="0 0 44 32" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"><polyline points="3,27 14,8 14,27 25,8 25,27 41,8"/></svg>'},
+  ];
+  const ors=[{v:0,n:'Jih'},{v:-45,n:'Jihovýchod'},{v:45,n:'Jihozápad'},{v:-90,n:'Východ'},{v:90,n:'Západ'},{v:999,n:'Východ / Západ',sp:true},{v:998,n:'JV / JZ',sp:true}];
+  const rHtml=roofs.map(r=>{const on=D.strTyp===r.v;return`<div class="chip${on?' on':''}" onclick="pickRoof('${r.v}',${r.sklon})"><div style="color:${on?'var(--blue)':'var(--text-2)'};margin-bottom:2px">${r.ic}</div><div class="chip-name" style="font-size:11px">${r.n}</div><div class="chip-sub">${r.sklon}°</div></div>`;}).join('');
+  const orHtml=ors.map(o=>`<div class="chip${D.azimut===o.v?' on':''}" onclick="D.azimut=${o.v};render()"><div class="chip-name">${o.n}</div><div class="chip-sub">${o.sp?'split systém':''}</div></div>`).join('');
+  const pvgisStatus=D.lat?`<span style="color:var(--green);font-size:12px">✅ Adresa načtena: ${D.lokace}</span>`:`<span style="color:var(--amber);font-size:12px">⚠️ Adresa nezadána — bude použit průměr ČR (1050 kWh/kWp)</span>`;
+  return`<div class="card">
+  <h2 class="ctitle">Střecha a solární systém</h2>
+  <p class="csub">Reálná data záření načteme z PVGIS EU JRC pro vaši přesnou polohu.</p>
+  <div style="margin-bottom:12px">${pvgisStatus}</div>
+  <div class="slabel" style="margin-top:0">Typ střechy</div>
+  <div class="chip-grid c3" style="margin-bottom:14px">${rHtml}</div>
+  <div style="display:flex;align-items:center;gap:16px;margin-bottom:14px">
+    <span style="font-size:12px;color:var(--text-2);font-weight:500;white-space:nowrap">Sklon panelu (°)</span>
+    ${stepper('sklon','',0,90,5)}
+  </div>
+  <div class="slabel">Orientace panelu</div>
+  <div class="chip-grid c3">${orHtml}</div>
+  <div style="margin-top:16px;padding:14px 16px;background:var(--blue-ll);border:0.5px solid #C8DFF2;border-radius:var(--rm)">
+    <div style="font-size:12px;color:#4A7BA8;font-weight:600;margin-bottom:6px">📐 Navrhovaný výkon: <strong style="color:var(--navy);font-size:16px">${kwp} kWp</strong></div>
+    <div style="font-size:11px;color:#4A7BA8">Pro ${D.bytu} bytů${D.tc?' + TČ':''}${D.ev>0?' + '+D.ev+' EV nabíječek':''}${sp.sp_mwh>0?' + '+sp.sp_mwh.toFixed(1)+' MWh/rok spol. prostory':''}</div>
+  </div>
+  </div>
+  <div class="nav"><button class="btn-out" onclick="goBack()">← Zpět</button><button class="btn-prim" onclick="goToResults()">Zobrazit výsledky →</button></div>`;
 }
 
-
-// CANVAS — profil spotřeby
-function drawProfile(){const c=document.getElementById('profCanvas');if(!c)return;const dpr=window.devicePixelRatio||1;c.width=c.offsetWidth*dpr;c.height=90*dpr;c.style.width='100%';c.style.height='90px';const ctx=c.getContext('2d');ctx.scale(dpr,dpr);const W=c.offsetWidth,H=90,prof=genProfile(D.hhSlider),mx=Math.max(...prof)*1.1;const grad=ctx.createLinearGradient(0,0,0,H);grad.addColorStop(0,'rgba(244,63,94,0.32)');grad.addColorStop(1,'rgba(244,63,94,0.02)');const pts=prof.map((v,i)=>({x:i/(prof.length-1)*W,y:H-(v/mx)*(H-8)}));ctx.beginPath();ctx.moveTo(0,H);pts.forEach((p,i)=>{if(i===0)ctx.lineTo(p.x,p.y);else{const pp=pts[i-1];ctx.bezierCurveTo((pp.x+p.x)/2,pp.y,(pp.x+p.x)/2,p.y,p.x,p.y);}});ctx.lineTo(W,H);ctx.closePath();ctx.fillStyle=grad;ctx.fill();ctx.beginPath();pts.forEach((p,i)=>{if(i===0)ctx.moveTo(p.x,p.y);else{const pp=pts[i-1];ctx.bezierCurveTo((pp.x+p.x)/2,pp.y,(pp.x+p.x)/2,p.y,p.x,p.y);}});ctx.strokeStyle='#F43F5E';ctx.lineWidth=2.5;ctx.stroke();[6,12,18].forEach(h=>{ctx.strokeStyle='rgba(148,163,184,0.35)';ctx.lineWidth=0.5;ctx.beginPath();ctx.moveTo(h/23*W,0);ctx.lineTo(h/23*W,H);ctx.stroke();});}
-
-// CANVAS — 3 křivky: splátka, úspora, čistý přínos
-function drawCf(){
-  const canvas=document.getElementById('cfCanvas');if(!canvas)return;
-  const kwp=optimKwp(D.bytu,D.zarizeni,D.ev,D.tc);
-  const sazba=doporucenaSazba(D.zarizeni);
-  const cf=calcCf(kwp,D.bytu,D.zarizeni,sazba,D.dist);
-  // Splátka anuita 20 let 5%
-  const r2=0.05/12,n2=240,mesic=cf.investice*(r2*Math.pow(1+r2,n2))/(Math.pow(1+r2,n2)-1);
-  const splatkaRok=Math.round(mesic*12);
-  const splatkaBytu=Math.round(splatkaRok/D.bytu);
-
-  // Data po rocich (25 let)
-  const years=Array.from({length:25},(_,i)=>i+1);
-  const usporaArr=years.map(y=>Math.round(cf.uspora_rok*Math.pow(1.03,y-1)/D.bytu));
-  const splatkaArr=years.map(y=>y<=20?splatkaBytu:0);
-  const rozdilArr=years.map((y,i)=>usporaArr[i]-splatkaArr[i]);
-
-  const dpr=window.devicePixelRatio||1;
-  canvas.width=canvas.offsetWidth*dpr;
-  canvas.height=160*dpr;
-  canvas.style.width='100%';canvas.style.height='160px';
-  const ctx=canvas.getContext('2d');
-  ctx.scale(dpr,dpr);
-  const W=canvas.offsetWidth,H=160,PAD=8;
-
-  const allVals=[...usporaArr,...splatkaArr,...rozdilArr];
-  const minV=Math.min(...allVals)*1.1;
-  const maxV=Math.max(...allVals)*1.1;
-  const rng=maxV-minV||1;
-  const toY=v=>PAD+(1-(v-minV)/rng)*(H-PAD*2);
-  const toX=i=>i/(years.length-1)*W;
-
-  // Zero line
-  const zY=toY(0);
-  ctx.strokeStyle='rgba(148,163,184,0.4)';ctx.lineWidth=0.5;
-  ctx.setLineDash([4,4]);
-  ctx.beginPath();ctx.moveTo(0,zY);ctx.lineTo(W,zY);ctx.stroke();
-  ctx.setLineDash([]);
-
-  // Rok splácení - oblast
-  const x20=toX(19);
-  ctx.fillStyle='rgba(244,63,94,0.04)';
-  ctx.fillRect(0,0,x20,H);
-
-  function drawLine(arr,color,dash){
-    ctx.beginPath();
-    arr.forEach((v,i)=>{const x=toX(i),y=toY(v);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
-    ctx.strokeStyle=color;ctx.lineWidth=2.5;
-    if(dash)ctx.setLineDash(dash);else ctx.setLineDash([]);
-    ctx.stroke();ctx.setLineDash([]);
-  }
-
-  // Splátka (rose, přerušovaná)
-  drawLine(splatkaArr,'#F43F5E',[6,3]);
-  // Úspora (green)
-  drawLine(usporaArr,'#2E8B4A',[]);
-  // Čistý přínos (blue, tučnější)
-  ctx.lineWidth=3;
-  drawLine(rozdilArr,'#1B6CA8',[]);
-
-  // Roční grid lines
-  [5,10,15,20].forEach(y=>{
-    ctx.strokeStyle='rgba(148,163,184,0.2)';ctx.lineWidth=0.5;
-    ctx.beginPath();ctx.moveTo(toX(y-1),0);ctx.lineTo(toX(y-1),H);ctx.stroke();
-  });
+function pickRoof(typ,sklon){
+  D.strTyp=typ; D.sklon=sklon;
+  if(typ==='sedelova') D.azimut=0;
+  else if(typ==='plocha') D.azimut=999;
+  else if(typ==='kolma') D.azimut=0;
+  render();
 }
 
+async function goToResults(){
+  cur=5;
+  render(); // ukáže loading stav
+  window.scrollTo(0,0);
+}
 
-// ── AUTOCOMPLETE ─────────────────────────────────────────────────
-const CZ_MESTA=['Praha','Brno','Ostrava','Plzeň','Liberec','Olomouc','Ústí nad Labem','České Budějovice','Hradec Králové','Pardubice','Zlín','Havířov','Kladno','Most','Opava','Frýdek-Místek','Karviná','Jihlava','Teplice','Děčín','Chomutov','Přerov','Jablonec nad Nisou','Mladá Boleslav','Prostějov','Třinec','Třebíč','Znojmo','Kolín','Příbram','Šumperk','Kroměříž','Vsetín','Trutnov','Cheb','Sokolov','Hodonín','Uherské Hradiště','Krnov','Orlová','Kopřivnice','Bohumín'];
-let acT=null;
-function onLokInput(e){
-  D.lokace=e.target.value;D.lat=null;D.lon=null;clearTimeout(acT);
-  const q=e.target.value.trim();
-  if(q.length<2){closeAc();return;}
-  const local=CZ_MESTA.filter(m=>m.toLowerCase().startsWith(q.toLowerCase())).slice(0,3);
-  if(local.length)showAcItems(local.map(m=>({name:m,lat:null,lon:null})));
-  acT=setTimeout(()=>fetchAc(q),550);
-}
-function closeAc(){const l=document.getElementById('acList');if(l)l.classList.remove('open');}
-function showAcItems(items){
-  const list=document.getElementById('acList');if(!list||!items.length)return;
-  list.innerHTML=items.map(it=>{
-    const safeN=it.name.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    const lat=it.lat||'null';
-    const lon=it.lon||'null';
-    const safeQ=it.name.replace(/"/g,'&quot;');
-    return '<div class="ac-item" onclick="pickAc(this)" data-name="'+safeQ+'" data-lat="'+lat+'" data-lon="'+lon+'">\u{1F4CD} '+safeN+'</div>';
-  }).join('');
-  list.classList.add('open');
-}
-async function fetchAc(q){
+// ================================================================
+// VÝSLEDKY — s reálným PVGIS
+// ================================================================
+let _pvgisCache=null;
+let _pvgisParams=null;
+
+async function fetchPvgis(lat, lon, kwp, sklon, azimut){
+  const key=`${lat},${lon},${kwp},${sklon},${azimut}`;
+  if(_pvgisCache&&_pvgisParams===key) return _pvgisCache;
+  _pvgisParams=key;
   try{
-    const r=await fetch('https://nominatim.openstreetmap.org/search?q='+encodeURIComponent(q+', Česká republika')+'&format=json&limit=5&addressdetails=1&countrycodes=cz',{headers:{'User-Agent':'svjenergie-kalkulator/1.0','Accept-Language':'cs'}});
-    if(!r.ok)return;
-    const data=await r.json();if(!data.length)return;
-    const items=data.map(item=>{
-      const a=item.address||{};
-      const road=[a.road,a.house_number].filter(Boolean).join(' ');
-      const city=a.city||a.town||a.village||a.municipality||'';
-      const name=(road?road+(city?', ':'')+city:city)||item.display_name.split(',')[0];
-      return{name:name.trim(),lat:parseFloat(item.lat),lon:parseFloat(item.lon)};
-    }).filter(i=>i.name);
-    if(items.length)showAcItems(items);
-  }catch(e){}
-}
-function pickAc(el){
-  const name=el.dataset.name||el.textContent.replace('\u{1F4CD} ','').trim();
-  const lat=el.dataset.lat;
-  const lon=el.dataset.lon;
-  D.lokace=name;
-  D.lat=(lat&&lat!=='null')?parseFloat(lat):null;
-  D.lon=(lon&&lon!=='null')?parseFloat(lon):null;
-  const inp=document.getElementById('fLok');if(inp)inp.value=name;
-  closeAc();
+    const az1=azimut===999?-90:azimut===998?-45:azimut;
+    const az2=azimut===999?90:azimut===998?45:null;
+    const kwp1=az2?kwp/2:kwp;
+    const params1=new URLSearchParams({lat,lon,peakpower:kwp1,loss:14,angle:sklon,aspect:az1,outputformat:'json',browser:0,pvcalculation:1,pvtechchoice:'crystSi',mountingplace:'building',trackingtype:0,usehorizon:1,tmy:1});
+    const r1=await fetch('https://re.jrc.ec.europa.eu/api/v5_2/seriescalc?'+params1.toString());
+    if(!r1.ok) throw new Error('PVGIS error '+r1.status);
+    const d1=await r1.json();
+    let arr=d1.outputs.hourly.map(h=>parseFloat(h.P)/1000.0).slice(0,8760);
+    if(az2!==null){
+      const params2=new URLSearchParams({lat,lon,peakpower:kwp/2,loss:14,angle:sklon,aspect:az2,outputformat:'json',browser:0,pvcalculation:1,pvtechchoice:'crystSi',mountingplace:'building',trackingtype:0,usehorizon:1,tmy:1});
+      const r2=await fetch('https://re.jrc.ec.europa.eu/api/v5_2/seriescalc?'+params2.toString());
+      if(r2.ok){const d2=await r2.json();const arr2=d2.outputs.hourly.map(h=>parseFloat(h.P)/1000.0).slice(0,8760);arr=arr.map((v,i)=>v+(arr2[i]||0));}
+    }
+    _pvgisCache=arr;
+    return arr;
+  }catch(e){console.warn('PVGIS fallback:',e);return null;}
 }
 
-// MODAL
-function openModal(){document.getElementById('regModal').classList.add('open');document.body.style.overflow='hidden';setTimeout(()=>{const el=document.getElementById('regJmeno');if(el)el.focus();},100);}
-function closeModal(){document.getElementById('regModal').classList.remove('open');document.body.style.overflow='';}
-document.getElementById('regModal').addEventListener('click',e=>{if(e.target===document.getElementById('regModal'))closeModal();});
+function vypoctiVse(vyroba8760){
+  const z=D.zarizeni;
+  const sazba=doporucenaSazba(z);
+  const dist=D.dist;
+  const sp=spSpVypocet(D.bytu,D.pater,D.vytahu>0,D.vytahu,D.tuv,D.tc,D.ev,D.cerpadla);
+  const kwp=optimKwp(D.bytu,z,D.ev,D.tc,sp.sp_mwh);
 
-// ── TELEFON validace ─────────────────────────────────────────────
-function formatTel(el){
-  let v=el.value.replace(/[^\d+]/g,'');
-  if(v.startsWith('00420'))v='+420'+v.slice(5);
-  let digits=v.replace(/^\+420/,'').replace(/\D/g,'');
-  if(digits.length>9)digits=digits.slice(0,9);
-  if(digits.length>6)digits=digits.slice(0,3)+' '+digits.slice(3,6)+' '+digits.slice(6);
-  else if(digits.length>3)digits=digits.slice(0,3)+' '+digits.slice(3);
-  el.value=(v.startsWith('+420')?'+420 ':'')+digits;
-  const ok=isTelOk(el.value);
-  el.style.borderColor=el.value.length>3?(ok?'var(--green)':'#F43F5E'):'';
-  document.getElementById('telIcon').textContent=el.value.length>3?(ok?'✅':'❌'):'';
-}
-function isTelOk(v){const c=v.replace(/[\s\-]/g,'');return/^(\+420|00420)?[0-9]{9}$/.test(c);}
-function telErrMsg(v){
-  const c=v.replace(/[\s\-]/g,'');
-  if(!c)return'Zadejte telefonní číslo';
-  if(c.replace(/^\+420|^00420/,'').length<9)return'Číslo je příliš krátké (9 číslic)';
-  return'Neplatný formát (př. 603 123 456)';
+  // Spotřeba bytů (VT + NT)
+  let sp_byt_vt=0, sp_byt_nt=0;
+  z.forEach(k=>{if(SP_ZAR[k]){sp_byt_vt+=SP_ZAR[k].vt*D.bytu;sp_byt_nt+=SP_ZAR[k].nt*D.bytu;}});
+  const sp_cel_vt=sp_byt_vt+sp.sp_vt_mwh*1000;
+  const sp_cel_nt=sp_byt_nt+sp.sp_nt_mwh*1000;
+
+  // Profily spotřeby
+  const vt_profil=genProfilVt(sp_cel_vt, D.hhSlider);
+  const nt_profil=genProfilNt(sp_cel_nt, sazba);
+
+  // Výroba
+  const vyroba=vyroba8760||genVyrobaFallback(kwp,D.sklon,D.azimut);
+
+  // Ceny (Kč/MWh → /1000 = Kč/kWh)
+  const cvt=CENY_VT[dist]?.[sazba]||6920;
+  const cnt=CENY_NT[dist]?.[sazba]||4070;
+  const cpr=1200; // přetoky Kč/MWh
+
+  // 3 modely sdílení
+  const sim_edc=simuluj(vyroba,vt_profil,nt_profil,0,'edc');
+  const sim_pm=simuluj(vyroba,vt_profil,nt_profil,0,'edc'); // podružná měřidla ≈ EDC (zachycuje stejnou výrobu)
+  const sim_sp=simuluj(vyroba,sp.sp_vt_mwh*1000>0?genProfilVt(sp.sp_vt_mwh*1000,D.hhSlider):Array(8760).fill(0),[],[],0,'spolecne'); // jen SP
+
+  // Investice
+  const investice=kwp*cenaKwp(kwp);
+  const {uver, bonus, splatnost}=nzuVypocet(investice, D.bytu);
+  const vlastni=investice-bonus-uver;
+
+  // Cashflow pro EDC (doporučený)
+  const cf_res=cashflow(sim_edc,cvt,cnt,cpr,investice,bonus,uver,splatnost,3.0,0.5);
+
+  // Úspora na byt
+  const uspora_byt_rok=Math.round(cf_res.cf[0]?.uspora_celkem/D.bytu)||0;
+  const uspora_byt_mes=Math.round(uspora_byt_rok/12);
+
+  // Verze s podružnými měřidly — mírně nižší využití (0.9 korekce)
+  const uspora_pm=Math.round(sim_pm.vlastni_kwh*0.9*(cvt/1000)+sim_pm.pretoky_kwh*0.9*(cpr/1000));
+  const nav_pm=investice/Math.max(uspora_pm,1);
+
+  // Verze jen SP
+  const uspora_sp=Math.round(sim_sp.vlastni_kwh*(cvt/1000)+sim_sp.pretoky_kwh*(cpr/1000));
+  const nav_sp=investice/Math.max(uspora_sp,1);
+
+  return{
+    kwp, investice, bonus, uver, vlastni, splatnost,
+    cvt, cnt, cpr,
+    sim_edc, sim_pm, sim_sp,
+    cf:cf_res.cf, nav:cf_res.nav, kum25:cf_res.kum25,
+    uspora_rok:cf_res.cf[0]?.uspora_celkem||0,
+    uspora_byt_rok, uspora_byt_mes,
+    uspora_pm, nav_pm: Math.round(nav_pm*10)/10,
+    uspora_sp, nav_sp: Math.round(nav_sp*10)/10,
+    vyroba_mwh:Math.round(sim_edc.vyroba_kwh/1000*10)/10,
+    vlastni_pct:Math.round(sim_edc.vlastni_kwh/sim_edc.vyroba_kwh*100)||0,
+    sp_mwh:sp.sp_mwh
+  };
 }
 
-// ── HESLO strength ────────────────────────────────────────────────
-function checkPwStrength(v){
-  const bar=document.getElementById('pwStrength');
-  const hint=document.getElementById('pwHint');
-  if(!bar||!hint)return;
-  bar.className='pw-strength';
-  if(v.length===0){hint.textContent='';return;}
-  if(v.length<6){bar.classList.add('weak');hint.textContent='Příliš krátké';return;}
-  const strong=/[A-Z]/.test(v)&&/[0-9]/.test(v)&&v.length>=10;
-  const ok=/[A-Z]/.test(v)||/[0-9]/.test(v);
-  if(strong){bar.classList.add('strong');hint.textContent='Silné heslo ✓';}
-  else if(ok||v.length>=8){bar.classList.add('ok');hint.textContent='Dobré heslo';}
-  else{bar.classList.add('weak');hint.textContent='Přidejte číslo nebo velké písmeno';}
+function s6(){
+  const z=D.zarizeni;
+  const sp=spSpVypocet(D.bytu,D.pater,D.vytahu>0,D.vytahu,D.tuv,D.tc,D.ev,D.cerpadla);
+  const kwp=optimKwp(D.bytu,z,D.ev,D.tc,sp.sp_mwh);
+
+  // Zobrazíme loading a spustíme async výpočet
+  setTimeout(async()=>{
+    const pvgisEl=document.getElementById('pvgisStatus');
+    let vyroba=null;
+    if(D.lat&&D.lon){
+      if(pvgisEl) pvgisEl.innerHTML='<div class="pvgis-loading"><div class="pvgis-spinner"></div><span>Načítám reálná solární data z PVGIS EU JRC pro vaši adresu…</span></div>';
+      vyroba=await fetchPvgis(D.lat,D.lon,kwp,D.sklon,D.azimut);
+      if(pvgisEl){
+        if(vyroba) pvgisEl.innerHTML=`<div style="font-size:12px;color:var(--green);padding:8px 0;">✅ Solární data načtena z PVGIS pro: <strong>${D.lokace}</strong></div>`;
+        else pvgisEl.innerHTML=`<div style="font-size:12px;color:var(--amber);padding:8px 0;">⚠️ PVGIS nedostupné — použit průměr ČR (1050 kWh/kWp)</div>`;
+      }
+    }
+    const R=vypoctiVse(vyroba);
+    const resEl=document.getElementById('resBody');
+    if(resEl) resEl.innerHTML=renderResults(R);
+    setTimeout(()=>drawCf(R.cf),50);
+  },100);
+
+  // Placeholder
+  const quickKwp=kwp;
+  const quickInv=quickKwp*cenaKwp(quickKwp);
+  const quickUspora=Math.round(quickKwp*1050*0.65*(CENY_VT[D.dist]?.D02d||6920)/1000000*1000);
+  const quickNav=Math.round(quickInv/Math.max(quickUspora,1)*10)/10;
+
+  return`<div class="card res-header">
+  <div class="res-meta">📍 ${D.lokace||'Zadaná poloha'} · ${D.bytu} bytů · ${quickKwp} kWp · ${D.dist}</div>
+  <h2 class="ctitle">Výsledky analýzy FVE</h2>
+  <p class="csub">Výpočet dle reálných dat PVGIS, ceníků 2026 a OTE TDD profilů spotřeby</p>
+  <div id="pvgisStatus">${D.lat?'<div class="pvgis-loading"><div class="pvgis-spinner"></div><span>Načítám reálná solární data z PVGIS EU JRC…</span></div>':'<div style="font-size:12px;color:var(--amber);padding:8px 0;">⚠️ Adresa nezadána — použit průměr ČR</div>'}</div>
+  </div>
+  <div id="resBody">
+    <div style="text-align:center;padding:40px 20px;color:var(--text-2)">
+      <div class="pvgis-spinner" style="margin:0 auto 12px;width:32px;height:32px;border-width:3px"></div>
+      <div style="font-size:13px">Počítám simulaci…</div>
+    </div>
+  </div>
+  <div class="nav" style="margin-top:12px"><button class="btn-out" onclick="goBack()">← Zpět</button><button class="btn-cta" style="background:var(--blue)" onclick="openModal();switchTab('reg')">Uložit a sdílet výsledky →</button></div>`;
 }
-function togglePw(id,btn){
-  const el=document.getElementById(id);
+
+function renderResults(R){
+  const premium=sessionStorage.getItem('premium_unlocked')==='true';
+  const verdiktText=R.nav?
+    R.nav<=10?`✅ Výborná investice — návratnost ${R.nav} let`:
+    R.nav<=15?`✅ Dobrá investice — návratnost ${R.nav} let`:
+    R.nav<=20?`⚠️ Přijatelná investice — návratnost ${R.nav} let`:
+    `⚠️ Hraniční projekt — návratnost ${R.nav} let`:
+    '❌ Projekt se za 25 let nevrátí';
+  const verdiktCls=R.nav&&R.nav<=15?'ok':R.nav&&R.nav<=20?'warn':'err';
+  const verdiktDetail=R.nav?
+    R.nav<=10?`Při realistickém vývoji cen elektřiny (+3 %/rok) ušetříte za 25 let <strong>${(R.kum25/1000).toFixed(0)} tis. Kč</strong>, tj. <strong>${Math.round(R.kum25/D.bytu/1000)} tis. Kč na byt</strong>. Bezúročný úvěr NZÚ výrazně snižuje riziko.`:
+    R.nav<=15?`Návratnost je solidní. Za 25 let kumulativně <strong>${(R.kum25/1000).toFixed(0)} tis. Kč</strong> čistého přínosu. S bezúročným úvěrem NZÚ je projekt bezrizikový.`:
+    R.nav<=20?`Projekt se vyplatí při realistickém vývoji cen. Doporučujeme zvýšit výkon nebo přidat baterii pro lepší využití výroby.`:
+    `Doporučujeme optimalizovat výkon FVE, zvážit model EDC nebo JOM pro maximální využití výroby.`:
+    'Při současných parametrech se investice za 25 let nevrátí. Zvažte vyšší výkon FVE nebo jiný model sdílení.';
+
+  const nzu_splatka=Math.round(R.uver/R.splatnost);
+
+  return`
+  <div class="verdikt ${verdiktCls}">
+    <strong>${verdiktText}</strong><br>
+    <span style="font-size:13px">${verdiktDetail}</span>
+  </div>
+
+  <!-- KPI -->
+  <div class="kpi-row">
+    <div class="kpi">
+      <div class="kpi-l">Navrhovaný výkon</div>
+      <div class="kpi-v">${R.kwp}</div>
+      <div class="kpi-u">kWp (${R.vyroba_mwh} MWh/rok)</div>
+    </div>
+    <div class="kpi green">
+      <div class="kpi-l">Roční úspora (EDC)</div>
+      <div class="kpi-v">${Math.round(R.uspora_rok/1000)}</div>
+      <div class="kpi-u">tis. Kč/rok · ${R.uspora_byt_mes} Kč/byt/měs</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-l">Investice / NZÚ úvěr</div>
+      <div class="kpi-v">${Math.round(R.investice/1000)}</div>
+      <div class="kpi-u">tis. Kč · splátka ${Math.round(nzu_splatka/1000)} tis./rok</div>
+    </div>
+  </div>
+
+  <!-- Modely sdílení -->
+  <div class="slabel">Porovnání modelů sdílení <span class="badge b-blue" style="margin-left:6px">PVGIS · OTE 2026</span></div>
+  <div class="var-grid">
+    <div class="var-card best">
+      <div class="var-badge">⭐ Doporučeno</div>
+      <div class="var-name">EDC — komunitní sdílení</div>
+      <div class="var-kwp">${R.kwp}<span> kWp</span></div>
+      <div class="var-save">+${Math.round(R.uspora_rok/1000)} tis. Kč/rok</div>
+      <div class="var-roi">návratnost ${R.nav||'>25'} let</div>
+      <div style="font-size:10px;color:var(--green);margin-top:4px">Max. využití výroby</div>
+    </div>
+    <div class="var-card${premium?'':' blurred'}">
+      ${!premium?'<div class="var-badge" style="background:var(--text-2)">🔒 Po registraci</div>':''}
+      <div class="var-name">Podružná měřidla</div>
+      <div class="var-kwp">${R.kwp}<span> kWp</span></div>
+      <div class="var-save">+${Math.round(R.uspora_pm/1000)} tis. Kč/rok</div>
+      <div class="var-roi">návratnost ~${R.nav_pm} let</div>
+      ${!premium?'<div class="var-lock-msg">Zaregistrujte se pro detail →</div>':''}
+    </div>
+    <div class="var-card${premium?'':' blurred'}">
+      ${!premium?'<div class="var-badge" style="background:var(--text-2)">🔒 Po registraci</div>':''}
+      <div class="var-name">Jen společné prostory</div>
+      <div class="var-kwp">${Math.round(R.kwp*0.3*2)/2}<span> kWp</span></div>
+      <div class="var-save">+${Math.round(R.uspora_sp/1000)} tis. Kč/rok</div>
+      <div class="var-roi">návratnost ~${R.nav_sp} let</div>
+      ${!premium?'<div class="var-lock-msg">Zaregistrujte se pro detail →</div>':''}
+    </div>
+  </div>
+
+  <!-- Cashflow graf -->
+  <div class="slabel">Kumulativní cashflow — EDC model</div>
+  <div class="cf-wrap"><canvas id="cfCanvas"></canvas></div>
+  ${!premium?`<div class="cf-blur"><div style="text-align:right"><div style="font-size:13px;font-weight:600;color:var(--navy)">Plný 25letý přehled</div><button class="btn-prim" style="margin-top:8px;font-size:12px;padding:8px 16px" onclick="openModal();switchTab('reg')">Registrovat se zdarma →</button></div></div>`:''}
+
+  <!-- NZÚ box -->
+  <div class="nzu-box" style="margin-top:14px">
+    <div class="nzu-title">🏛️ Státní podpora NZÚ 2026</div>
+    <div class="nzu-row">✅ <strong>Bezúročný úvěr</strong> ${Math.round(R.uver/1000)} tis. Kč — splácení ${R.splatnost} let (${Math.round(nzu_splatka/1000)} tis. Kč/rok)</div>
+    <div class="nzu-row">✅ <strong>Bonus</strong> za zranitelné domácnosti (dle počtu příjemců sociálních dávek)</div>
+    <div class="nzu-row">✅ <strong>NZÚ Light</strong> — přímá dotace pro nízkopříjmové domácnosti</div>
+    <div style="font-size:11px;color:#2E6B40;margin-top:6px">Vždy ověřte na <a href="https://novazelenausporam.cz" target="_blank" style="color:var(--blue)">novazelenausporam.cz</a></div>
+  </div>
+
+  <!-- Scénáře — za registrací -->
+  <div class="slabel">Citlivostní analýza — 3 scénáře vývoje cen <span class="badge b-amber" style="margin-left:6px">Po registraci</span></div>
+  <div class="scenare-wrap">
+    <div class="${premium?'':'scenare-blur'} scenar-grid">
+      ${[['😐 Pesimistický','+1 %/rok',R.nav?R.nav+2:'—',R.kum25*0.6],['📊 Realistický','+3 %/rok',R.nav||'—',R.kum25],['🔥 Krizový','+6 %/rok',R.nav?R.nav-2:'—',R.kum25*1.6]].map(([t,r,nav,kum])=>`
+      <div class="scenar-card">
+        <div class="scenar-title">${t}</div>
+        <div style="font-size:10px;color:var(--text-2);margin-bottom:6px">${r}</div>
+        <div class="scenar-v">${typeof nav==='number'&&nav>0?nav:'>25'} let</div>
+        <div class="scenar-sub">návratnost</div>
+        <div style="font-size:13px;font-weight:600;color:var(--green);margin-top:6px">${kum>0?'+'+Math.round(kum/1000)+' tis. Kč':'N/A'}</div>
+        <div class="scenar-sub">kumulativně 25 let</div>
+      </div>`).join('')}
+    </div>
+    ${!premium?`<div class="scenare-overlay"><div style="font-size:13px;font-weight:600;color:var(--navy)">📊 Plná citlivostní analýza</div><button class="btn-prim" style="font-size:12px;padding:9px 20px" onclick="openModal();switchTab('reg')">Zaregistrovat se zdarma →</button></div>`:''}
+  </div>
+
+  <!-- CTA -->
+  <div class="cta-box">
+    <div class="cta-body">
+      <div class="cta-title">Připravit podklady pro schůzi SVJ?</div>
+      <div class="cta-desc">Přesný výpočet · Bezplatné měření střechy · Nabídka na míru · Pomoc s NZÚ žádostí</div>
+    </div>
+    <button class="btn-cta" onclick="openModal();switchTab('reg')">Nezávazně →</button>
+  </div>
+
+  <div style="font-size:10px;color:var(--text-2);line-height:1.5;padding:8px 0">
+    ⚠️ Orientační výpočty. Profily spotřeby: OTE ČR TDD4. Solární data: PVGIS TMY © Evropská komise, JRC.
+    Ceny dle ceníků ČEZ, E.ON, PRE od 1.1.2026 (s DPH 21 %, POZE=0 Kč). NZÚ: sfzp.gov.cz · EDC: edc.cz
+  </div>`;
+}
+
+// ================================================================
+// GRAFY
+// ================================================================
+function drawProfile(){
+  const c=document.getElementById('profCanvas');
+  if(!c)return;
+  const ctx=c.ctx2d||c.getContext('2d');
+  c.width=c.offsetWidth*2; c.height=180;
+  ctx.scale(2,1);
+  const W=c.offsetWidth, H=90;
+  ctx.clearRect(0,0,W,H);
+  const pSen=D.hhSlider/100, pPrac=1-pSen;
+  const uprava=Array(24).fill(0).map((_,h)=>pPrac*UPRAVY.pracujici[h]+pSen*UPRAVY.seniori[h]);
+  const uMean=uprava.reduce((a,b)=>a+b)/24;
+  const vals=uprava.map(v=>v/uMean);
+  const max=Math.max(...vals);
+  const pad=10;
+  ctx.fillStyle='rgba(27,108,168,0.08)';
+  ctx.beginPath();
+  vals.forEach((v,i)=>{const x=pad+(i/(23))*(W-2*pad); const y=H-pad-(v/max)*(H-2*pad);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+  ctx.lineTo(W-pad,H-pad); ctx.lineTo(pad,H-pad); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle='var(--blue)'; ctx.lineWidth=2; ctx.lineJoin='round';
+  ctx.beginPath();
+  vals.forEach((v,i)=>{const x=pad+(i/23)*(W-2*pad); const y=H-pad-(v/max)*(H-2*pad);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+  ctx.stroke();
+}
+
+function drawCf(cf){
+  if(!cf) return;
+  const c=document.getElementById('cfCanvas');
+  if(!c)return;
+  c.width=c.offsetWidth*2; c.height=200;
+  const ctx=c.getContext('2d');
+  ctx.scale(2,1);
+  const W=c.offsetWidth, H=100;
+  const vals=cf.map(r=>r.kumulativni);
+  const min=Math.min(...vals,0), max=Math.max(...vals);
+  const range=Math.max(max-min,1);
+  const pad={l:10,r:10,t:10,b:10};
+  const iW=W-pad.l-pad.r, iH=H-pad.t-pad.b;
+  const scX=(i)=>pad.l+i/(cf.length-1)*iW;
+  const scY=(v)=>pad.t+iH-(v-min)/range*iH;
+  // Plocha
+  ctx.fillStyle='rgba(46,139,74,0.12)';
+  ctx.beginPath(); ctx.moveTo(scX(0),scY(0));
+  vals.forEach((v,i)=>ctx.lineTo(scX(i),scY(v)));
+  ctx.lineTo(scX(vals.length-1),scY(0)); ctx.lineTo(scX(0),scY(0));
+  ctx.closePath(); ctx.fill();
+  // Nulová osa
+  if(min<0&&max>0){ctx.strokeStyle='rgba(0,0,0,0.15)';ctx.lineWidth=1;ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(pad.l,scY(0));ctx.lineTo(W-pad.r,scY(0));ctx.stroke();ctx.setLineDash([]);}
+  // Čára
+  ctx.strokeStyle='var(--green)'; ctx.lineWidth=2.5; ctx.lineJoin='round';
+  ctx.beginPath(); vals.forEach((v,i)=>i===0?ctx.moveTo(scX(i),scY(v)):ctx.lineTo(scX(i),scY(v)));
+  ctx.stroke();
+  // Bod návratnosti
+  const nav=cf.findIndex(r=>r.kumulativni>=0);
+  if(nav>0){ctx.fillStyle='var(--green)';ctx.beginPath();ctx.arc(scX(nav),scY(0),5,0,Math.PI*2);ctx.fill();ctx.fillStyle='var(--green)';ctx.font='bold 11px DM Sans,sans-serif';ctx.textAlign='center';ctx.fillText(`rok ${nav+1}`,scX(nav),scY(0)-9);}
+}
+
+// ================================================================
+// GEOCODING + AUTOCOMPLETE
+// ================================================================
+let _acTimer=null;
+async function onLokInput(){
+  const el=document.getElementById('fLok');
   if(!el)return;
-  el.type=el.type==='password'?'text':'password';
-  btn.textContent=el.type==='password'?'👁':'🙈';
+  const v=el.value.trim();
+  D.lokace=v; D.lat=null; D.lon=null; _pvgisCache=null;
+  clearTimeout(_acTimer);
+  if(v.length<3){const l=document.getElementById('acList');if(l)l.classList.remove('open');return;}
+  _acTimer=setTimeout(async()=>{
+    try{
+      const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(v+', Česká republika')}&format=json&limit=5&addressdetails=1&countrycodes=cz`,{headers:{'User-Agent':'FVE-SVJ-Kalkulacka/1.0'}});
+      const data=await r.json();
+      const list=document.getElementById('acList');
+      if(!list)return;
+      if(!data.length){list.classList.remove('open');return;}
+      list.innerHTML=data.map(d=>`<div class="ac-item" onclick="pickLok(${d.lat},${d.lon},'${(d.display_name||d.name).replace(/'/g,"\\'")}')">📍 ${d.display_name||d.name}</div>`).join('');
+      list.classList.add('open');
+    }catch(e){console.warn('Geocoding error',e);}
+  },400);
 }
 
-// ── MODAL TABS ────────────────────────────────────────────────────
-function switchTab(tab){
-  ['reg','login','reset'].forEach(t=>{
-    document.getElementById('panel'+t.charAt(0).toUpperCase()+t.slice(1)).style.display=t===tab?'block':'none';
-    document.getElementById('tab'+t.charAt(0).toUpperCase()+t.slice(1)).classList.toggle('active',t===tab);
-  });
+function pickLok(lat,lon,name){
+  D.lat=parseFloat(lat); D.lon=parseFloat(lon);
+  D.lokace=name.split(',').slice(0,3).join(', ');
+  _pvgisCache=null; _pvgisParams=null;
+  const el=document.getElementById('fLok');
+  if(el) el.value=D.lokace;
+  const list=document.getElementById('acList');
+  if(list) list.classList.remove('open');
+  // Určit distributor dle regionu
+  if(name.toLowerCase().includes('prag')||name.toLowerCase().includes('praha')) D.dist='PREdistribuce';
+  else if(name.toLowerCase().includes('brno')||name.toLowerCase().includes('jihomorav')||name.toLowerCase().includes('jihočes')||name.toLowerCase().includes('pardubice')||name.toLowerCase().includes('vysoč')||name.toLowerCase().includes('jihochees')) D.dist="EG.D (E.ON)";
+  else D.dist='ČEZ Distribuce';
 }
 
-// ── SUPABASE CONFIG ───────────────────────────────────────────────
-const SUPA_URL='https://aeypeepckmbejdcotdss.supabase.co';
-const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFleXBlZXBja21iZWpkY290ZHNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTkyNjAsImV4cCI6MjA5Mjk3NTI2MH0.JjYiI3bcL1ds1vAkFq59Z0WhNCLAd8oekX6GF4Zq5bA';
-const SUPA_HEADERS={'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json'};
+// ================================================================
+// SUPABASE AUTH
+// ================================================================
+const SUPA_URL='https://xzxkwrqvxkxkuqxkxkxk.supabase.co'; // doplnit
+const SUPA_KEY=''; // doplnit
 
 async function supaFetch(path,method,body){
-  const r=await fetch(SUPA_URL+path,{method:method||'GET',headers:SUPA_HEADERS,body:body?JSON.stringify(body):undefined});
+  const headers={'apikey':SUPA_KEY,'Content-Type':'application/json','Authorization':'Bearer '+(localStorage.getItem('supa_access_token')||SUPA_KEY)};
+  const r=await fetch(SUPA_URL+path,{method,headers,body:body?JSON.stringify(body):undefined});
   const data=await r.json().catch(()=>({}));
-  return{ok:r.ok,status:r.status,data};
+  return{ok:r.ok,data};
 }
 
-// ── REGISTRACE ────────────────────────────────────────────────────
+function openModal(){document.getElementById('regModal').classList.add('open');}
+function closeModal(){document.getElementById('regModal').classList.remove('open');}
+function switchTab(t){
+  ['reg','login','reset'].forEach(x=>{
+    document.getElementById('tab'+x.charAt(0).toUpperCase()+x.slice(1))?.classList.toggle('active',x===t);
+    document.getElementById('panel'+x.charAt(0).toUpperCase()+x.slice(1)).style.display=x===t?'':'none';
+  });
+}
+
+function getHhLabel(v){return v<25?'Převážně pracující':v>75?'Převážně senioři / homeoffice':v<50?'Spíše pracující':v>50?'Spíše senioři':'Vyvážený mix';}
+
+function togglePw(id,btn){const el=document.getElementById(id);if(!el)return;el.type=el.type==='password'?'text':'password';btn.textContent=el.type==='password'?'👁':'🔒';}
+function checkPwStrength(pw){const s=document.getElementById('pwStrength'),h=document.getElementById('pwHint');if(!s)return;const strong=pw.length>=10&&/[A-Z]/.test(pw)&&/[0-9]/.test(pw),ok=pw.length>=8;s.className='pw-strength'+(strong?' strong':ok?' ok':pw.length?' weak':'');if(h)h.textContent=strong?'Silné heslo':ok?'Dobré heslo — přidejte číslo nebo velké písmeno':'Slabé heslo — min. 8 znaků';}
+function formatTel(el){let v=el.value.replace(/\D/g,'');if(v.startsWith('420'))v=v.slice(3);if(v.length>9)v=v.slice(0,9);el.value=v.replace(/(\d{3})(?=\d)/g,'$1 ').trim();document.getElementById('telIcon').textContent=v.length===9?'✅':'';}
+
 async function submitReg(){
-  const email=document.getElementById('regEmail').value.trim();
-  const pw=document.getElementById('regPw').value;
-  const pw2=document.getElementById('regPw2').value;
-  const telEl=document.getElementById('regTel');
-  const tel=telEl?telEl.value.trim():'';
-
-  if(!email||!email.includes('@')){shake(document.getElementById('regEmail'));return;}
-  if(pw.length<8){shake(document.getElementById('regPw'));showFieldErr(document.getElementById('regPw'),'Heslo musí mít alespoň 8 znaků');return;}
+  const jm=document.getElementById('regJmeno')?.value.trim();
+  const em=document.getElementById('regEmail')?.value.trim();
+  const pw=document.getElementById('regPw')?.value;
+  const pw2=document.getElementById('regPw2')?.value;
+  if(!em||!em.includes('@')){shake(document.getElementById('regEmail'));return;}
+  if(!pw||pw.length<8){shake(document.getElementById('regPw'));return;}
   if(pw!==pw2){shake(document.getElementById('regPw2'));showFieldErr(document.getElementById('regPw2'),'Hesla se neshodují');return;}
-  if(tel&&!isTelOk(tel)){shake(telEl);showFieldErr(telEl,telErrMsg(tel));return;}
-
   setBtnLoading('regBtn','regBtnTxt',true);
   try{
-    // 1. Supabase signUp
-    const {ok,data}=await supaFetch('/auth/v1/signup','POST',{
-      email,password:pw,
-      options:{data:{
-        jmeno:document.getElementById('regJmeno').value.trim()||null,
-        telefon:tel.replace(/[\s\-]/g,'')||null,
-        svj:document.getElementById('regSvj').value.trim()||null,
-      },emailRedirectTo:'https://www.svjenergie.cz/kalkulator.html'}
-    });
-    if(!ok){
-      const msg=data.msg||data.message||data.error_description||'Chyba registrace';
-      if(msg.includes('already registered'))throw new Error('Tento e-mail je již registrován — přihlaste se');
-      throw new Error(msg);
-    }
-    // 2. Uložit lead
-    await supaFetch('/rest/v1/leads','POST',{
-      jmeno:document.getElementById('regJmeno').value.trim()||null,
-      email,telefon:tel.replace(/[\s\-]/g,'')||null,
-      svj:document.getElementById('regSvj').value.trim()||null,
-      strecha:(D.strTyp||'sedelova')+(D.lokace?' | '+D.lokace:''),
-      azimut:D.azimut,zarizeni:D.zarizeni.join(','),
-    });
-    // 3. Uložit parametry kalkulačky
-    await saveCalculation(data.user?.id || data.id);
-    // 4. Úspěch
+    const {ok,data}=await supaFetch('/auth/v1/signup','POST',{email:em,password:pw,data:{full_name:jm,svj:document.getElementById('regSvj')?.value.trim(),phone:document.getElementById('regTel')?.value.trim()}});
+    if(!ok)throw new Error(data.msg||data.error_description||'Chyba registrace');
+    if(data.access_token){localStorage.setItem('supa_access_token',data.access_token);}
     document.getElementById('regFormWrap').style.display='none';
     document.getElementById('regSuccess').style.display='block';
-    document.getElementById('regSuccess').innerHTML='<div class="success-box">'
-      +'<div class="success-icon">📧</div>'
-      +'<div class="success-title">Zkontrolujte e-mail!</div>'
-      +'<div class="success-desc">Poslali jsme vám potvrzovací odkaz na <strong>'+email+'</strong>.<br>'
-      +'Po kliknutí na odkaz budete přihlášeni a uvidíte plné výsledky.</div></div>';
-  }catch(e){
-    setBtnLoading('regBtn','regBtnTxt',false,'Vytvořit účet a odemknout výsledky →');
-    showFieldErr(document.getElementById('regEmail'),e.message);
-  }
+    setTimeout(()=>{closeModal();unlockPremium();},1800);
+  }catch(e){setBtnLoading('regBtn','regBtnTxt',false,'Vytvořit účet a odemknout výsledky →');showFieldErr(document.getElementById('regEmail'),e.message);}
 }
 
-// ── PŘIHLÁŠENÍ ────────────────────────────────────────────────────
 async function submitLogin(){
-  const email=document.getElementById('loginEmail').value.trim();
-  const pw=document.getElementById('loginPw').value;
-  if(!email||!email.includes('@')){shake(document.getElementById('loginEmail'));return;}
-  if(!pw){shake(document.getElementById('loginPw'));return;}
+  const em=document.getElementById('loginEmail')?.value.trim();
+  const pw=document.getElementById('loginPw')?.value;
+  if(!em||!pw){shake(document.getElementById('loginEmail'));return;}
   setBtnLoading('loginBtn','loginBtnTxt',true);
   try{
-    const {ok,data}=await supaFetch('/auth/v1/token?grant_type=password','POST',{email,password:pw});
-    if(!ok){
-      const msg=data.error_description||data.msg||'Nesprávný e-mail nebo heslo';
-      throw new Error(msg);
-    }
-    // Uložit session token
-    localStorage.setItem('supa_access_token',data.access_token);
-    // Uložit parametry kalkulačky
-    await saveCalculation(data.user?.id);
-    document.getElementById('regFormWrap').style.display='none';
-    document.getElementById('regSuccess').style.display='block';
-    document.getElementById('regSuccess').innerHTML='<div class="success-box">'
-      +'<div class="success-icon">✅</div>'
-      +'<div class="success-title">Přihlášení úspěšné!</div>'
-      +'<div class="success-desc">Přesměrováváme vás na plné výsledky…</div></div>';
+    const {ok,data}=await supaFetch('/auth/v1/token?grant_type=password','POST',{email:em,password:pw});
+    if(!ok)throw new Error(data.error_description||'Nesprávné přihlašovací údaje');
+    if(data.access_token) localStorage.setItem('supa_access_token',data.access_token);
+    document.getElementById('regFormWrap').innerHTML='<div class="success-box"><div class="success-icon">✅</div><div class="success-title">Přihlášení úspěšné!</div><div class="success-desc">Přesměrováváme vás na plné výsledky…</div></div>';
     setTimeout(()=>{closeModal();unlockPremium();},1500);
-  }catch(e){
-    setBtnLoading('loginBtn','loginBtnTxt',false,'Přihlásit se →');
-    showFieldErr(document.getElementById('loginEmail'),e.message);
-  }
+  }catch(e){setBtnLoading('loginBtn','loginBtnTxt',false,'Přihlásit se →');showFieldErr(document.getElementById('loginEmail'),e.message);}
 }
 
-// ── RESET HESLA ───────────────────────────────────────────────────
 async function submitReset(){
-  const email=document.getElementById('resetEmail').value.trim();
-  if(!email||!email.includes('@')){shake(document.getElementById('resetEmail'));return;}
+  const em=document.getElementById('resetEmail')?.value.trim();
+  if(!em||!em.includes('@')){shake(document.getElementById('resetEmail'));return;}
   setBtnLoading('resetBtn','resetBtnTxt',true);
   try{
-    const {ok,data}=await supaFetch('/auth/v1/recover','POST',{
-      email,options:{emailRedirectTo:'https://www.svjenergie.cz/kalkulator.html'}
-    });
+    const {ok,data}=await supaFetch('/auth/v1/recover','POST',{email:em,options:{emailRedirectTo:'https://www.svjenergie.cz/kalkulator.html'}});
     if(!ok)throw new Error(data.msg||'Chyba');
-    document.getElementById('panelReset').innerHTML='<div class="success-box">'
-      +'<div class="success-icon">📧</div>'
-      +'<div class="success-title">Odkaz odeslán!</div>'
-      +'<div class="success-desc">Zkontrolujte e-mail <strong>'+email+'</strong>.</div></div>';
-  }catch(e){
-    setBtnLoading('resetBtn','resetBtnTxt',false,'Odeslat odkaz pro obnovu →');
-    showFieldErr(document.getElementById('resetEmail'),e.message);
-  }
+    document.getElementById('panelReset').innerHTML='<div class="success-box"><div class="success-icon">📧</div><div class="success-title">Odkaz odeslán!</div><div class="success-desc">Zkontrolujte e-mail <strong>'+em+'</strong>.</div></div>';
+  }catch(e){setBtnLoading('resetBtn','resetBtnTxt',false,'Odeslat odkaz pro obnovu →');}
 }
-// UI helpers
+
 function shake(el){if(!el)return;el.animate([{transform:'translateX(-4px)'},{transform:'translateX(4px)'},{transform:'translateX(-4px)'},{transform:'translateX(0)'}],{duration:300,easing:'ease-out'});}
-function showFieldErr(el,msg){if(!el)return;let e=el.parentElement.querySelector('.field-err');if(!e){e=document.createElement('div');e.className='field-err';e.style.cssText='font-size:11px;color:#F43F5E;margin-top:3px';el.parentElement.appendChild(e);}e.textContent=msg;setTimeout(()=>e.remove(),4000);}
-function setBtnLoading(btnId,txtId,loading,label){
-  const btn=document.getElementById(btnId);
-  const txt=document.getElementById(txtId);
-  if(!btn||!txt)return;
-  btn.disabled=loading;
-  txt.innerHTML=loading?'<span class="spin"></span> Odesílám…':(label||'Zkusit znovu');
-}
+function showFieldErr(el,msg){if(!el)return;let e=el.parentElement.querySelector('.field-err');if(!e){e=document.createElement('div');e.className='field-err';el.parentElement.appendChild(e);}e.textContent=msg;setTimeout(()=>e.remove(),4000);}
+function setBtnLoading(btnId,txtId,loading,label){const btn=document.getElementById(btnId);const txt=document.getElementById(txtId);if(!btn||!txt)return;btn.disabled=loading;txt.innerHTML=loading?'<span class="spin"></span> Odesílám…':(label||'Zkusit znovu');}
 
-// Check for #registrace hash on page load
-if(window.location.hash==='#registrace'){
-  setTimeout(function(){
-    openModal();
-    switchTab('reg');
-  },800);
-}
-
-
-// ── ULOŽENÍ VÝPOČTU DO SUPABASE ─────────────────────────────────
-async function saveCalculation(userId){
-  if(!userId)return;
-  const kwp=optimKwp(D.bytu,D.zarizeni,D.ev,D.tc);
-  const sazba=doporucenaSazba(D.zarizeni);
-  const cf=calcCf(kwp,D.bytu,D.zarizeni,sazba,D.dist);
-  try{
-    await supaFetch('/rest/v1/vypocty','POST',{
-      user_id:userId,
-      parametry:{
-        lokace:D.lokace,lat:D.lat,lon:D.lon,
-        bytu:D.bytu,vchodu:D.vchodu,pater:D.pater,
-        vytahu:D.vytahu,tuv:D.tuv,cerpadla:D.cerpadla,
-        zatepleno:D.zatepleno,okna:D.okna,topeni:D.topeni,
-        tc:D.tc,ev:D.ev,zarizeni:D.zarizeni,
-        hhSlider:D.hhSlider,sklon:D.sklon,azimut:D.azimut,
-        strTyp:D.strTyp,dist:D.dist
-      },
-      vysledky:{
-        kwp:kwp,uspora_rok:cf.uspora_rok,
-        uspora_byt:cf.uspora_byt,investice:cf.investice,
-        navrat:cf.navrat
-      }
-    });
-  }catch(e){console.error('Save calc error:',e);}
-}
-
-// ── ODEMČENÍ PREMIUM FUNKCÍ ─────────────────────────────────────
 function unlockPremium(){
-  // Odstranit blur efekty z variant
-  document.querySelectorAll('.var-card.blurred').forEach(function(card){
-    card.classList.remove('blurred');
-  });
-  // Odstranit blur z cashflow grafu
-  var cfBlur=document.querySelector('.cf-blur');
-  if(cfBlur)cfBlur.style.display='none';
-  // Aktualizovat lock řádky
-  document.querySelectorAll('.lock-row').forEach(function(row){
-    var ico=row.querySelector('.lock-ico');
-    if(ico){ico.textContent='✓';ico.style.color='var(--green)';}
-  });
-  // Uložit stav
+  document.querySelectorAll('.var-card.blurred').forEach(c=>c.classList.remove('blurred'));
+  const cfBlur=document.querySelector('.cf-blur');if(cfBlur)cfBlur.style.display='none';
+  document.querySelectorAll('.scenare-wrap .scenare-blur').forEach(c=>c.classList.remove('scenare-blur'));
+  document.querySelectorAll('.scenare-overlay').forEach(c=>c.remove());
   sessionStorage.setItem('premium_unlocked','true');
 }
 
-// ── KONTROLA PŘI NAČTENÍ ────────────────────────────────────────
 (function checkPremiumOnLoad(){
-  var token=localStorage.getItem('supa_access_token');
-  if(token && sessionStorage.getItem('premium_unlocked')){
-    setTimeout(unlockPremium,500);
-  }
+  const token=localStorage.getItem('supa_access_token');
+  if(token&&sessionStorage.getItem('premium_unlocked')) setTimeout(unlockPremium,500);
 })();
+
+if(window.location.hash==='#registrace') setTimeout(()=>{openModal();switchTab('reg');},800);
+
 render();
 </script>
 </body>
