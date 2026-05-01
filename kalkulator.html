@@ -681,7 +681,7 @@ function s1(){
   <div class="autocomplete-wrap"><input type="text" id="fLok" placeholder="Např. Praha 4, Nuselská 12" value="${D.lokace}" autocomplete="off"><div class="ac-list" id="acList"></div></div>
   <div class="tip">☀️ Stačí napsat město nebo ulici — adresu ověříme přes OpenStreetMap a načteme reálná solární data z EU databáze PVGIS. Výpočet bude přesný pro vaši konkrétní polohu.</div>
   <div class="slabel">Základní údaje domu</div>
-  <div class="g3">${stepper('bytu','Počet bytů',2,300)}${stepper('vchodu','Počet vchodů',1,20)}${stepper('pater','Počet pater',1,30)}</div>
+  <div style="display:flex;flex-direction:column;gap:10px">${stepper('bytu','Počet bytů',2,300)}${stepper('vchodu','Počet vchodů',1,20)}${stepper('pater','Počet pater',1,30)}</div>
   </div>
   <div class="nav"><span class="step-lbl">Krok 1 z 5</span><button class="btn-prim" onclick="goNext()">Pokračovat →</button></div>`;
 }
@@ -692,7 +692,7 @@ function s2(){
   <h2 class="ctitle">Technické vybavení budovy</h2>
   <p class="csub">Ovlivňuje spotřebu společných prostor a optimální výkon FVE systému.</p>
   <div class="slabel">Výtahy a technologie</div>
-  <div class="g2" style="margin-bottom:10px">${stepper('vytahu','Počet výtahů',0,10)}${stepper('cerpadla','Oběhová čerpadla (ks)',0,20)}</div>
+  <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px">${stepper('vytahu','Počet výtahů',0,10)}${stepper('cerpadla','Oběhová čerpadla (ks)',0,20)}</div>
   <div class="tog-grid">
     <div class="tog${D.tuv?' on':''}" onclick="D.tuv=!D.tuv;render()"><span class="tog-icon">🚿</span><div class="tog-body"><div class="tog-name">Centrální TUV</div><div class="tog-sub">společná příprava TUV</div></div><div class="tog-chk">✓</div></div>
     <div class="tog${D.zatepleno?' on':''}" onclick="D.zatepleno=!D.zatepleno;render()"><span class="tog-icon">🧱</span><div class="tog-body"><div class="tog-name">Zateplená budova</div><div class="tog-sub">ETICS nebo lepší</div></div><div class="tog-chk">✓</div></div>
@@ -714,9 +714,10 @@ function s3(){
     <div class="inv-body"><div class="inv-title">Tepelné čerpadlo domu</div><div class="inv-desc">Vytápění celého domu nebo bytů — výrazně zvýší spotřebu i úspory z FVE</div></div>
     <div class="inv-chk">✓</div>
   </div>
-  <div class="inv" style="cursor:default" onclick="event.stopPropagation()">
-    <span class="inv-icon">🔌</span>
-    <div class="inv-body"><div class="inv-title">Nabíjecí stanice EV</div><div class="inv-desc">Počet stání: ${stepper('ev','',0,50,1)}</div></div>
+  <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:0.5px solid var(--border);border-radius:var(--rm);background:var(--white);margin-bottom:8px">
+    <span style="font-size:20px">🔌</span>
+    <span style="font-size:13px;font-weight:500;color:var(--text);flex-shrink:0">Nabíjecí stanice EV — počet stání:</span>
+    <div style="flex:1;max-width:160px">${stepper('ev','',0,50,1)}</div>
   </div>
   <div class="tip">💡 Tepelné čerpadlo a EV nabíječky výrazně zvýší spotřebu domu — FVE se tak lépe využije a zkrátí se návratnost.</div>
   </div>
@@ -754,11 +755,12 @@ function s4(){
     ${['ČEZ Distribuce','EG.D (E.ON)','PREdistribuce'].map(d=>`<option${D.dist===d?' selected':''}>${d}</option>`).join('')}
   </select>
   <div class="slabel">Odhadované parametry</div>
-  <div class="lock-row"><span class="lock-l">Spotřeba bytů</span><span class="lock-v" id="lv_sp">${mwh} MWh/rok</span><span class="lock-ico">📊</span></div>
+  <div class="lock-row"><span class="lock-l">Spotřeba bytů</span><span class="lock-v" id="lv_sp">${((sVT+sNT)/1000).toFixed(1)} MWh/rok (${Math.round(sVT+sNT).toLocaleString('cs-CZ')} kWh)</span><span class="lock-ico">📊</span></div>
   <div class="lock-row"><span class="lock-l">Odhadovaná sazba bytu</span><span class="lock-v" id="lv_sazba">${sazba}</span><span class="lock-ico">📊</span></div>
-  <div class="lock-row"><span class="lock-l">Odhadovaný jistič domu</span><span class="lock-v" id="lv_jistic">3×${amp}A</span><span class="lock-ico">📊</span></div>
-  <div class="lock-row"><span class="lock-l">Spotřeba spol. prostor</span><span class="lock-v" id="lv_spmwh">${sp.sp_mwh.toFixed(1)} MWh/rok</span><span class="lock-ico">📊</span></div>
-  <div class="lock-row"><span class="lock-l">Odhadovaná sazba SP / jistič SP</span><span class="lock-v" id="lv_spsazba">${sp.sazba_sp} / 3×${sp.jistic_sp_a}A</span><span class="lock-ico">📊</span></div>
+  <div class="lock-row"><span class="lock-l">Odhadovaný jistič bytu</span><span class="lock-v" id="lv_jistic">3×${amp}A</span><span class="lock-ico">📊</span></div>
+  <div class="lock-row"><span class="lock-l">Spotřeba společných prostor</span><span class="lock-v" id="lv_spmwh">${sp.sp_mwh.toFixed(1)} MWh/rok (${Math.round(sp.sp_mwh*1000).toLocaleString('cs-CZ')} kWh)</span><span class="lock-ico">📊</span></div>
+  <div class="lock-row"><span class="lock-l">Odhadovaná sazba spol. prostor</span><span class="lock-v" id="lv_spsazba">${sp.sazba_sp}</span><span class="lock-ico">📊</span></div>
+  <div class="lock-row"><span class="lock-l">Odhadovaný jistič spol. prostor</span><span class="lock-v" id="lv_jisticsp">3×${sp.jistic_sp_a}A</span><span class="lock-ico">📊</span></div>
   </div>
   <div class="nav"><button class="btn-out" onclick="goBack()">← Zpět</button><button class="btn-prim" onclick="goNext()">Střecha →</button></div>`;
 }
@@ -832,19 +834,45 @@ async function fetchPvgis(lat, lon, kwp, sklon, azimut){
     const az1=azimut===999?-90:azimut===998?-45:azimut;
     const az2=azimut===999?90:azimut===998?45:null;
     const kwp1=az2?kwp/2:kwp;
-    const params1=new URLSearchParams({lat,lon,peakpower:kwp1,loss:14,angle:sklon,aspect:az1,outputformat:'json',browser:0,pvcalculation:1,pvtechchoice:'crystSi',mountingplace:'building',trackingtype:0,usehorizon:1,tmy:1});
+    // Správné parametry PVGIS v5.2 — bez tmy (způsobuje jiný výstup), browser:1 pro CORS
+    const params1=new URLSearchParams({
+      lat, lon, peakpower:kwp1, loss:14,
+      angle:sklon, aspect:az1,
+      outputformat:'json', browser:1,
+      pvcalculation:1, pvtechchoice:'crystSi',
+      mountingplace:'building', trackingtype:0,
+      usehorizon:1, startyear:2020, endyear:2023
+    });
     const r1=await fetch('https://re.jrc.ec.europa.eu/api/v5_2/seriescalc?'+params1.toString());
-    if(!r1.ok) throw new Error('PVGIS error '+r1.status);
+    if(!r1.ok) throw new Error('PVGIS HTTP '+r1.status);
     const d1=await r1.json();
-    let arr=d1.outputs.hourly.map(h=>parseFloat(h.P)/1000.0).slice(0,8760);
+    // PVGIS vrací outputs.hourly jako pole objektů s klíčem 'P' (W)
+    const hourly1=d1?.outputs?.hourly;
+    if(!hourly1||!hourly1.length) throw new Error('PVGIS: prázdná data hourly');
+    let arr=hourly1.map(h=>parseFloat(h.P||0)/1000.0).slice(0,8760);
+    // Pokud split systém — druhý azimut
     if(az2!==null){
-      const params2=new URLSearchParams({lat,lon,peakpower:kwp/2,loss:14,angle:sklon,aspect:az2,outputformat:'json',browser:0,pvcalculation:1,pvtechchoice:'crystSi',mountingplace:'building',trackingtype:0,usehorizon:1,tmy:1});
+      const params2=new URLSearchParams({
+        lat, lon, peakpower:kwp/2, loss:14,
+        angle:sklon, aspect:az2,
+        outputformat:'json', browser:1,
+        pvcalculation:1, pvtechchoice:'crystSi',
+        mountingplace:'building', trackingtype:0,
+        usehorizon:1, startyear:2020, endyear:2023
+      });
       const r2=await fetch('https://re.jrc.ec.europa.eu/api/v5_2/seriescalc?'+params2.toString());
-      if(r2.ok){const d2=await r2.json();const arr2=d2.outputs.hourly.map(h=>parseFloat(h.P)/1000.0).slice(0,8760);arr=arr.map((v,i)=>v+(arr2[i]||0));}
+      if(r2.ok){
+        const d2=await r2.json();
+        const h2=d2?.outputs?.hourly;
+        if(h2&&h2.length) arr=arr.map((v,i)=>v+(parseFloat(h2[i]?.P||0)/1000.0));
+      }
     }
     _pvgisCache=arr;
     return arr;
-  }catch(e){console.warn('PVGIS fallback:',e);return null;}
+  }catch(e){
+    console.warn('PVGIS nedostupné, použit fallback:',e.message);
+    return null;
+  }
 }
 
 function vypoctiVse(vyroba8760){
@@ -966,8 +994,8 @@ function renderResults(R){
     '❌ Projekt se za 25 let nevrátí';
   const verdiktCls=R.nav&&R.nav<=15?'ok':R.nav&&R.nav<=20?'warn':'err';
   const verdiktDetail=R.nav?
-    R.nav<=10?`Při realistickém vývoji cen elektřiny (+3 %/rok) ušetříte za 25 let <strong>${(R.kum25/1000).toFixed(0)} tis. Kč</strong>, tj. <strong>${Math.round(R.kum25/D.bytu/1000)} tis. Kč na byt</strong>. Bezúročný úvěr NZÚ výrazně snižuje riziko.`:
-    R.nav<=15?`Návratnost je solidní. Za 25 let kumulativně <strong>${(R.kum25/1000).toFixed(0)} tis. Kč</strong> čistého přínosu. S bezúročným úvěrem NZÚ je projekt bezrizikový.`:
+    R.nav<=10?`Při realistickém vývoji cen elektřiny (+3 %/rok) ušetříte za 25 let <strong>${Math.round(R.kum25).toLocaleString('cs-CZ')} Kč</strong>, tj. <strong>${Math.round(R.kum25/D.bytu).toLocaleString('cs-CZ')} Kč na byt</strong>. Bezúročný úvěr NZÚ výrazně snižuje riziko.`:
+    R.nav<=15?`Návratnost je solidní. Za 25 let kumulativně <strong>${Math.round(R.kum25).toLocaleString('cs-CZ')} Kč</strong> čistého přínosu. S bezúročným úvěrem NZÚ je projekt bezrizikový.`:
     R.nav<=20?`Projekt se vyplatí při realistickém vývoji cen. Doporučujeme zvýšit výkon nebo přidat baterii pro lepší využití výroby.`:
     `Doporučujeme optimalizovat výkon FVE nebo zvolit model EDC pro maximální využití výroby.`:
     'Při současných parametrech se investice za 25 let nevrátí. Zvažte vyšší výkon FVE nebo jiný model sdílení.';
@@ -983,19 +1011,27 @@ function renderResults(R){
   <!-- KPI -->
   <div class="kpi-row">
     <div class="kpi">
-      <div class="kpi-l">Navrhovaný výkon</div>
-      <div class="kpi-v">${R.kwp}</div>
-      <div class="kpi-u">kWp (${R.vyroba_mwh} MWh/rok)</div>
+      <div class="kpi-l">Navrhovaný výkon FVE</div>
+      <div class="kpi-v">${R.kwp} <span style="font-size:14px;font-weight:400">kWp</span></div>
+      <div class="kpi-u">${R.vyroba_mwh} MWh/rok · baterie ${Math.round(R.kwp*1.4*10)/10} kWh</div>
     </div>
     <div class="kpi green">
       <div class="kpi-l">Roční úspora (EDC)</div>
-      <div class="kpi-v">${Math.round(R.uspora_rok/1000)}</div>
-      <div class="kpi-u">tis. Kč/rok · ${R.uspora_byt_mes} Kč/byt/měs</div>
+      <div class="kpi-v">${Math.round(R.uspora_rok).toLocaleString('cs-CZ')} <span style="font-size:14px;font-weight:400">Kč</span></div>
+      <div class="kpi-u">${R.uspora_byt_mes.toLocaleString('cs-CZ')} Kč/byt/měs</div>
     </div>
     <div class="kpi">
       <div class="kpi-l">Investice / NZÚ úvěr</div>
-      <div class="kpi-v">${Math.round(R.investice/1000)}</div>
-      <div class="kpi-u">tis. Kč · splátka ${Math.round(nzu_splatka/1000)} tis./rok</div>
+      <div class="kpi-v">${Math.round(R.investice).toLocaleString('cs-CZ')} <span style="font-size:14px;font-weight:400">Kč</span></div>
+      <div class="kpi-u">splátka ${Math.round(nzu_splatka).toLocaleString('cs-CZ')} Kč/rok</div>
+    </div>
+  </div>
+  <!-- Doporučená baterie -->
+  <div style="background:var(--amber-l);border:1px solid #F6D860;border-radius:var(--rm);padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px">
+    <span style="font-size:22px">🔋</span>
+    <div>
+      <div style="font-size:13px;font-weight:600;color:#7C5300">Doporučená baterie: ${Math.round(R.kwp*1.4*10)/10} kWh</div>
+      <div style="font-size:11px;color:#92400E;margin-top:2px">Zvýší vlastní spotřebu o ~15–20 % · orientační cena ${Math.round(R.kwp*1.4*8000).toLocaleString('cs-CZ')} Kč · návratnost se prodlouží o 1–2 roky</div>
     </div>
   </div>
 
@@ -1006,7 +1042,7 @@ function renderResults(R){
       <div class="var-badge">⭐ Doporučeno</div>
       <div class="var-name">EDC — komunitní sdílení</div>
       <div class="var-kwp">${R.kwp}<span> kWp</span></div>
-      <div class="var-save">+${Math.round(R.uspora_rok/1000)} tis. Kč/rok</div>
+      <div class="var-save">+${Math.round(R.uspora_rok).toLocaleString('cs-CZ')} Kč/rok</div>
       <div class="var-roi">návratnost ${R.nav||'>25'} let</div>
       <div style="font-size:10px;color:var(--green);margin-top:4px">Max. využití výroby</div>
     </div>
@@ -1014,7 +1050,7 @@ function renderResults(R){
       ${!premium?'<div class="var-badge" style="background:var(--text-2)">🔒 Po registraci</div>':''}
       <div class="var-name">Podružná měřidla</div>
       <div class="var-kwp">${R.kwp}<span> kWp</span></div>
-      <div class="var-save">+${Math.round(R.uspora_pm/1000)} tis. Kč/rok</div>
+      <div class="var-save">+${Math.round(R.uspora_pm).toLocaleString('cs-CZ')} Kč/rok</div>
       <div class="var-roi">návratnost ~${R.nav_pm} let</div>
       ${!premium?'<div class="var-lock-msg">Zaregistrujte se pro detail →</div>':''}
     </div>
@@ -1022,7 +1058,7 @@ function renderResults(R){
       ${!premium?'<div class="var-badge" style="background:var(--text-2)">🔒 Po registraci</div>':''}
       <div class="var-name">Jen společné prostory</div>
       <div class="var-kwp">${Math.round(R.kwp*0.3*2)/2}<span> kWp</span></div>
-      <div class="var-save">+${Math.round(R.uspora_sp/1000)} tis. Kč/rok</div>
+      <div class="var-save">+${Math.round(R.uspora_sp).toLocaleString('cs-CZ')} Kč/rok</div>
       <div class="var-roi">návratnost ~${R.nav_sp} let</div>
       ${!premium?'<div class="var-lock-msg">Zaregistrujte se pro detail →</div>':''}
     </div>
@@ -1036,8 +1072,8 @@ function renderResults(R){
   </div>
   <div class="nzu-box" style="margin-top:14px">
     <div class="nzu-title">🏛️ Státní podpora NZÚ 2026</div>
-    <div class="nzu-row">✅ <strong>Bezúročný úvěr</strong> ${Math.round(R.uver/1000)} tis. Kč (80 % investice) — splácení ${R.splatnost} let · ${Math.round(nzu_splatka/1000)} tis. Kč/rok</div>
-    <div class="nzu-row">✅ <strong>Vlastní vklad SVJ</strong> min. 20 % = ${Math.round((R.investice-R.uver)/1000)} tis. Kč (${Math.round((R.investice-R.uver)/D.bytu/1000)} tis. Kč/byt)</div>
+    <div class="nzu-row">✅ <strong>Bezúročný úvěr</strong> ${Math.round(R.uver).toLocaleString('cs-CZ')} Kč (80 % investice) — splácení ${R.splatnost} let · ${Math.round(nzu_splatka).toLocaleString('cs-CZ')} Kč/rok</div>
+    <div class="nzu-row">✅ <strong>Vlastní vklad SVJ</strong> min. 20 % = ${Math.round(R.investice-R.uver).toLocaleString('cs-CZ')} Kč (${Math.round((R.investice-R.uver)/D.bytu).toLocaleString('cs-CZ')} Kč/byt)</div>
     <div class="nzu-row">✅ <strong>Bonus</strong> za zranitelné domácnosti (dle počtu příjemců sociálních dávek)</div>
     <div class="nzu-row">✅ <strong>NZÚ Light</strong> — přímá dotace pro nízkopříjmové domácnosti</div>
     <div style="font-size:11px;color:#2E6B40;margin-top:6px">Vždy ověřte na <a href="https://novazelenausporam.cz" target="_blank" style="color:var(--blue)">novazelenausporam.cz</a></div>
