@@ -74,30 +74,32 @@ input[type=range]{width:100%;accent-color:var(--blue);margin-bottom:12px;cursor:
 .b-amber{background:var(--amber-l);color:#92400E}.b-blue{background:var(--blue-l);color:#0C4A7C}.b-green{background:var(--green-l);color:#1A5C32}.b-always{background:#F1F5F9;color:#475569}
 .tip{font-size:12px;color:#4A7BA8;padding:10px 14px;background:var(--blue-ll);border-radius:var(--rm);border-left:3px solid var(--blue);margin-top:12px;line-height:1.5}
 /* VÝSLEDKY */
-.var-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px}
-.var-card{border:0.5px solid var(--border);border-radius:var(--r);padding:16px 12px;text-align:center;position:relative;background:var(--white);transition:box-shadow .2s}
+.var-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;margin-top:16px}
+.var-card{border:0.5px solid var(--border);border-radius:var(--r);padding:16px 12px;text-align:center;position:relative;background:var(--white);transition:box-shadow .2s;min-width:0;overflow:hidden}
 .var-card.best{border:2px solid var(--blue);box-shadow:0 0 0 4px rgba(27,108,168,.08)}
 .var-card.blurred{filter:blur(3px);pointer-events:none;opacity:.6;user-select:none}
 .var-badge{position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:var(--blue);color:#fff;font-size:10px;font-weight:600;padding:3px 12px;border-radius:10px;white-space:nowrap}
-.var-name{font-size:11px;color:var(--text-2);margin-bottom:8px}
-.var-kwp{font-size:24px;font-weight:600;color:var(--navy);line-height:1}
-.var-kwp span{font-size:13px;font-weight:400;color:var(--text-2)}
-.var-save{font-size:15px;color:var(--green);font-weight:600;margin-top:6px}
+.var-name{font-size:11px;color:var(--text-2);margin-bottom:8px;line-height:1.3}
+.var-kwp{font-size:22px;font-weight:600;color:var(--navy);line-height:1}
+.var-kwp span{font-size:12px;font-weight:400;color:var(--text-2)}
+.var-save{font-size:14px;color:var(--green);font-weight:600;margin-top:6px}
 .var-roi{font-size:11px;color:var(--text-2);margin-top:3px}
-.var-lock-msg{font-size:11px;color:var(--blue);margin-top:8px;font-weight:500}
+.var-lock-msg{font-size:11px;color:var(--blue);margin-top:8px;font-weight:500;cursor:pointer}
 .kpi-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px}
-.kpi{background:var(--blue-ll);border-radius:var(--rm);padding:14px 16px;border:0.5px solid #C8DFF2}
-.kpi-l{font-size:11px;color:#4A7BA8;margin-bottom:4px}.kpi-v{font-size:26px;font-weight:600;color:var(--navy);line-height:1}.kpi-u{font-size:11px;color:#4A7BA8;margin-top:3px}
+.kpi{background:var(--blue-ll);border-radius:var(--rm);padding:14px 16px;border:0.5px solid #C8DFF2;min-width:0}
+.kpi-l{font-size:11px;color:#4A7BA8;margin-bottom:4px}.kpi-v{font-size:24px;font-weight:600;color:var(--navy);line-height:1}.kpi-u{font-size:11px;color:#4A7BA8;margin-top:3px;line-height:1.3}
 .kpi.green{background:var(--green-l);border-color:#A3D8B8}
 .kpi.green .kpi-l,.kpi.green .kpi-u{color:#2E6B40}.kpi.green .kpi-v{color:#1A5C32}
-.cf-wrap{position:relative;height:100px;margin-bottom:6px}.cf-wrap canvas{width:100%;height:100px;display:block}
-.cf-blur{position:absolute;inset:0;background:linear-gradient(to right,transparent 40%,rgba(240,247,253,.97) 65%);display:flex;align-items:center;justify-content:flex-end;padding-right:14px;border-radius:var(--rm)}
+/* Cashflow graf */
+.cf-outer{position:relative;margin-bottom:6px}
+.cf-wrap{height:110px}.cf-wrap canvas{width:100%!important;height:110px;display:block}
+.cf-blur{position:absolute;top:0;right:0;bottom:0;width:55%;background:linear-gradient(to right,transparent 0%,rgba(240,247,253,.97) 35%);display:flex;align-items:center;justify-content:flex-end;padding-right:14px;border-radius:var(--rm)}
 /* Scénáře — skryté za registrací */
 .scenare-wrap{position:relative;margin-bottom:14px}
 .scenare-blur{filter:blur(4px);pointer-events:none;user-select:none}
-.scenare-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:rgba(240,247,253,0.85);border-radius:var(--r);border:1.5px dashed var(--blue)}
+.scenare-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:rgba(240,247,253,0.88);border-radius:var(--r);border:1.5px dashed var(--blue)}
 .scenar-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
-.scenar-card{border:0.5px solid var(--border);border-radius:var(--rm);padding:14px;text-align:center;background:var(--white)}
+.scenar-card{border:0.5px solid var(--border);border-radius:var(--rm);padding:14px;text-align:center;background:var(--white);min-width:0}
 .scenar-title{font-size:11px;font-weight:600;color:var(--text-2);margin-bottom:8px}
 .scenar-v{font-size:18px;font-weight:700;color:var(--navy)}
 .scenar-sub{font-size:11px;color:var(--text-2);margin-top:3px}
@@ -165,6 +167,7 @@ input[type=range]{width:100%;accent-color:var(--blue);margin-bottom:12px;cursor:
 .stepper-btn:hover{background:var(--blue-l)}.stepper-btn:active{background:var(--blue-l)}
 .stepper-val{flex:1;text-align:center;font-size:15px;font-weight:600;color:var(--text);border:none;outline:none;background:transparent;min-width:32px;padding:0;-moz-appearance:textfield;width:48px}
 @media(max-width:560px){.g3{grid-template-columns:1fr 1fr}.tog-grid{grid-template-columns:1fr}.var-grid{grid-template-columns:1fr}.kpi-row{grid-template-columns:1fr 1fr}.cta-box{flex-direction:column;text-align:center}.hdr-steps{display:none}.scenar-grid{grid-template-columns:1fr}}
+@media(max-width:700px){.var-grid{grid-template-columns:1fr}.kpi-row{grid-template-columns:1fr 1fr}.scenar-grid{grid-template-columns:1fr 1fr}}
 /* Supabase */
 .field-err{font-size:11px;color:#F43F5E;margin-top:3px}
 </style>
@@ -227,8 +230,13 @@ input[type=range]{width:100%;accent-color:var(--blue);margin-bottom:12px;cursor:
             <input type="password" id="regPw2" placeholder="Potvrdit heslo" autocomplete="new-password">
             <button class="pw-eye" onclick="togglePw('regPw2',this)" type="button">👁</button>
           </div>
+          <!-- GDPR souhlas -->
+          <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:12px;color:var(--text-2);font-weight:400;margin-top:4px">
+            <input type="checkbox" id="regGdpr" style="width:16px;height:16px;min-width:16px;flex-shrink:0;margin-top:1px;accent-color:var(--blue);cursor:pointer;display:inline-block;appearance:checkbox;-webkit-appearance:checkbox;opacity:1;visibility:visible">
+            <span>Souhlasím se <a href="/podminky" target="_blank" style="color:var(--blue)">Obchodními podmínkami</a> a <a href="/gdpr" target="_blank" style="color:var(--blue)">Zásadami ochrany osobních údajů</a>. Registrací vyjadřuji souhlas s tím, že mě může kontaktovat obchodní oddělení SVJ Energie s nezávaznou nabídkou.</span>
+          </label>
           <button class="btn-register" id="regBtn" onclick="submitReg()">
-            <span id="regBtnTxt">Vytvořit účet a odemknout výsledky →</span>
+            <span id="regBtnTxt">Registrovat se nezávazně →</span>
           </button>
         </div>
         <div style="margin-top:12px;padding:10px 14px;background:var(--green-l);border-radius:var(--rm);border-left:3px solid var(--green);font-size:12px;color:#1A5C32;line-height:1.5">
@@ -546,32 +554,36 @@ function simuluj(vyroba8760, sp_vt8760, sp_nt8760, bat=0, model='edc'){
 
 // Cashflow 25 let
 function cashflow(sim, cvt, cnt, cpr, investice, bonus, uver, splatnost, rust=3.0, deg=0.5){
-  const vlastni_cast=investice-bonus-uver;
   const rocni_spl=uver>0?uver/splatnost:0;
   const cf=[];
-  let kum=-(vlastni_cast);
+  // Kumulativ startuje od CELÉ investice mínus bonus (grant/dotace snižuje základ)
+  // Úvěr není "příjem" — je to závazek který splácíme, proto startujeme od -(investice-bonus)
+  let kum=-(investice-bonus);
   for(let rok=1;rok<=25;rok++){
-    const d=Math.pow(1-deg/100, rok-1);
-    const c=Math.pow(1+rust/100, rok-1);
+    const d=Math.pow(1-deg/100, rok-1);   // degradace panelů
+    const c=Math.pow(1+rust/100, rok-1);  // růst cen elektřiny
     const u_vt=sim.vlastni_vt_kwh*d*cvt/1000*c;
     const u_nt=sim.vlastni_nt_kwh*d*cnt/1000*c;
     const u_pr=sim.pretoky_kwh*d*(cpr/1000)*c;
     const uspora=u_vt+u_nt+u_pr;
+    // Splátka úvěru = odečítáme z přínosu (je to cash-outflow)
     const splatka=rok<=splatnost?rocni_spl:0;
-    kum+=uspora-splatka;
-    cf.push({rok, uspora_celkem:Math.round(uspora), splatka:Math.round(splatka), cisty_prinos:Math.round(uspora-splatka), kumulativni:Math.round(kum)});
+    const cisty=uspora-splatka;
+    kum+=cisty;
+    cf.push({rok, uspora_celkem:Math.round(uspora), splatka:Math.round(splatka), cisty_prinos:Math.round(cisty), kumulativni:Math.round(kum)});
   }
-  // Návratnost
+  // Statická návratnost = první rok kdy kumulativ přejde do kladných čísel
   let nav=null;
-  for(const r of cf) if(r.kumulativni>=0&&!nav) nav=r.rok;
+  for(const r of cf){ if(r.kumulativni>=0&&!nav){ nav=r.rok; break; } }
   return{cf, nav, kum25:Math.round(kum)};
 }
 
 // NZÚ — bezúročný úvěr a bonus
 function nzuVypocet(investice, bytu){
-  // Bezúročný úvěr NZÚ — max investice, splatnost 15 let
-  const uver=Math.min(investice, 5000000);
-  const bonus=parseInt(bytu)*0; // bonus dle zranitelných domácností — 0 pokud neznáme
+  // Bezúročný úvěr NZÚ — max 80 % investice, max 5 mil. Kč, splatnost 15 let
+  // Podmínka: SVJ musí mít vlastní vklad min. 20 %
+  const uver=Math.min(investice*0.80, 5000000);
+  const bonus=0; // bonus dle zranitelných domácností — zadáme po registraci
   return{uver, bonus, splatnost:15};
 }
 
@@ -743,10 +755,10 @@ function s4(){
   </select>
   <div class="slabel">Odhadované parametry</div>
   <div class="lock-row"><span class="lock-l">Spotřeba bytů</span><span class="lock-v" id="lv_sp">${mwh} MWh/rok</span><span class="lock-ico">📊</span></div>
-  <div class="lock-row"><span class="lock-l">Doporučená sazba bytu</span><span class="lock-v" id="lv_sazba">${sazba}</span><span class="lock-ico">📊</span></div>
-  <div class="lock-row"><span class="lock-l">Jistič domu (JOM)</span><span class="lock-v" id="lv_jistic">3×${amp}A</span><span class="lock-ico">📊</span></div>
+  <div class="lock-row"><span class="lock-l">Odhadovaná sazba bytu</span><span class="lock-v" id="lv_sazba">${sazba}</span><span class="lock-ico">📊</span></div>
+  <div class="lock-row"><span class="lock-l">Odhadovaný jistič domu</span><span class="lock-v" id="lv_jistic">3×${amp}A</span><span class="lock-ico">📊</span></div>
   <div class="lock-row"><span class="lock-l">Spotřeba spol. prostor</span><span class="lock-v" id="lv_spmwh">${sp.sp_mwh.toFixed(1)} MWh/rok</span><span class="lock-ico">📊</span></div>
-  <div class="lock-row"><span class="lock-l">Sazba SP / jistič SP</span><span class="lock-v" id="lv_spsazba">${sp.sazba_sp} / 3×${sp.jistic_sp_a}A</span><span class="lock-ico">📊</span></div>
+  <div class="lock-row"><span class="lock-l">Odhadovaná sazba SP / jistič SP</span><span class="lock-v" id="lv_spsazba">${sp.sazba_sp} / 3×${sp.jistic_sp_a}A</span><span class="lock-ico">📊</span></div>
   </div>
   <div class="nav"><button class="btn-out" onclick="goBack()">← Zpět</button><button class="btn-prim" onclick="goNext()">Střecha →</button></div>`;
 }
@@ -957,7 +969,7 @@ function renderResults(R){
     R.nav<=10?`Při realistickém vývoji cen elektřiny (+3 %/rok) ušetříte za 25 let <strong>${(R.kum25/1000).toFixed(0)} tis. Kč</strong>, tj. <strong>${Math.round(R.kum25/D.bytu/1000)} tis. Kč na byt</strong>. Bezúročný úvěr NZÚ výrazně snižuje riziko.`:
     R.nav<=15?`Návratnost je solidní. Za 25 let kumulativně <strong>${(R.kum25/1000).toFixed(0)} tis. Kč</strong> čistého přínosu. S bezúročným úvěrem NZÚ je projekt bezrizikový.`:
     R.nav<=20?`Projekt se vyplatí při realistickém vývoji cen. Doporučujeme zvýšit výkon nebo přidat baterii pro lepší využití výroby.`:
-    `Doporučujeme optimalizovat výkon FVE, zvážit model EDC nebo JOM pro maximální využití výroby.`:
+    `Doporučujeme optimalizovat výkon FVE nebo zvolit model EDC pro maximální využití výroby.`:
     'Při současných parametrech se investice za 25 let nevrátí. Zvažte vyšší výkon FVE nebo jiný model sdílení.';
 
   const nzu_splatka=Math.round(R.uver/R.splatnost);
@@ -1018,13 +1030,14 @@ function renderResults(R){
 
   <!-- Cashflow graf -->
   <div class="slabel">Kumulativní cashflow — EDC model</div>
-  <div class="cf-wrap"><canvas id="cfCanvas"></canvas></div>
-  ${!premium?`<div class="cf-blur"><div style="text-align:right"><div style="font-size:13px;font-weight:600;color:var(--navy)">Plný 25letý přehled</div><button class="btn-prim" style="margin-top:8px;font-size:12px;padding:8px 16px" onclick="openModal();switchTab('reg')">Registrovat se zdarma →</button></div></div>`:''}
-
-  <!-- NZÚ box -->
+  <div class="cf-outer">
+    <div class="cf-wrap"><canvas id="cfCanvas"></canvas></div>
+    ${!premium?`<div class="cf-blur"><div style="text-align:right"><div style="font-size:12px;font-weight:600;color:var(--navy)">Plný 25letý přehled</div><button class="btn-prim" style="margin-top:8px;font-size:12px;padding:8px 16px" onclick="openModal();switchTab('reg')">Registrovat se nezávazně →</button></div></div>`:''}
+  </div>
   <div class="nzu-box" style="margin-top:14px">
     <div class="nzu-title">🏛️ Státní podpora NZÚ 2026</div>
-    <div class="nzu-row">✅ <strong>Bezúročný úvěr</strong> ${Math.round(R.uver/1000)} tis. Kč — splácení ${R.splatnost} let (${Math.round(nzu_splatka/1000)} tis. Kč/rok)</div>
+    <div class="nzu-row">✅ <strong>Bezúročný úvěr</strong> ${Math.round(R.uver/1000)} tis. Kč (80 % investice) — splácení ${R.splatnost} let · ${Math.round(nzu_splatka/1000)} tis. Kč/rok</div>
+    <div class="nzu-row">✅ <strong>Vlastní vklad SVJ</strong> min. 20 % = ${Math.round((R.investice-R.uver)/1000)} tis. Kč (${Math.round((R.investice-R.uver)/D.bytu/1000)} tis. Kč/byt)</div>
     <div class="nzu-row">✅ <strong>Bonus</strong> za zranitelné domácnosti (dle počtu příjemců sociálních dávek)</div>
     <div class="nzu-row">✅ <strong>NZÚ Light</strong> — přímá dotace pro nízkopříjmové domácnosti</div>
     <div style="font-size:11px;color:#2E6B40;margin-top:6px">Vždy ověřte na <a href="https://novazelenausporam.cz" target="_blank" style="color:var(--blue)">novazelenausporam.cz</a></div>
@@ -1044,7 +1057,7 @@ function renderResults(R){
         <div class="scenar-sub">kumulativně 25 let</div>
       </div>`).join('')}
     </div>
-    ${!premium?`<div class="scenare-overlay"><div style="font-size:13px;font-weight:600;color:var(--navy)">📊 Plná citlivostní analýza</div><button class="btn-prim" style="font-size:12px;padding:9px 20px" onclick="openModal();switchTab('reg')">Zaregistrovat se zdarma →</button></div>`:''}
+    ${!premium?`<div class="scenare-overlay"><div style="font-size:13px;font-weight:600;color:var(--navy)">📊 Plná citlivostní analýza</div><button class="btn-prim" style="font-size:12px;padding:9px 20px" onclick="openModal();switchTab('reg')">Registrovat se nezávazně →</button></div>`:''}
   </div>
 
   <!-- CTA -->
@@ -1068,24 +1081,45 @@ function renderResults(R){
 function drawProfile(){
   const c=document.getElementById('profCanvas');
   if(!c)return;
-  const ctx=c.ctx2d||c.getContext('2d');
   c.width=c.offsetWidth*2; c.height=180;
+  const ctx=c.getContext('2d');
   ctx.scale(2,1);
   const W=c.offsetWidth, H=90;
   ctx.clearRect(0,0,W,H);
   const pSen=D.hhSlider/100, pPrac=1-pSen;
   const uprava=Array(24).fill(0).map((_,h)=>pPrac*UPRAVY.pracujici[h]+pSen*UPRAVY.seniori[h]);
   const uMean=uprava.reduce((a,b)=>a+b)/24;
-  const vals=uprava.map(v=>v/uMean);
-  const max=Math.max(...vals);
+  const raw=uprava.map(v=>v/uMean);
+  const max=Math.max(...raw);
   const pad=10;
-  ctx.fillStyle='rgba(27,108,168,0.08)';
+  // Pomocná funkce pro hladkou Catmull-Rom křivku
+  function smoothPath(ctx, pts){
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for(let i=0;i<pts.length-1;i++){
+      const p0=pts[Math.max(i-1,0)], p1=pts[i], p2=pts[i+1], p3=pts[Math.min(i+2,pts.length-1)];
+      const cp1x=p1.x+(p2.x-p0.x)/6;
+      const cp1y=p1.y+(p2.y-p0.y)/6;
+      const cp2x=p2.x-(p3.x-p1.x)/6;
+      const cp2y=p2.y-(p3.y-p1.y)/6;
+      ctx.bezierCurveTo(cp1x,cp1y,cp2x,cp2y,p2.x,p2.y);
+    }
+  }
+  const pts=raw.map((v,i)=>({x:pad+(i/23)*(W-2*pad), y:H-pad-(v/max)*(H-2*pad)}));
+  // Gradient výplň
+  const grad=ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0,'rgba(244,63,94,0.25)');
+  grad.addColorStop(1,'rgba(244,63,94,0.02)');
+  ctx.fillStyle=grad;
   ctx.beginPath();
-  vals.forEach((v,i)=>{const x=pad+(i/(23))*(W-2*pad); const y=H-pad-(v/max)*(H-2*pad);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
-  ctx.lineTo(W-pad,H-pad); ctx.lineTo(pad,H-pad); ctx.closePath(); ctx.fill();
-  ctx.strokeStyle='var(--blue)'; ctx.lineWidth=2; ctx.lineJoin='round';
+  smoothPath(ctx,pts);
+  ctx.lineTo(pts[pts.length-1].x, H-pad);
+  ctx.lineTo(pts[0].x, H-pad);
+  ctx.closePath();
+  ctx.fill();
+  // Červená hladká křivka
+  ctx.strokeStyle='#F43F5E'; ctx.lineWidth=2.5; ctx.lineJoin='round';
   ctx.beginPath();
-  vals.forEach((v,i)=>{const x=pad+(i/23)*(W-2*pad); const y=H-pad-(v/max)*(H-2*pad);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+  smoothPath(ctx,pts);
   ctx.stroke();
 }
 
@@ -1195,6 +1229,8 @@ async function submitReg(){
   if(!em||!em.includes('@')){shake(document.getElementById('regEmail'));return;}
   if(!pw||pw.length<8){shake(document.getElementById('regPw'));return;}
   if(pw!==pw2){shake(document.getElementById('regPw2'));showFieldErr(document.getElementById('regPw2'),'Hesla se neshodují');return;}
+  const gdpr=document.getElementById('regGdpr');
+  if(!gdpr?.checked){shake(gdpr);showFieldErr(gdpr,'Prosím potvrďte souhlas s podmínkami');return;}
   setBtnLoading('regBtn','regBtnTxt',true);
   try{
     const {ok,data}=await supaFetch('/auth/v1/signup','POST',{email:em,password:pw,data:{full_name:jm,svj:document.getElementById('regSvj')?.value.trim(),phone:document.getElementById('regTel')?.value.trim()}});
