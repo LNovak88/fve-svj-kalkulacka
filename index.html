@@ -414,7 +414,7 @@ footer{background:var(--navy);padding:40px 5vw 24px;color:#8BA8C4}
         </div>
         <div class="fv-lock">
           <span>📄</span>
-          <div class="fv-lock-t">PDF report pro schůzi SVJ — Premium</div>
+          <div class="fv-lock-t">PDF report pro schůzi SVJ — Dostupné na vyžádání</div>
         </div>
       </div>
     </div>
@@ -431,35 +431,34 @@ footer{background:var(--navy);padding:40px 5vw 24px;color:#8BA8C4}
     </div>
     <div class="pricing-grid">
       <div class="plan fade-up">
-        <div class="plan-name">Zdarma</div>
-        <div class="plan-price">0 Kč <span>/ navždy</span></div>
+        <div class="plan-name">Výpočet bez registrace</div>
+        <div class="plan-price" style="font-size:1.8rem">Zdarma</div>
         <p class="plan-desc">Orientační výsledky bez registrace. Ideální pro první odhad.</p>
         <div class="plan-features">
           <div class="plan-feat"><span class="plan-feat-icon">✅</span> Wizard kalkulačka (5 kroků)</div>
           <div class="plan-feat"><span class="plan-feat-icon">✅</span> Reálná data PVGIS z vaší adresy</div>
           <div class="plan-feat"><span class="plan-feat-icon">✅</span> Orientační úspora a návratnost</div>
           <div class="plan-feat"><span class="plan-feat-icon">✅</span> Graf čistého přínosu</div>
-          <div class="plan-feat locked"><span class="plan-feat-icon">🔒</span> Editace parametrů</div>
-          <div class="plan-feat locked"><span class="plan-feat-icon">🔒</span> PDF report pro schůzi</div>
-          <div class="plan-feat locked"><span class="plan-feat-icon">🔒</span> Varianta s baterií a JOM</div>
+          <div class="plan-feat locked"><span class="plan-feat-icon">❌</span> Editace parametrů</div>
+          <div class="plan-feat locked"><span class="plan-feat-icon">❌</span> 3 varianty FVE</div>
+          <div class="plan-feat locked"><span class="plan-feat-icon">❌</span> PDF report pro schůzi</div>
         </div>
         <a href="kalkulator.html" class="btn-plan free">Spočítat zdarma →</a>
       </div>
       <div class="plan featured fade-up">
-        <div class="plan-badge">Nejoblíbenější</div>
-        <div class="plan-name">Registrace zdarma</div>
-        <div class="plan-price">0 Kč <span>/ navždy</span></div>
+        <div class="plan-badge">Dostupné na vyžádání</div>
+        <div class="plan-name">Výpočet s registrací</div>
+        <div class="plan-price" style="font-size:1.8rem">Zdarma</div>
         <p class="plan-desc">Plná analýza po bezplatné registraci. Připraveno pro schůzi SVJ.</p>
         <div class="plan-features">
-          <div class="plan-feat"><span class="plan-feat-icon">✅</span> Vše ze Zdarma</div>
+          <div class="plan-feat"><span class="plan-feat-icon">✅</span> Vše bez registrace</div>
           <div class="plan-feat"><span class="plan-feat-icon">✅</span> Editace všech parametrů</div>
-          <div class="plan-feat"><span class="plan-feat-icon">✅</span> Cashflow 25 let přesně</div>
-          <div class="plan-feat"><span class="plan-feat-icon">✅</span> 3 varianty (bez bat., s bat., JOM)</div>
-          <div class="plan-feat"><span class="plan-feat-icon">✅</span> PDF report pro schůzi SVJ</div>
-          <div class="plan-feat"><span class="plan-feat-icon">✅</span> Uložení simulace</div>
-          <div class="plan-feat"><span class="plan-feat-icon">✅</span> Bezplatná konzultace s odborníkem</div>
+          <div class="plan-feat"><span class="plan-feat-icon">✅</span> Cashflow 25 let</div>
+          <div class="plan-feat"><span class="plan-feat-icon">✅</span> 3 varianty FVE</div>
+          <div class="plan-feat locked"><span class="plan-feat-icon">❌</span> PDF report pro schůzi — <em>Dostupné na vyžádání</em></div>
+          <div class="plan-feat locked"><span class="plan-feat-icon">❌</span> Uložení simulace — <em>Dostupné na vyžádání</em></div>
         </div>
-        <a href="kalkulator.html" class="btn-plan premium">Zaregistrovat se zdarma →</a>
+        <a href="kalkulator.html#registrace" class="btn-plan premium">Zaregistrovat se zdarma →</a>
       </div>
     </div>
   </div>
@@ -508,6 +507,13 @@ footer{background:var(--navy);padding:40px 5vw 24px;color:#8BA8C4}
         </button>
         <div class="faq-a">Jsme nezávislá kalkulačka — nenavazujeme na žádného konkrétního dodavatele. Po registraci vás může kontaktovat naše obchodní oddělení s nabídkou bezplatného měření střechy a nezávazné cenové nabídky od prověřených instalatérů.</div>
       </div>
+      <div class="faq-item fade-up">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Co je sdílení energie s pomocí EDC?
+          <span class="faq-arrow">▼</span>
+        </button>
+        <div class="faq-a">EDC (Elektronické datové centrum, <a href="https://www.edc-cr.cz/" target="_blank" style="color:var(--blue)">www.edc-cr.cz</a>) umožňuje virtuální sdílení solární energie bez nutnosti fyzického podružného měření v domě. FVE je připojena na jeden hlavní elektroměr a EDC zajišťuje přesné rozúčtování výroby mezi jednotlivé byty. Je to flexibilnější řešení než klasické podružné měření, ale závisí na spolupráci s distributorem a dodavatelem energie.</div>
+      </div>
     </div>
   </div>
 </section>
@@ -541,7 +547,7 @@ footer{background:var(--navy);padding:40px 5vw 24px;color:#8BA8C4}
         <div class="footer-col">
           <h4>Kalkulačka</h4>
           <a href="kalkulator.html">Spočítat zdarma</a>
-          <a href="kalkulator.html">Registrace</a>
+          <a href="kalkulator.html#registrace">Registrace</a>
           <a href="#cenik">Ceník</a>
         </div>
         <div class="footer-col">
@@ -680,5 +686,126 @@ function loadGA(){
 }
 initCookies();
 </script>
+
+<!-- SCROLL REGISTRATION MODAL -->
+<div class="modal-overlay" id="scrollRegModal" style="display:none">
+  <div class="modal" style="max-width:420px;padding:28px">
+    <button class="modal-close" onclick="closeScrollModal()">&#x2715;</button>
+    <div class="modal-badge">&#10024; Zdarma &mdash; v&yacute;sledky ihned</div>
+    <h2 class="modal-title" style="font-size:20px">Z&iacute;skejte p&#345;esnou anal&yacute;zu pro sch&#367;zi SVJ</h2>
+    <div class="modal-form" style="margin-top:14px">
+      <input type="text" id="scrollJmeno" placeholder="Jm&eacute;no a p&#345;&iacute;jmen&iacute;" autocomplete="name">
+      <input type="email" id="scrollEmail" placeholder="E-mailov&aacute; adresa" autocomplete="email">
+      <div style="position:relative">
+        <input type="tel" id="scrollTel" placeholder="Telefon (nap&#345;. 603 123 456)" autocomplete="tel" oninput="formatScrollTel(this)">
+        <span id="scrollTelIcon" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none"></span>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:10px;margin-top:4px">
+        <input type="checkbox" id="scrollGdpr" style="width:18px;height:18px;margin-top:2px;accent-color:var(--green);cursor:pointer;flex-shrink:0">
+        <label for="scrollGdpr" style="font-size:12px;color:var(--text-2);line-height:1.5;cursor:pointer;font-weight:400;margin-bottom:0">
+          Souhlasím se <a href="/gdpr" target="_blank" style="color:var(--blue);text-decoration:underline">zpracováním osobních údajů</a> 
+          a <a href="/podminky" target="_blank" style="color:var(--blue);text-decoration:underline">obchodními podmínkami</a>.
+        </label>
+      </div>
+      <button class="btn-register" id="scrollBtn" onclick="submitScrollReg()" style="margin-top:8px">
+        <span id="scrollBtnTxt">Vytvo&#345;it &uacute;&#269;et zdarma &rarr;</span>
+      </button>
+    </div>
+    <p style="font-size:12px;color:var(--text-2);text-align:center;margin-top:10px">
+      <a href="kalkulator.html#registrace" style="color:var(--blue)">M&aacute;m &uacute;&#269;et &mdash; p&#345;ihl&aacute;sit se</a>
+    </p>
+  </div>
+</div>
+
+<style>
+/* Scroll modal styles reuse existing modal styles */
+#scrollRegModal .modal-title{font-size:20px}
+#scrollRegModal input{padding:12px 14px;font-size:14px;border:1.5px solid var(--border);border-radius:var(--rm);width:100%;font-family:inherit}
+#scrollRegModal input:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-l);outline:none}
+</style>
+
+<script>
+// Scroll-triggered modal
+(function(){
+  var shown = sessionStorage.getItem('scrollModalShown');
+  if(shown) return;
+
+  var triggerScroll = false;
+  var triggerTime = false;
+
+  // Trigger after 60% scroll
+  window.addEventListener('scroll', function(){
+    var scrollPercent = (window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100;
+    if(scrollPercent > 60 && !triggerScroll){
+      triggerScroll = true;
+      tryShowModal();
+    }
+  });
+
+  // Trigger after 8 seconds
+  setTimeout(function(){
+    triggerTime = true;
+    tryShowModal();
+  }, 8000);
+
+  function tryShowModal(){
+    if((triggerScroll || triggerTime) && !sessionStorage.getItem('scrollModalShown')){
+      document.getElementById('scrollRegModal').style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+      sessionStorage.setItem('scrollModalShown', 'true');
+    }
+  }
+})();
+
+function closeScrollModal(){
+  document.getElementById('scrollRegModal').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function formatScrollTel(el){
+  let v = el.value.replace(/[^\d+]/g, '');
+  if(v.startsWith('00420')) v = '+420' + v.slice(5);
+  let digits = v.replace(/^\+420/, '').replace(/\D/g, '');
+  if(digits.length > 9) digits = digits.slice(0, 9);
+  if(digits.length > 6) digits = digits.slice(0, 3) + ' ' + digits.slice(3, 6) + ' ' + digits.slice(6);
+  else if(digits.length > 3) digits = digits.slice(0, 3) + ' ' + digits.slice(3);
+  el.value = (v.startsWith('+420') ? '+420 ' : '') + digits;
+  var ok = /^\+420\s?\d{3}\s?\d{3}\s?\d{3}$/.test(el.value) || /^\d{3}\s?\d{3}\s?\d{3}$/.test(el.value);
+  el.style.borderColor = el.value.length > 3 ? (ok ? 'var(--green)' : '#F43F5E') : '';
+  document.getElementById('scrollTelIcon').textContent = el.value.length > 3 ? (ok ? '✅' : '❌') : '';
+}
+
+function submitScrollReg(){
+  var gdpr = document.getElementById('scrollGdpr');
+  if(!gdpr || !gdpr.checked){
+    shake(gdpr.parentElement);
+    showScrollErr(gdpr.parentElement, 'Pro registraci je nutný souhlas se zpracováním osobních údajů.');
+    return;
+  }
+  var email = document.getElementById('scrollEmail').value.trim();
+  var jmeno = document.getElementById('scrollJmeno').value.trim();
+  var tel = document.getElementById('scrollTel').value.trim();
+
+  if(!email || !email.includes('@')){shake(document.getElementById('scrollEmail'));return;}
+  if(!jmeno){shake(document.getElementById('scrollJmeno'));return;}
+
+  // Store in localStorage and redirect to calculator with registration
+  localStorage.setItem('pending_reg_email', email);
+  localStorage.setItem('pending_reg_jmeno', jmeno);
+  localStorage.setItem('pending_reg_tel', tel);
+  window.location.href = 'kalkulator.html#registrace';
+}
+
+function showScrollErr(el, msg){
+  var e = el.querySelector('.field-err');
+  if(!e){e = document.createElement('div'); e.className = 'field-err'; e.style.cssText = 'font-size:11px;color:#F43F5E;margin-top:3px'; el.appendChild(e);}
+  e.textContent = msg;
+  setTimeout(function(){if(e)e.remove();}, 4000);
+}
+
+// Reuse shake function from main script
+function shake(el){if(!el)return;el.animate([{transform:'translateX(-4px)'},{transform:'translateX(4px)'},{transform:'translateX(-4px)'},{transform:'translateX(0)'}],{duration:300,easing:'ease-out'});}
+</script>
+
 </body>
 </html>
