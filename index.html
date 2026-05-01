@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SVJ Energie — FVE kalkulačka pro bytové domy | Ušetřete na elektřině</title>
 <meta name="description" content="Zjistěte za 2 minuty, kolik ušetří váš bytový dům na fotovoltaice. Bezplatná kalkulačka FVE pro SVJ a správce bytových domů. Reálná data, přesné výpočty.">
-<meta name="keywords" content="FVE SVJ, fotovoltaika bytový dům, solární panely SVJ, kalkulačka FVE, úspory elektřiny SVJ, JOM sdílení energie">
+<meta name="keywords" content="FVE SVJ, fotovoltaika bytový dům, solární panely SVJ, kalkulačka FVE, úspory elektřiny SVJ, EDC sdílení energie, komunitní energetika">
 <link rel="canonical" href="https://www.svjenergie.cz">
 <meta property="og:title" content="SVJ Energie — Kolik ušetří váš bytový dům na FVE?">
 <meta property="og:description" content="Bezplatná kalkulačka fotovoltaiky pro bytové domy. Výsledky za 2 minuty, reálná data PVGIS.">
@@ -386,15 +386,15 @@ footer{background:var(--navy);padding:40px 5vw 24px;color:#8BA8C4}
         <div class="feat fade-up">
           <div class="feat-icon blue">🏦</div>
           <div>
-            <div class="feat-h">3 varianty — bez baterie, s baterií, JOM</div>
-            <p class="feat-p">Porovnání variant včetně Jednotného odběrného místa (sdílení energie v domě) dle nového energetického zákona.</p>
+            <div class="feat-h">3 varianty — bez baterie, s baterií, EDC sdílení</div>
+            <p class="feat-p">Porovnání variant včetně komunitního sdílení energie (EDC) mezi byty a společnými prostory dle nového energetického zákona.</p>
           </div>
         </div>
       </div>
     </div>
     <div class="features-visual fade-up">
       <div class="fv-title">Co dostanete po registraci</div>
-      <div class="fv-sub">Zdarma · Bez platební karty</div>
+      <div class="fv-sub">Nezávazně · Bez platební karty</div>
       <div class="fv-items">
         <div class="fv-item">
           <span class="fv-item-icon">📊</span>
@@ -410,7 +410,7 @@ footer{background:var(--navy);padding:40px 5vw 24px;color:#8BA8C4}
         </div>
         <div class="fv-item">
           <span class="fv-item-icon">🔋</span>
-          <div><div class="fv-item-t">Varianty s baterií a JOM</div><div class="fv-item-s">Porovnání návratnosti</div></div>
+          <div><div class="fv-item-t">Varianty s baterií a EDC sdílením</div><div class="fv-item-s">Porovnání návratnosti</div></div>
         </div>
         <div class="fv-lock">
           <span>📄</span>
@@ -481,10 +481,10 @@ footer{background:var(--navy);padding:40px 5vw 24px;color:#8BA8C4}
       </div>
       <div class="faq-item fade-up">
         <button class="faq-q" onclick="toggleFaq(this)">
-          Co je JOM (Jednotné odběrné místo) a jak pomáhá?
+          Co je EDC komunitní sdílení a jak pomáhá SVJ?
           <span class="faq-arrow">▼</span>
         </button>
-        <div class="faq-a">JOM umožňuje sdílet vyrobenou elektřinu mezi byty a společnými prostory v rámci jednoho domu. Každý byt dostane poměrný díl výroby přímo na svůj elektroměr. Zvyšuje vlastní spotřebu FVE a tím i úspory.</div>
+        <div class="faq-a">EDC (komunitní energetika) umožňuje virtuálně sdílet vyrobenou elektřinu z FVE mezi byty a společnými prostory bez nutnosti fyzického přepojení. Každý člen komunity dostane poměrný díl výroby přímo na svůj elektroměr. Výrazně zvyšuje vlastní spotřebu FVE a tím i celkové úspory domu.</div>
       </div>
       <div class="faq-item fade-up">
         <button class="faq-q" onclick="toggleFaq(this)">
@@ -733,25 +733,25 @@ initCookies();
   var triggerScroll = false;
   var triggerTime = false;
 
-  // Trigger after 60% scroll
+  // Trigger after 70% scroll — passive listener pro plynulý scroll
   window.addEventListener('scroll', function(){
     var scrollPercent = (window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100;
-    if(scrollPercent > 60 && !triggerScroll){
+    if(scrollPercent > 70 && !triggerScroll){
       triggerScroll = true;
       tryShowModal();
     }
-  });
+  }, {passive: true});
 
-  // Trigger after 8 seconds
+  // Trigger after 15 seconds (zvýšeno ze 8s)
   setTimeout(function(){
     triggerTime = true;
     tryShowModal();
-  }, 8000);
+  }, 15000);
 
   function tryShowModal(){
     if((triggerScroll || triggerTime) && !sessionStorage.getItem('scrollModalShown')){
       document.getElementById('scrollRegModal').style.display = 'flex';
-      document.body.style.overflow = 'hidden';
+      // Neblokujeme scroll stránky — způsobovalo zamrznutí
       sessionStorage.setItem('scrollModalShown', 'true');
     }
   }
