@@ -74,11 +74,11 @@ input[type=range]{width:100%;accent-color:var(--blue);margin-bottom:12px;cursor:
 .b-amber{background:var(--amber-l);color:#92400E}.b-blue{background:var(--blue-l);color:#0C4A7C}.b-green{background:var(--green-l);color:#1A5C32}.b-always{background:#F1F5F9;color:#475569}
 .tip{font-size:12px;color:#4A7BA8;padding:10px 14px;background:var(--blue-ll);border-radius:var(--rm);border-left:3px solid var(--blue);margin-top:12px;line-height:1.5}
 /* VÝSLEDKY */
-.var-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;margin-top:16px}
-.var-card{border:0.5px solid var(--border);border-radius:var(--r);padding:16px 12px;text-align:center;position:relative;background:var(--white);transition:box-shadow .2s;min-width:0;overflow:hidden}
+.var-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;margin-top:20px}
+.var-card{border:0.5px solid var(--border);border-radius:var(--r);padding:20px 12px 16px;text-align:center;position:relative;background:var(--white);transition:box-shadow .2s;min-width:0;overflow:visible}
 .var-card.best{border:2px solid var(--blue);box-shadow:0 0 0 4px rgba(27,108,168,.08)}
 .var-card.blurred{filter:blur(3px);pointer-events:none;opacity:.6;user-select:none}
-.var-badge{position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:var(--blue);color:#fff;font-size:10px;font-weight:600;padding:3px 12px;border-radius:10px;white-space:nowrap}
+.var-badge{position:absolute;top:-13px;left:50%;transform:translateX(-50%);background:var(--blue);color:#fff;font-size:10px;font-weight:700;padding:4px 14px;border-radius:10px;white-space:nowrap;box-shadow:0 2px 6px rgba(27,108,168,.3);letter-spacing:.3px}
 .var-name{font-size:11px;color:var(--text-2);margin-bottom:8px;line-height:1.3}
 .var-kwp{font-size:22px;font-weight:600;color:var(--navy);line-height:1}
 .var-kwp span{font-size:12px;font-weight:400;color:var(--text-2)}
@@ -845,36 +845,26 @@ async function fetchPvgis(lat, lon, kwp, sklon, azimut){
   const az2=azimut===999?90:azimut===998?45:null;
   const kwp1=az2?kwp/2:kwp;
 
+  // Volání přes Vercel proxy (/api/pvgis)
+  // — obchází CORS blokaci přímého volání PVGIS z prohlížeče
   async function pvgisCall(peakpower, aspect){
-    const params=new URLSearchParams({
-      lat, lon, peakpower, loss:14,
-      angle:sklon, aspect,
-      outputformat:'json', browser:1,
-      pvcalculation:1, pvtechchoice:'crystSi',
-      mountingplace:'building', trackingtype:0,
-      usehorizon:1, startyear:2020, endyear:2020
-    });
-    const baseUrl='https://re.jrc.ec.europa.eu/api/v5_2/seriescalc?'+params.toString();
-    // Zkusíme přímé volání, pak CORS proxy
-    const urls=[
-      baseUrl,
-      'https://corsproxy.io/?'+encodeURIComponent(baseUrl)
-    ];
-    for(const url of urls){
-      try{
-        const r=await fetch(url,{signal:AbortSignal.timeout(10000)});
-        if(!r.ok) continue;
-        const d=await r.json();
-        const h=d?.outputs?.hourly;
-        if(h&&h.length>100) return h.map(x=>parseFloat(x.P||0)/1000.0).slice(0,8760);
-      }catch(e){ continue; }
+    const params=new URLSearchParams({lat,lon,peakpower,angle:sklon,aspect});
+    try{
+      const r=await fetch(`/api/pvgis?${params}`,{signal:AbortSignal.timeout(20000)});
+      if(!r.ok) throw new Error('Proxy HTTP '+r.status);
+      const d=await r.json();
+      const h=d?.outputs?.hourly;
+      if(h&&h.length>100) return h.map(x=>parseFloat(x.P||0)/1000.0).slice(0,8760);
+      throw new Error('Prázdná data');
+    }catch(e){
+      console.warn('PVGIS proxy selhala:',e.message);
+      return null;
     }
-    return null;
   }
 
   try{
     const arr1=await pvgisCall(kwp1, az1);
-    if(!arr1) throw new Error('Oba PVGIS endpointy selhaly');
+    if(!arr1) throw new Error('PVGIS nedostupné');
     let arr=arr1;
     if(az2!==null){
       const arr2=await pvgisCall(kwp/2, az2);
@@ -883,7 +873,7 @@ async function fetchPvgis(lat, lon, kwp, sklon, azimut){
     _pvgisCache=arr;
     return arr;
   }catch(e){
-    console.warn('PVGIS nedostupné:', e.message);
+    console.warn('PVGIS fallback na matematický model:', e.message);
     return null;
   }
 }
@@ -1049,9 +1039,9 @@ function renderResults(R){
       <div class="var-kwp">${R.kwp}<span> kWp</span></div>
       <div class="var-save">+${Math.round(R.uspora_rok).toLocaleString('cs-CZ')} Kč/rok</div>
       <div class="var-roi">návratnost ${R.nav||'>25'} let</div>
-      <div style="margin-top:8px;padding:6px 8px;background:rgba(245,158,11,0.1);border-radius:6px;border:1px solid rgba(245,158,11,0.3)">
-        <div style="font-size:11px;font-weight:600;color:#92400E">🔋 + baterie ${Math.round(R.kwp*1.4*10)/10} kWh</div>
-        <div style="font-size:10px;color:#92400E;margin-top:1px">~${Math.round(R.kwp*1.4*8000).toLocaleString('cs-CZ')} Kč · +15–20 % vlastní spotřeby</div>
+      <div style="margin-top:10px;padding:7px 10px;background:rgba(245,158,11,0.12);border-radius:6px;border:1px solid rgba(245,158,11,0.35)">
+        <div style="font-size:11px;font-weight:600;color:#92400E">🔋 Doporučená baterie ${Math.round(R.kwp*1.4*10)/10} kWh</div>
+        <div style="font-size:10px;color:#92400E;margin-top:2px;line-height:1.4">Zachytí přebytky FVE pro večer a ráno — místo přetoku za ~0,50 Kč/kWh ušetří za plnou cenu elektřiny</div>
       </div>
     </div>
     <div class="var-card${premium?'':' blurred'}">
