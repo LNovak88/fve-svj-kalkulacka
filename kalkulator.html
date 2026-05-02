@@ -1368,13 +1368,21 @@ function pickLok(lat,lon,name){
 // ================================================================
 // SUPABASE AUTH
 // ================================================================
-const SUPA_URL='https://xzxkwrqvxkxkuqxkxkxk.supabase.co'; // doplnit
-const SUPA_KEY=''; // doplnit
+const SUPA_URL='https://aeypeepckmbejdcotdss.supabase.co';
+const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFleXBlZXBja21iZWpkY290ZHNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTkyNjAsImV4cCI6MjA5Mjk3NTI2MH0.JjYiI3bcL1ds1vAkFq59Z0WhNCLAd8oekX6GF4Zq5bA';
 
 async function supaFetch(path,method,body){
-  const headers={'apikey':SUPA_KEY,'Content-Type':'application/json','Authorization':'Bearer '+(localStorage.getItem('supa_access_token')||SUPA_KEY)};
+  const token=localStorage.getItem('supa_access_token')||SUPA_KEY;
+  const isRest=path.startsWith('/rest/');
+  const headers={
+    'apikey':SUPA_KEY,
+    'Content-Type':'application/json',
+    'Authorization':'Bearer '+token,
+    ...(isRest?{'Prefer':'return=minimal'}:{})
+  };
   const r=await fetch(SUPA_URL+path,{method,headers,body:body?JSON.stringify(body):undefined});
-  const data=await r.json().catch(()=>({}));
+  const text=await r.text();
+  const data=text?JSON.parse(text):{};
   return{ok:r.ok,data};
 }
 
@@ -1405,13 +1413,48 @@ async function submitReg(){
   if(!gdpr?.checked){shake(gdpr);showFieldErr(gdpr,'Prosím potvrďte souhlas s podmínkami');return;}
   setBtnLoading('regBtn','regBtnTxt',true);
   try{
-    const {ok,data}=await supaFetch('/auth/v1/signup','POST',{email:em,password:pw,data:{full_name:jm,svj:document.getElementById('regSvj')?.value.trim(),phone:document.getElementById('regTel')?.value.trim()}});
-    if(!ok)throw new Error(data.msg||data.error_description||'Chyba registrace');
-    if(data.access_token){localStorage.setItem('supa_access_token',data.access_token);}
+    // 1. Registrace uživatele
+    const {ok,data}=await supaFetch('/auth/v1/signup','POST',{
+      email:em, password:pw,
+      data:{full_name:jm, svj:document.getElementById('regSvj')?.value.trim(), phone:document.getElementById('regTel')?.value.trim()}
+    });
+    if(!ok) throw new Error(data.msg||data.error_description||'Chyba registrace');
+    if(data.access_token) localStorage.setItem('supa_access_token',data.access_token);
+
+    // 2. Uložit lead do Supabase
+    const sp=spSpVypocet(D.bytu,D.pater,D.vytahu>0,D.vytahu,D.tuv,D.tc,D.ev,D.cerpadla);
+    await supaFetch('/rest/v1/leads','POST',{
+      jmeno:jm, email:em,
+      telefon:document.getElementById('regTel')?.value.trim()||null,
+      svj:document.getElementById('regSvj')?.value.trim()||null,
+      byty:D.bytu, pater:D.pater,
+      dist:D.dist, zarizeni:D.zarizeni.join(','),
+      strecha:D.strTyp, azimut:D.azimut, sklon:D.sklon,
+      lat:D.lat||null, lon:D.lon||null,
+      sp_mwh:sp.sp_mwh, tc:D.tc, ev:D.ev,
+      kwp:optimKwp(D.bytu,D.zarizeni,D.ev,D.tc,sp.sp_mwh),
+      stav:'novy'
+    });
+
+    // 3. Uložit simulaci
+    if(data.user?.id){
+      const kwp=optimKwp(D.bytu,D.zarizeni,D.ev,D.tc,sp.sp_mwh);
+      await supaFetch('/rest/v1/simulations','POST',{
+        user_id:data.user.id,
+        name:`${D.lokace||'Bez adresy'} · ${D.bytu} bytů · ${kwp} kWp`,
+        params:JSON.stringify({...D, kwp}),
+        result:JSON.stringify({})
+      });
+    }
+
     document.getElementById('regFormWrap').style.display='none';
     document.getElementById('regSuccess').style.display='block';
     setTimeout(()=>{closeModal();unlockPremium();},1800);
-  }catch(e){setBtnLoading('regBtn','regBtnTxt',false,'Vytvořit účet a odemknout výsledky →');showFieldErr(document.getElementById('regEmail'),e.message);}
+  }catch(e){
+    setBtnLoading('regBtn','regBtnTxt',false,'Registrovat se nezávazně →');
+    showFieldErr(document.getElementById('regEmail'),e.message);
+  }
+}
 }
 
 async function submitLogin(){
