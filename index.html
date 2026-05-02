@@ -40,11 +40,11 @@ html{scroll-behavior:smooth}
 body{font-family:'DM Sans',system-ui,sans-serif;background:var(--white);color:var(--text);line-height:1.6;overflow-x:hidden}
 
 /* ── NAV ── */
-nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 5vw;height:64px;background:rgba(255,255,255,0.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);transition:box-shadow .3s}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 5vw;height:76px;background:rgba(255,255,255,0.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);transition:box-shadow .3s}
 nav.scrolled{box-shadow:0 2px 20px rgba(30,58,95,0.1)}
-.nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none}
-.nav-logo-box{width:36px;height:36px;background:var(--blue);border-radius:var(--rm);display:flex;align-items:center;justify-content:center}
-.nav-logo-t{font-size:16px;font-weight:600;color:var(--navy);letter-spacing:-.3px}
+.nav-logo{display:flex;align-items:center;gap:12px;text-decoration:none}
+.nav-logo-box{width:42px;height:42px;background:var(--blue);border-radius:var(--rm);display:flex;align-items:center;justify-content:center}
+.nav-logo-t{font-size:17px;font-weight:600;color:var(--navy);letter-spacing:-.3px}
 .nav-logo-s{font-size:11px;color:var(--text-2)}
 .nav-links{display:flex;align-items:center;gap:8px}
 .btn-nav-ghost{background:transparent;border:1.5px solid var(--border);color:var(--text-2);border-radius:var(--rm);padding:8px 16px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;text-decoration:none;transition:all .15s}
@@ -53,7 +53,7 @@ nav.scrolled{box-shadow:0 2px 20px rgba(30,58,95,0.1)}
 .btn-nav-cta:hover{background:var(--green-d);transform:translateY(-1px)}
 
 /* ── HERO ── */
-.hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:100px 5vw 60px;position:relative;overflow:hidden;background:linear-gradient(160deg,#f0f7fd 0%,#fff 50%,#e8f5f0 100%)}
+.hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:112px 5vw 60px;position:relative;overflow:hidden;background:linear-gradient(160deg,#f0f7fd 0%,#fff 50%,#e8f5f0 100%)}
 .hero-bg{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 .hero-orb{position:absolute;border-radius:50%;filter:blur(80px);opacity:.35}
 .hero-orb-1{width:600px;height:600px;background:var(--blue-l);top:-200px;right:-100px}
@@ -693,28 +693,30 @@ initCookies();
 <div class="modal-overlay" id="scrollRegModal" style="display:none">
   <div class="modal" style="max-width:420px;padding:28px">
     <button class="modal-close" onclick="closeScrollModal()">&#x2715;</button>
-    <div class="modal-badge">&#10024; Zdarma &mdash; v&yacute;sledky ihned</div>
-    <h2 class="modal-title" style="font-size:20px">Z&iacute;skejte p&#345;esnou anal&yacute;zu pro sch&#367;zi SVJ</h2>
-    <div class="modal-form" style="margin-top:14px">
-      <input type="text" id="scrollJmeno" placeholder="Jm&eacute;no a p&#345;&iacute;jmen&iacute;" autocomplete="name">
-      <input type="email" id="scrollEmail" placeholder="E-mailov&aacute; adresa" autocomplete="email">
+    <div class="modal-badge" style="background:var(--green-l);color:var(--green)">✨ Výsledky ihned — nezávazně</div>
+    <h2 class="modal-title" style="font-size:20px;margin-bottom:6px">Získejte přesnou analýzu pro schůzi SVJ</h2>
+    <p style="font-size:13px;color:var(--text-2);margin-bottom:16px">Registrace je bezplatná a nezávazná. Naše oddělení vás kontaktuje s nabídkou na míru.</p>
+    <div class="modal-form" style="margin-top:0;gap:10px;display:flex;flex-direction:column">
+      <input type="text" id="scrollJmeno" placeholder="Jméno a příjmení" autocomplete="name">
+      <input type="email" id="scrollEmail" placeholder="E-mailová adresa" autocomplete="email">
       <div style="position:relative">
-        <input type="tel" id="scrollTel" placeholder="Telefon (nap&#345;. 603 123 456)" autocomplete="tel" oninput="formatScrollTel(this)">
+        <input type="tel" id="scrollTel" placeholder="Telefon (např. 603 123 456)" autocomplete="tel" oninput="formatScrollTel(this)">
         <span id="scrollTelIcon" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none"></span>
       </div>
-      <div style="display:flex;align-items:flex-start;gap:10px;margin-top:4px">
-        <input type="checkbox" id="scrollGdpr" style="width:18px;height:18px;margin-top:2px;accent-color:var(--green);cursor:pointer;flex-shrink:0">
+      <input type="text" id="scrollSvj" placeholder="Název SVJ nebo bytového domu (volitelné)">
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <input type="checkbox" id="scrollGdpr" style="width:16px;height:16px;min-width:16px;margin-top:2px;accent-color:var(--green);cursor:pointer;flex-shrink:0;appearance:checkbox;-webkit-appearance:checkbox">
         <label for="scrollGdpr" style="font-size:12px;color:var(--text-2);line-height:1.5;cursor:pointer;font-weight:400;margin-bottom:0">
-          Souhlasím se <a href="gdpr.html" target="_blank" style="color:var(--blue);text-decoration:underline">zpracováním osobních údajů</a> 
+          Souhlasím se <a href="gdpr.html" target="_blank" style="color:var(--blue);text-decoration:underline">zpracováním osobních údajů</a>
           a <a href="podminky.html" target="_blank" style="color:var(--blue);text-decoration:underline">obchodními podmínkami</a>.
         </label>
       </div>
-      <button class="btn-register" id="scrollBtn" onclick="submitScrollReg()" style="margin-top:8px">
+      <button id="scrollBtn" onclick="submitScrollReg()" style="width:100%;padding:15px;background:linear-gradient(135deg,var(--green) 0%,#1f6b36 100%);color:#fff;border:none;border-radius:var(--rm);font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;box-shadow:0 4px 14px rgba(46,139,74,.4);transition:transform .15s,box-shadow .15s;display:flex;align-items:center;justify-content:center;gap:8px" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform=''">
         <span id="scrollBtnTxt">Registrovat se nezávazně →</span>
       </button>
     </div>
-    <p style="font-size:12px;color:var(--text-2);text-align:center;margin-top:10px">
-      <a href="kalkulator.html#registrace" style="color:var(--blue)">M&aacute;m &uacute;&#269;et &mdash; p&#345;ihl&aacute;sit se</a>
+    <p style="font-size:12px;color:var(--text-2);text-align:center;margin-top:12px">
+      <a href="kalkulator.html#registrace" style="color:var(--blue)">Mám účet — přihlásit se</a>
     </p>
   </div>
 </div>
@@ -787,14 +789,15 @@ function submitScrollReg(){
   var email = document.getElementById('scrollEmail').value.trim();
   var jmeno = document.getElementById('scrollJmeno').value.trim();
   var tel = document.getElementById('scrollTel').value.trim();
+  var svj = document.getElementById('scrollSvj')?.value.trim()||'';
 
   if(!email || !email.includes('@')){shake(document.getElementById('scrollEmail'));return;}
   if(!jmeno){shake(document.getElementById('scrollJmeno'));return;}
 
-  // Store in localStorage and redirect to calculator with registration
   localStorage.setItem('pending_reg_email', email);
   localStorage.setItem('pending_reg_jmeno', jmeno);
   localStorage.setItem('pending_reg_tel', tel);
+  localStorage.setItem('pending_reg_svj', svj);
   window.location.href = 'kalkulator.html#registrace';
 }
 
