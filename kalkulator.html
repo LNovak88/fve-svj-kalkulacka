@@ -279,12 +279,48 @@ input[type=range]{width:100%;accent-color:var(--blue);margin-bottom:12px;cursor:
 
 <script>
 // ================================================================
-// KONSTANTY — z app.py (ceníky 2026)
+// PVGIS KRAJSKÁ TABULKA — průměry kWh/kWp/rok pro ČR (jih 25°)
+// Zdroj: PVGIS TMY průměry pro krajská města
 // ================================================================
+const PVGIS_KRAJE={
+  // [lat_min, lat_max, lon_min, lon_max, kWh_kWp]
+  Praha:      {lat:[49.9,50.3],lon:[14.2,14.8],kwh:1080},
+  Stredocesky:{lat:[49.7,50.5],lon:[13.8,15.3],kwh:1065},
+  Jihocesky:  {lat:[48.5,49.7],lon:[13.2,15.2],kwh:1095},
+  Plzensky:   {lat:[49.2,50.1],lon:[12.5,14.0],kwh:1075},
+  Karlovarsky:{lat:[50.0,50.6],lon:[12.2,13.2],kwh:1020},
+  Ustecky:    {lat:[50.3,51.0],lon:[13.2,15.0],kwh:1010},
+  Liberecky:  {lat:[50.5,51.0],lon:[14.8,15.8],kwh:1005},
+  Kralovehradecky:{lat:[50.1,50.8],lon:[15.5,16.8],kwh:1030},
+  Pardubicky: {lat:[49.7,50.2],lon:[15.5,16.8],kwh:1045},
+  Vysocina:   {lat:[49.2,50.0],lon:[15.2,16.5],kwh:1060},
+  Jihomoravsky:{lat:[48.5,49.5],lon:[16.2,18.0],kwh:1110},
+  Olomoucky:  {lat:[49.3,50.0],lon:[16.5,17.8],kwh:1055},
+  Zlinsky:    {lat:[48.8,49.5],lon:[17.2,18.4],kwh:1070},
+  Moravskoslezsky:{lat:[49.3,50.0],lon:[17.5,18.9],kwh:1025},
+  default:    {kwh:1050}
+};
+
+function pvgisKrajKwh(lat, lon, sklon, azimut){
+  // Korekce sklonu (optimum 30-35° pro ČR)
+  const sklonKor=1.0+0.002*(sklon-25);
+  // Korekce azimutu
+  const azKor=azimut===0?1.0:azimut===999||azimut===998?0.87:Math.cos((azimut||0)*Math.PI/180)*0.15+0.85;
+  let kwh=PVGIS_KRAJE.default.kwh;
+  if(lat&&lon){
+    for(const [k,v] of Object.entries(PVGIS_KRAJE)){
+      if(k==='default') continue;
+      if(lat>=v.lat[0]&&lat<=v.lat[1]&&lon>=v.lon[0]&&lon<=v.lon[1]){kwh=v.kwh;break;}
+    }
+  }
+  return kwh*sklonKor*azKor;
+}
+
+// Konstanty — ceníky 2026
 const CENY_VT={
-  "ČEZ Distribuce":{D01d:7320,D02d:6610,D25d:6920,D26d:5650,D27d:6920,D35d:5410,D45d:5410,D56d:5410,D57d:5410,D61d:8050},
-  "EG.D (E.ON)":   {D01d:7050,D02d:6550,D25d:6650,D26d:5430,D27d:6650,D35d:4270,D45d:4270,D56d:4270,D57d:4270,D61d:7720},
-  "PREdistribuce": {D01d:5980,D02d:5570,D25d:5620,D26d:4840,D27d:5620,D35d:3910,D45d:3910,D56d:3910,D57d:3910,D61d:6770}
+  "ČEZ Distribuce":{D01d:7320,D02d:6800,D25d:6200,D26d:5650,D27d:6920,D35d:5410,D45d:5410,D56d:5410,D57d:5410,D61d:8050},
+  "EG.D (E.ON)":   {D01d:7050,D02d:6700,D25d:6100,D26d:5430,D27d:6650,D35d:4270,D45d:4270,D56d:4270,D57d:4270,D61d:7720},
+  "PREdistribuce": {D01d:5980,D02d:5700,D25d:5200,D26d:4840,D27d:5620,D35d:3910,D45d:3910,D56d:3910,D57d:3910,D61d:6770}
 };
 const CENY_NT={
   "ČEZ Distribuce":{D25d:4070,D26d:4070,D27d:4020,D35d:4390,D45d:4390,D56d:4390,D57d:4390,D61d:4200},
@@ -341,11 +377,31 @@ for(const k in UPRAVY){const m=UPRAVY[k].reduce((a,b)=>a+b)/24;UPRAVY[k]=UPRAVY[
 // ================================================================
 
 function doporucenaSazba(z){
+  // Bojler nebo akumulační kamna (nebo oboje) → D25d, 3×32A
+  if(z.includes('bojler')||z.includes('akum')) return 'D25d';
+  // TČ → D57d
   if(z.includes('tc')) return 'D57d';
-  if(z.includes('akum')) return 'D26d';
-  if(z.includes('ev') && !z.includes('bojler')) return 'D27d';
-  if(z.includes('bojler') || z.includes('ev')) return 'D25d';
+  // EV bez bojleru → D27d
+  if(z.includes('ev')) return 'D27d';
+  // Sporák (bez bojleru) → D02d, 3×25A
+  if(z.includes('sporak')) return 'D02d';
+  // Základ + klima → D02d, 1×25A
   return 'D02d';
+}
+
+function doporucenyJisticFaze(z){
+  if(z.includes('bojler')||z.includes('akum')) return '3';
+  if(z.includes('tc')) return '3';
+  if(z.includes('ev')) return '3';
+  if(z.includes('sporak')) return '3';
+  return '1'; // základ, klima
+}
+
+function doporucenyJisticAmpery(z){
+  if(z.includes('tc')) return 25;
+  if(z.includes('bojler')||z.includes('akum')) return 32;
+  if(z.includes('ev')||z.includes('sporak')) return 25;
+  return 25; // základ, klima
 }
 
 // Jistič jednoho bytu — typické hodnoty dle spotřebičů
@@ -739,7 +795,8 @@ function s4(){
   const z=D.zarizeni;
   const sazba=doporucenaSazba(z);
   const amp=jisticDumAmpery(D.bytu,z);
-  const ampByt=jisticBytAmpery(z);
+  const faze=doporucenyJisticFaze(z);
+  const ampBytNew=doporucenyJisticAmpery(z);
   let sVT=0,sNT=0;
   z.forEach(k=>{if(SP_ZAR[k]){sVT+=SP_ZAR[k].vt*D.bytu;sNT+=SP_ZAR[k].nt*D.bytu;}});
   const sp=spSpVypocet(D.bytu,D.pater,D.vytahu>0,D.vytahu,D.tuv,D.tc,D.ev,D.cerpadla);
@@ -765,11 +822,11 @@ function s4(){
   <select onchange="D.dist=this.value;render()" style="margin-bottom:12px">
     ${['ČEZ Distribuce','EG.D (E.ON)','PREdistribuce'].map(d=>`<option${D.dist===d?' selected':''}>${d}</option>`).join('')}
   </select>
-  <div class="slabel">Odhadované parametry</div>
-  <div class="lock-row"><span class="lock-l">Spotřeba bytů</span><span class="lock-v" id="lv_sp">${((sVT+sNT)/1000).toFixed(1)} MWh/rok (${Math.round(sVT+sNT).toLocaleString('cs-CZ')} kWh)</span><span class="lock-ico">📊</span></div>
+  <div class="slabel">Odhadované parametry <span class="badge b-amber" style="margin-left:6px">Po registraci — editace</span></div>
+  <div class="lock-row"><span class="lock-l">Spotřeba bytů</span><span class="lock-v" id="lv_sp">${((sVT+sNT)/1000).toFixed(1)} MWh/rok</span><span class="lock-ico">📊</span></div>
   <div class="lock-row"><span class="lock-l">Odhadovaná sazba bytu</span><span class="lock-v" id="lv_sazba">${sazba}</span><span class="lock-ico">📊</span></div>
-  <div class="lock-row"><span class="lock-l">Odhadovaný jistič bytu</span><span class="lock-v" id="lv_jistic">1×${ampByt}A</span><span class="lock-ico">📊</span></div>
-  <div class="lock-row"><span class="lock-l">Spotřeba společných prostor</span><span class="lock-v" id="lv_spmwh">${sp.sp_mwh.toFixed(1)} MWh/rok (${Math.round(sp.sp_mwh*1000).toLocaleString('cs-CZ')} kWh)</span><span class="lock-ico">📊</span></div>
+  <div class="lock-row"><span class="lock-l">Odhadovaný jistič bytu</span><span class="lock-v" id="lv_jistic">${faze}×${ampBytNew}A</span><span class="lock-ico">📊</span></div>
+  <div class="lock-row"><span class="lock-l">Spotřeba společných prostor</span><span class="lock-v" id="lv_spmwh">${sp.sp_mwh.toFixed(1)} MWh/rok</span><span class="lock-ico">📊</span></div>
   <div class="lock-row"><span class="lock-l">Odhadovaná sazba spol. prostor</span><span class="lock-v" id="lv_spsazba">${sp.sazba_sp}</span><span class="lock-ico">📊</span></div>
   <div class="lock-row"><span class="lock-l">Odhadovaný jistič spol. prostor</span><span class="lock-v" id="lv_jisticsp">3×${sp.jistic_sp_a}A</span><span class="lock-ico">📊</span></div>
   </div>
@@ -886,6 +943,10 @@ function vypoctiVse(vyroba8760){
   const sp=spSpVypocet(D.bytu,D.pater,D.vytahu>0,D.vytahu,D.tuv,D.tc,D.ev,D.cerpadla);
   const kwp=optimKwp(D.bytu,z,D.ev,D.tc,sp.sp_mwh);
 
+  // Baterie — vždy zahrnuta
+  const bat_kwh=Math.round(kwp*1.4*10)/10;
+  const bat_cena=Math.round(bat_kwh*8000);
+
   // Spotřeba bytů (VT + NT)
   let sp_byt_vt=0, sp_byt_nt=0;
   z.forEach(k=>{if(SP_ZAR[k]){sp_byt_vt+=SP_ZAR[k].vt*D.bytu;sp_byt_nt+=SP_ZAR[k].nt*D.bytu;}});
@@ -896,51 +957,67 @@ function vypoctiVse(vyroba8760){
   const vt_profil=genProfilVt(sp_cel_vt, D.hhSlider);
   const nt_profil=genProfilNt(sp_cel_nt, sazba);
 
-  // Výroba
-  const vyroba=vyroba8760||genVyrobaFallback(kwp,D.sklon,D.azimut);
+  // Výroba — PVGIS nebo krajský fallback
+  let vyroba;
+  if(vyroba8760){
+    vyroba=vyroba8760;
+  } else {
+    // Krajský fallback — rychlý matematický model kalibrovaný dle kraje
+    const kwh_kraj=pvgisKrajKwh(D.lat, D.lon, D.sklon, D.azimut);
+    vyroba=genVyrobaFallback(kwp, D.sklon, D.azimut);
+    // Kalibruj na krajský průměr
+    const sum=vyroba.reduce((a,b)=>a+b,0);
+    if(sum>0) vyroba=vyroba.map(v=>v*(kwp*kwh_kraj/sum));
+  }
 
-  // Ceny (Kč/MWh → /1000 = Kč/kWh)
-  const cvt=CENY_VT[dist]?.[sazba]||6920;
+  // Ceny (Kč/MWh)
+  const cvt=CENY_VT[dist]?.[sazba]||6800;
   const cnt=CENY_NT[dist]?.[sazba]||4070;
-  const cpr=1200; // přetoky Kč/MWh
+  const cpr=500; // přetoky ~0,50 Kč/kWh
 
-  // 3 modely sdílení
-  const sim_edc=simuluj(vyroba,vt_profil,nt_profil,0,'edc');
-  const sim_pm=simuluj(vyroba,vt_profil,nt_profil,0,'edc'); // podružná měřidla ≈ EDC (zachycuje stejnou výrobu)
-  const sim_sp=simuluj(vyroba,sp.sp_vt_mwh*1000>0?genProfilVt(sp.sp_vt_mwh*1000,D.hhSlider):Array(8760).fill(0),[],[],0,'spolecne'); // jen SP
+  // Simulace s baterií (doporučené řešení)
+  const sim_pm=simuluj(vyroba,vt_profil,nt_profil,bat_kwh,'edc');  // podružné měření + baterie
+  const sim_edc=simuluj(vyroba,vt_profil,nt_profil,0,'edc');       // EDC bez baterie
+  const sim_sp=simuluj(vyroba,sp.sp_vt_mwh*1000>0?genProfilVt(sp.sp_vt_mwh*1000,D.hhSlider):Array(8760).fill(0),Array(8760).fill(0),0,'spolecne');
 
-  // Investice
-  const investice=kwp*cenaKwp(kwp);
+  // Investice — FVE + baterie
+  const investice_fve=kwp*cenaKwp(kwp);
+  const investice=investice_fve+bat_cena;
   const {uver, bonus, splatnost}=nzuVypocet(investice, D.bytu);
-  const vlastni=investice-bonus-uver;
 
-  // Cashflow pro EDC (doporučený)
-  const cf_res=cashflow(sim_edc,cvt,cnt,cpr,investice,bonus,uver,splatnost,3.0,0.5);
+  // Cashflow — podružné měření s baterií (doporučené)
+  const cf_res=cashflow(sim_pm,cvt,cnt,cpr,investice,bonus,uver,splatnost,3.0,0.5);
 
   // Úspora na byt
   const uspora_byt_rok=Math.round(cf_res.cf[0]?.uspora_celkem/D.bytu)||0;
   const uspora_byt_mes=Math.round(uspora_byt_rok/12);
 
-  // Verze s podružnými měřidly — mírně nižší využití (0.9 korekce)
-  const uspora_pm=Math.round(sim_pm.vlastni_kwh*0.9*(cvt/1000)+sim_pm.pretoky_kwh*0.9*(cpr/1000));
-  const nav_pm=investice/Math.max(uspora_pm,1);
+  // EDC bez baterie
+  const investice_edc=investice_fve; // jen FVE bez baterie
+  const nzu_edc=nzuVypocet(investice_edc,D.bytu);
+  const cf_edc=cashflow(sim_edc,cvt,cnt,cpr,investice_edc,0,nzu_edc.uver,nzu_edc.splatnost,3.0,0.5);
+  const uspora_edc=cf_edc.cf[0]?.uspora_celkem||0;
+  const nav_edc=cf_edc.nav;
 
-  // Verze jen SP
+  // Jen SP
   const uspora_sp=Math.round(sim_sp.vlastni_kwh*(cvt/1000)+sim_sp.pretoky_kwh*(cpr/1000));
-  const nav_sp=investice/Math.max(uspora_sp,1);
+  const investice_sp=Math.round(kwp*0.3)*cenaKwp(kwp*0.3);
+  const nav_sp=Math.round(investice_sp/Math.max(uspora_sp,1)*10)/10;
 
   return{
-    kwp, investice, bonus, uver, vlastni, splatnost,
+    kwp, bat_kwh, bat_cena,
+    investice, investice_fve, bonus, uver, splatnost,
     cvt, cnt, cpr,
-    sim_edc, sim_pm, sim_sp,
+    sim_pm, sim_edc, sim_sp,
     cf:cf_res.cf, nav:cf_res.nav, kum25:cf_res.kum25,
     uspora_rok:cf_res.cf[0]?.uspora_celkem||0,
     uspora_byt_rok, uspora_byt_mes,
-    uspora_pm, nav_pm: Math.round(nav_pm*10)/10,
-    uspora_sp, nav_sp: Math.round(nav_sp*10)/10,
-    vyroba_mwh:Math.round(sim_edc.vyroba_kwh/1000*10)/10,
-    vlastni_pct:Math.round(sim_edc.vlastni_kwh/sim_edc.vyroba_kwh*100)||0,
-    sp_mwh:sp.sp_mwh
+    uspora_edc, nav_edc,
+    uspora_sp, nav_sp,
+    vyroba_mwh:Math.round(sim_pm.vyroba_kwh/1000*10)/10,
+    vlastni_pct:Math.round(sim_pm.vlastni_kwh/sim_pm.vyroba_kwh*100)||0,
+    sp_mwh:sp.sp_mwh,
+    kwh_kraj:pvgisKrajKwh(D.lat,D.lon,D.sklon,D.azimut)
   };
 }
 
@@ -958,7 +1035,7 @@ function s6(){
       vyroba=await fetchPvgis(D.lat,D.lon,kwp,D.sklon,D.azimut);
       if(pvgisEl){
         if(vyroba) pvgisEl.innerHTML=`<div style="font-size:12px;color:var(--green);padding:8px 0;">✅ Solární data načtena z PVGIS pro: <strong>${D.lokace}</strong></div>`;
-        else pvgisEl.innerHTML=`<div style="font-size:12px;color:var(--amber);padding:8px 0;">⚠️ PVGIS nedostupné — použit průměr ČR (1050 kWh/kWp)</div>`;
+        else pvgisEl.innerHTML=`<div style="font-size:12px;color:var(--amber);padding:8px 0;">⚠️ PVGIS nedostupné — použit krajový průměr ${Math.round(pvgisKrajKwh(D.lat,D.lon,D.sklon,D.azimut))} kWh/kWp/rok</div>`;
       }
     }
     const R=vypoctiVse(vyroba);
@@ -1015,56 +1092,59 @@ function renderResults(R){
   <!-- KPI -->
   <div class="kpi-row">
     <div class="kpi">
-      <div class="kpi-l">Navrhovaný výkon FVE</div>
+      <div class="kpi-l">Navrhovaný výkon FVE + baterie</div>
       <div class="kpi-v">${R.kwp} <span style="font-size:14px;font-weight:400">kWp</span></div>
-      <div class="kpi-u">${R.vyroba_mwh} MWh/rok · baterie ${Math.round(R.kwp*1.4*10)/10} kWh</div>
+      <div class="kpi-u">${R.vyroba_mwh} MWh/rok · baterie ${R.bat_kwh} kWh</div>
     </div>
     <div class="kpi green">
-      <div class="kpi-l">Roční úspora (EDC)</div>
+      <div class="kpi-l">Roční úspora (podružné měření)</div>
       <div class="kpi-v">${Math.round(R.uspora_rok).toLocaleString('cs-CZ')} <span style="font-size:14px;font-weight:400">Kč</span></div>
       <div class="kpi-u">${R.uspora_byt_mes.toLocaleString('cs-CZ')} Kč/byt/měs</div>
     </div>
     <div class="kpi">
-      <div class="kpi-l">Investice / NZÚ úvěr</div>
+      <div class="kpi-l">Investice celkem / NZÚ úvěr</div>
       <div class="kpi-v">${Math.round(R.investice).toLocaleString('cs-CZ')} <span style="font-size:14px;font-weight:400">Kč</span></div>
       <div class="kpi-u">splátka ${Math.round(nzu_splatka/D.bytu/12).toLocaleString('cs-CZ')} Kč/byt/měs</div>
     </div>
   </div>
 
-  <!-- Modely sdílení -->
+  <!-- Modely sdílení — pořadí: SP | Doporučeno PM | EDC -->
   <div class="slabel">Porovnání modelů sdílení <span class="badge b-blue" style="margin-left:6px">PVGIS · OTE 2026</span></div>
   <div class="var-grid">
-    <div class="var-card best">
-      <div class="var-badge">⭐ Doporučeno</div>
-      <div class="var-name">EDC — komunitní sdílení</div>
-      <div class="var-kwp">${R.kwp}<span> kWp</span></div>
-      <div class="var-save">+${Math.round(R.uspora_rok).toLocaleString('cs-CZ')} Kč/rok</div>
-      <div class="var-roi">návratnost ${R.nav||'>25'} let</div>
-      <div style="margin-top:10px;padding:7px 10px;background:rgba(245,158,11,0.12);border-radius:6px;border:1px solid rgba(245,158,11,0.35)">
-        <div style="font-size:11px;font-weight:600;color:#92400E">🔋 Doporučená baterie ${Math.round(R.kwp*1.4*10)/10} kWh</div>
-        <div style="font-size:10px;color:#92400E;margin-top:2px;line-height:1.4">Zachytí přebytky FVE pro večer a ráno — místo přetoku za ~0,50 Kč/kWh ušetří za plnou cenu elektřiny</div>
-      </div>
-    </div>
-    <div class="var-card${premium?'':' blurred'}">
-      ${!premium?'<div class="var-badge" style="background:var(--text-2)">🔒 Po registraci</div>':''}
-      <div class="var-name">Podružná měřidla</div>
-      <div class="var-kwp">${R.kwp}<span> kWp</span></div>
-      <div class="var-save">+${Math.round(R.uspora_pm).toLocaleString('cs-CZ')} Kč/rok</div>
-      <div class="var-roi">návratnost ~${R.nav_pm} let</div>
-      ${!premium?'<div class="var-lock-msg">Zaregistrujte se pro detail →</div>':''}
-    </div>
+    <!-- 1. Jen společné prostory — vlevo rozmazané -->
     <div class="var-card${premium?'':' blurred'}">
       ${!premium?'<div class="var-badge" style="background:var(--text-2)">🔒 Po registraci</div>':''}
       <div class="var-name">Jen společné prostory</div>
       <div class="var-kwp">${Math.round(R.kwp*0.3*2)/2}<span> kWp</span></div>
       <div class="var-save">+${Math.round(R.uspora_sp).toLocaleString('cs-CZ')} Kč/rok</div>
       <div class="var-roi">návratnost ~${R.nav_sp} let</div>
-      ${!premium?'<div class="var-lock-msg">Zaregistrujte se pro detail →</div>':''}
+      ${!premium?'<div class="var-lock-msg" onclick="openModal();switchTab(\'reg\')">Registrovat se →</div>':''}
+    </div>
+    <!-- 2. Doporučeno — podružné měření — uprostřed -->
+    <div class="var-card best">
+      <div class="var-badge">⭐ Doporučeno</div>
+      <div class="var-name">Jeden elektroměr + podružné měření</div>
+      <div class="var-kwp">${R.kwp}<span> kWp</span></div>
+      <div class="var-save">+${Math.round(R.uspora_rok).toLocaleString('cs-CZ')} Kč/rok</div>
+      <div class="var-roi">návratnost ${R.nav||'>25'} let</div>
+      <div style="margin-top:10px;padding:7px 10px;background:rgba(245,158,11,0.12);border-radius:6px;border:1px solid rgba(245,158,11,0.35)">
+        <div style="font-size:11px;font-weight:600;color:#92400E">🔋 Baterie ${R.bat_kwh} kWh zahrnuta</div>
+        <div style="font-size:10px;color:#92400E;margin-top:2px;line-height:1.4">Zachytí přebytky FVE pro večer a ráno — místo přetoku za ~0,50 Kč ušetří za plnou cenu elektřiny</div>
+      </div>
+    </div>
+    <!-- 3. EDC — vpravo rozmazané -->
+    <div class="var-card${premium?'':' blurred'}">
+      ${!premium?'<div class="var-badge" style="background:var(--text-2)">🔒 Po registraci</div>':''}
+      <div class="var-name">EDC — komunitní sdílení</div>
+      <div class="var-kwp">${R.kwp}<span> kWp</span></div>
+      <div class="var-save">+${Math.round(R.uspora_edc).toLocaleString('cs-CZ')} Kč/rok</div>
+      <div class="var-roi">návratnost ~${R.nav_edc||'>25'} let</div>
+      ${!premium?'<div class="var-lock-msg" onclick="openModal();switchTab(\'reg\')">Registrovat se →</div>':''}
     </div>
   </div>
 
   <!-- Cashflow graf -->
-  <div class="slabel">Kumulativní cashflow — EDC model</div>
+  <div class="slabel">Kumulativní cashflow — podružné měření + baterie</div>
   <div class="cf-outer">
     <div class="cf-wrap"><canvas id="cfCanvas"></canvas></div>
     ${!premium?`<div class="cf-blur"><div style="text-align:right"><div style="font-size:12px;font-weight:600;color:var(--navy)">Plný 25letý přehled</div><button class="btn-prim" style="margin-top:8px;font-size:12px;padding:8px 16px" onclick="openModal();switchTab('reg')">Registrovat se nezávazně →</button></div></div>`:''}
