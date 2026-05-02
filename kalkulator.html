@@ -1026,22 +1026,27 @@ function s6(){
   const sp=spSpVypocet(D.bytu,D.pater,D.vytahu>0,D.vytahu,D.tuv,D.tc,D.ev,D.cerpadla);
   const kwp=optimKwp(D.bytu,z,D.ev,D.tc,sp.sp_mwh);
 
-  // Zobrazíme loading a spustíme async výpočet
+  // Zobrazíme výsledky IHNED z krajového průměru, pak tiše přepočítáme z PVGIS
   setTimeout(async()=>{
     const pvgisEl=document.getElementById('pvgisStatus');
-    let vyroba=null;
+    // 1. Okamžitý výpočet z krajového průměru
+    const R_rychly=vypoctiVse(null);
+    const resEl=document.getElementById('resBody');
+    if(resEl) resEl.innerHTML=renderResults(R_rychly);
+    setTimeout(()=>drawCf(R_rychly.cf),50);
+    // 2. Pokud máme adresu — načti PVGIS na pozadí a tiše přepočítej
     if(D.lat&&D.lon){
-      if(pvgisEl) pvgisEl.innerHTML='<div class="pvgis-loading"><div class="pvgis-spinner"></div><span>Načítám reálná solární data z PVGIS EU JRC pro vaši adresu…</span></div>';
-      vyroba=await fetchPvgis(D.lat,D.lon,kwp,D.sklon,D.azimut);
-      if(pvgisEl){
-        if(vyroba) pvgisEl.innerHTML=`<div style="font-size:12px;color:var(--green);padding:8px 0;">✅ Solární data načtena z PVGIS pro: <strong>${D.lokace}</strong></div>`;
-        else pvgisEl.innerHTML=`<div style="font-size:12px;color:var(--amber);padding:8px 0;">⚠️ PVGIS nedostupné — použit krajový průměr ${Math.round(pvgisKrajKwh(D.lat,D.lon,D.sklon,D.azimut))} kWh/kWp/rok</div>`;
+      if(pvgisEl) pvgisEl.innerHTML='<div class="pvgis-loading"><div class="pvgis-spinner"></div><span>Zpřesňuji data z PVGIS EU JRC pro vaši adresu…</span></div>';
+      const vyroba=await fetchPvgis(D.lat,D.lon,kwp,D.sklon,D.azimut);
+      if(vyroba){
+        const R_presny=vypoctiVse(vyroba);
+        if(resEl) resEl.innerHTML=renderResults(R_presny);
+        setTimeout(()=>drawCf(R_presny.cf),50);
+        if(pvgisEl) pvgisEl.innerHTML=`<div style="font-size:12px;color:var(--green);padding:8px 0;">✅ Zpřesněno reálnými daty PVGIS pro: <strong>${D.lokace}</strong></div>`;
+      } else {
+        if(pvgisEl) pvgisEl.innerHTML=`<div style="font-size:12px;color:var(--amber);padding:8px 0;">⚠️ PVGIS nedostupné — použit krajový průměr ${Math.round(pvgisKrajKwh(D.lat,D.lon,D.sklon,D.azimut))} kWh/kWp/rok</div>`;
       }
     }
-    const R=vypoctiVse(vyroba);
-    const resEl=document.getElementById('resBody');
-    if(resEl) resEl.innerHTML=renderResults(R);
-    setTimeout(()=>drawCf(R.cf),50);
   },100);
 
   // Placeholder
@@ -1057,9 +1062,9 @@ function s6(){
   <div id="pvgisStatus">${D.lat?'<div class="pvgis-loading"><div class="pvgis-spinner"></div><span>Načítám reálná solární data z PVGIS EU JRC…</span></div>':'<div style="font-size:12px;color:var(--amber);padding:8px 0;">⚠️ Adresa nezadána — použit průměr ČR</div>'}</div>
   </div>
   <div id="resBody">
-    <div style="text-align:center;padding:40px 20px;color:var(--text-2)">
-      <div class="pvgis-spinner" style="margin:0 auto 12px;width:32px;height:32px;border-width:3px"></div>
-      <div style="font-size:13px">Počítám simulaci…</div>
+    <div style="text-align:center;padding:20px;color:var(--text-2);font-size:13px">
+      <div class="pvgis-spinner" style="margin:0 auto 8px;width:24px;height:24px;border-width:2.5px"></div>
+      Počítám…
     </div>
   </div>
   <div class="nav" style="margin-top:12px"><button class="btn-out" onclick="goBack()">← Zpět</button><button class="btn-cta" style="background:var(--blue)" onclick="openModal();switchTab('reg')">Uložit a sdílet výsledky →</button></div>`;
@@ -1108,7 +1113,7 @@ function renderResults(R){
     </div>
   </div>
 
-  <!-- Modely sdílení — pořadí: SP | Doporučeno PM | EDC -->
+  <!-- Modely sdílení — pořadí: SP | Doporučeno EDC | Podružné měření -->
   <div class="slabel">Porovnání modelů sdílení <span class="badge b-blue" style="margin-left:6px">PVGIS · OTE 2026</span></div>
   <div class="var-grid">
     <!-- 1. Jen společné prostory — vlevo rozmazané -->
@@ -1120,25 +1125,25 @@ function renderResults(R){
       <div class="var-roi">návratnost ~${R.nav_sp} let</div>
       ${!premium?'<div class="var-lock-msg" onclick="openModal();switchTab(\'reg\')">Registrovat se →</div>':''}
     </div>
-    <!-- 2. Doporučeno — podružné měření — uprostřed -->
+    <!-- 2. Doporučeno — EDC — uprostřed -->
     <div class="var-card best">
       <div class="var-badge">⭐ Doporučeno</div>
-      <div class="var-name">Jeden elektroměr + podružné měření</div>
+      <div class="var-name">EDC — komunitní sdílení</div>
       <div class="var-kwp">${R.kwp}<span> kWp</span></div>
-      <div class="var-save">+${Math.round(R.uspora_rok).toLocaleString('cs-CZ')} Kč/rok</div>
-      <div class="var-roi">návratnost ${R.nav||'>25'} let</div>
+      <div class="var-save">+${Math.round(R.uspora_edc).toLocaleString('cs-CZ')} Kč/rok</div>
+      <div class="var-roi">návratnost ${R.nav_edc||'>25'} let</div>
       <div style="margin-top:10px;padding:7px 10px;background:rgba(245,158,11,0.12);border-radius:6px;border:1px solid rgba(245,158,11,0.35)">
         <div style="font-size:11px;font-weight:600;color:#92400E">🔋 Baterie ${R.bat_kwh} kWh zahrnuta</div>
         <div style="font-size:10px;color:#92400E;margin-top:2px;line-height:1.4">Zachytí přebytky FVE pro večer a ráno — místo přetoku za ~0,50 Kč ušetří za plnou cenu elektřiny</div>
       </div>
     </div>
-    <!-- 3. EDC — vpravo rozmazané -->
+    <!-- 3. Podružné měření — vpravo rozmazané -->
     <div class="var-card${premium?'':' blurred'}">
       ${!premium?'<div class="var-badge" style="background:var(--text-2)">🔒 Po registraci</div>':''}
-      <div class="var-name">EDC — komunitní sdílení</div>
+      <div class="var-name">Jeden elektroměr + podružné měření</div>
       <div class="var-kwp">${R.kwp}<span> kWp</span></div>
-      <div class="var-save">+${Math.round(R.uspora_edc).toLocaleString('cs-CZ')} Kč/rok</div>
-      <div class="var-roi">návratnost ~${R.nav_edc||'>25'} let</div>
+      <div class="var-save">+${Math.round(R.uspora_rok).toLocaleString('cs-CZ')} Kč/rok</div>
+      <div class="var-roi">návratnost ~${R.nav||'>25'} let</div>
       ${!premium?'<div class="var-lock-msg" onclick="openModal();switchTab(\'reg\')">Registrovat se →</div>':''}
     </div>
   </div>
