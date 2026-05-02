@@ -1498,7 +1498,20 @@ function unlockPremium(){
   if(token&&sessionStorage.getItem('premium_unlocked')) setTimeout(unlockPremium,500);
 })();
 
-if(window.location.hash==='#registrace') setTimeout(()=>{openModal();switchTab('reg');},800);
+if(window.location.hash==='#registrace') setTimeout(()=>{
+  openModal();switchTab('reg');
+  // Předvyplnit z index.html formuláře
+  const em=localStorage.getItem('pending_reg_email');
+  const jm=localStorage.getItem('pending_reg_jmeno');
+  const tel=localStorage.getItem('pending_reg_tel');
+  const svj=localStorage.getItem('pending_reg_svj');
+  if(em){const el=document.getElementById('regEmail');if(el)el.value=em;}
+  if(jm){const el=document.getElementById('regJmeno');if(el)el.value=jm;}
+  if(tel){const el=document.getElementById('regTel');if(el)el.value=tel;}
+  if(svj){const el=document.getElementById('regSvj');if(el)el.value=svj;}
+  // Vymazat z localStorage
+  ['pending_reg_email','pending_reg_jmeno','pending_reg_tel','pending_reg_svj'].forEach(k=>localStorage.removeItem(k));
+},800);
 
 render();
 </script>
