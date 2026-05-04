@@ -788,14 +788,16 @@ initCookies();
   var triggerScroll = false;
   var triggerTime = false;
 
-  // Trigger after 40% scroll — passive listener
-  window.addEventListener('scroll', function(){
+  window.addEventListener('scroll', checkScroll, {passive: true});
+  window.addEventListener('touchmove', checkScroll, {passive: true});
+
+  function checkScroll(){
     var scrollPercent = (window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100;
     if(scrollPercent > 40 && !triggerScroll){
       triggerScroll = true;
       tryShowModal();
     }
-  }, {passive: true});
+  }
 
   // Trigger after 10 seconds
   setTimeout(function(){
