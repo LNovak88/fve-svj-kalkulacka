@@ -188,7 +188,7 @@ var SUPA_URL='https://aeypeepckmbejdcotdss.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFleXBlZXBja21iZWpkY290ZHNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTkyNjAsImV4cCI6MjA5Mjk3NTI2MH0.JjYiI3bcL1ds1vAkFq59Z0WhNCLAd8oekX6GF4Zq5bA';
 
 // ADMIN EMAIL — sem přidej svůj admin email
-var ADMIN_EMAIL='lsohr@seznam.cz';
+var ADMIN_EMAIL='lnovak88@seznam.cz';
 
 var TOKEN=null;
 var ALL_LEADS=[];
@@ -225,6 +225,7 @@ async function doLogin(){
     });
     var d=await r.json();
     if(!r.ok) throw new Error('Nesprávné přihlašovací údaje');
+    if(em.toLowerCase()!==ADMIN_EMAIL.toLowerCase()) throw new Error('Nemáte oprávnění pro přístup do administrace.');
     TOKEN=d.access_token;
     document.getElementById('adminUserEmail').textContent=em;
     document.getElementById('loginWrap').style.display='none';
