@@ -828,6 +828,22 @@ initCookies();
         <div><label style="font-size:11px;font-weight:600;color:#64748B;display:block;margin-bottom:4px;letter-spacing:.4px">E-MAILOVÁ ADRESA</label><input type="email" id="scrollEmail" placeholder="jan@svj.cz" autocomplete="email" style="width:100%;padding:10px 13px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;font-family:inherit;outline:none"></div>
         <div><label style="font-size:11px;font-weight:600;color:#64748B;display:block;margin-bottom:4px;letter-spacing:.4px">TELEFON</label><div style="position:relative"><input type="tel" id="scrollTel" placeholder="603 123 456" autocomplete="tel" oninput="formatScrollTel(this)" style="width:100%;padding:10px 40px 10px 13px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;font-family:inherit;outline:none"><span id="scrollTelIcon" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none"></span></div></div>
         <div><label style="font-size:11px;font-weight:600;color:#64748B;display:block;margin-bottom:4px;letter-spacing:.4px">NÁZEV SVJ <span style="font-weight:400;text-transform:none;letter-spacing:0">(volitelné)</span></label><input type="text" id="scrollSvj" placeholder="SVJ Ke Školce 12" style="width:100%;padding:10px 13px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;font-family:inherit;outline:none"></div>
+        <!-- Adresa bytového domu -->
+        <div><label style="font-size:11px;font-weight:600;color:#64748B;display:block;margin-bottom:4px;letter-spacing:.4px">ADRESA BYTOVÉHO DOMU</label>
+          <div style="position:relative">
+            <input type="text" id="scrollAdresa" placeholder="Např. Praha 4, Nuselská 12" autocomplete="off" oninput="scrollAcInput(this)" style="width:100%;padding:10px 13px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;font-family:inherit;outline:none">
+            <div id="scrollAcList" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1px solid #CBD5E1;border-radius:8px;z-index:300;box-shadow:0 8px 24px rgba(0,0,0,.1);overflow:hidden"></div>
+          </div>
+        </div>
+        <!-- Kontaktní adresa -->
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:#64748B">
+          <input type="checkbox" id="scrollSameAddr" checked onchange="toggleScrollKontAddr()" style="width:15px;height:15px;accent-color:#2E8B4A;cursor:pointer;appearance:checkbox;-webkit-appearance:checkbox">
+          <span>Kontaktní adresa je stejná jako adresa domu</span>
+        </label>
+        <div id="scrollKontAddrWrap" style="display:none">
+          <label style="font-size:11px;font-weight:600;color:#64748B;display:block;margin-bottom:4px;letter-spacing:.4px">KONTAKTNÍ ADRESA</label>
+          <input type="text" id="scrollKontAddr" placeholder="Ulice, město" autocomplete="street-address" style="width:100%;padding:10px 13px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;font-family:inherit;outline:none">
+        </div>
         <div><label style="font-size:11px;font-weight:600;color:#64748B;display:block;margin-bottom:4px;letter-spacing:.4px">POZICE V SVJ <span style="font-weight:400;text-transform:none;letter-spacing:0">(volitelné)</span></label>
         <select id="scrollPozice" style="width:100%;padding:10px 13px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;font-family:inherit;outline:none;background:#fff;color:#1E293B">
           <option value="">Vyberte pozici…</option>
@@ -957,6 +973,43 @@ function prelozChybuIndex(msg){
   if(m.includes('email not confirmed')) return 'Potvrďte svůj e-mail (zkontrolujte schránku).';
   return msg;
 }
+
+function toggleScrollKontAddr(){
+  const wrap=document.getElementById('scrollKontAddrWrap');
+  const chk=document.getElementById('scrollSameAddr');
+  if(wrap) wrap.style.display=chk?.checked?'none':'block';
+}
+
+let _scrollAcTimer=null;
+function scrollAcInput(el){
+  clearTimeout(_scrollAcTimer);
+  const v=el.value.trim();
+  const list=document.getElementById('scrollAcList');
+  if(!list) return;
+  if(v.length<3){list.style.display='none';return;}
+  _scrollAcTimer=setTimeout(async()=>{
+    try{
+      const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(v+', Česká republika')}&format=json&limit=5&countrycodes=cz`,{headers:{'User-Agent':'SVJEnergie/1.0'}});
+      const data=await r.json();
+      if(!data.length){list.style.display='none';return;}
+      list.innerHTML=data.map(d=>`<div onclick="pickScrollAddr('${(d.display_name||'').replace(/'/g,"\\'")}','${d.lat}','${d.lon}')" style="padding:9px 13px;font-size:12px;cursor:pointer;color:#1E293B;transition:background .1s" onmouseover="this.style.background='#E3F0FA'" onmouseout="this.style.background=''">📍 ${d.display_name}</div>`).join('');
+      list.style.display='block';
+    }catch(e){}
+  },400);
+}
+function pickScrollAddr(name,lat,lon){
+  const el=document.getElementById('scrollAdresa');
+  const list=document.getElementById('scrollAcList');
+  if(el) el.value=name.split(',').slice(0,3).join(', ');
+  if(list) list.style.display='none';
+  window._scrollLat=parseFloat(lat);
+  window._scrollLon=parseFloat(lon);
+}
+document.addEventListener('click',function(e){
+  const list=document.getElementById('scrollAcList');
+  const inp=document.getElementById('scrollAdresa');
+  if(list&&inp&&!inp.contains(e.target)&&!list.contains(e.target)) list.style.display='none';
+});
 
 function closeScrollModal(){
   document.getElementById('scrollRegModal').classList.remove('open');
