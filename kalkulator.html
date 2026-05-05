@@ -118,9 +118,9 @@ input[type=range]{width:100%;accent-color:var(--blue);margin-bottom:12px;cursor:
 .pvgis-spinner{width:20px;height:20px;border:2.5px solid #C8DFF2;border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
 @keyframes spin{to{transform:rotate(360deg)}}
 /* Modals */
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,.75);z-index:1000;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,.75);z-index:1000;align-items:center;justify-content:center;backdrop-filter:blur(4px);padding:1rem}
 .modal-overlay.open{display:flex}
-.modal{background:var(--white);border-radius:16px;padding:32px;max-width:480px;width:calc(100% - 2rem);box-shadow:0 24px 80px rgba(0,0,0,.25);animation:slideUp .3s ease;position:relative}
+.modal{background:var(--white);border-radius:16px;padding:28px;max-width:480px;width:100%;box-shadow:0 24px 80px rgba(0,0,0,.25);animation:slideUp .3s ease;position:relative;max-height:90vh;overflow-y:auto;overscroll-behavior:contain}
 @keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
 .modal-close{position:absolute;top:16px;right:16px;width:32px;height:32px;border-radius:50%;border:none;background:var(--bg);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--text-2)}
 .modal-close:hover{background:var(--border)}
@@ -169,8 +169,20 @@ input[type=range]{width:100%;accent-color:var(--blue);margin-bottom:12px;cursor:
 .stepper-val{flex:1;text-align:center;font-size:15px;font-weight:600;color:var(--text);border:none;outline:none;background:transparent;min-width:32px;padding:0;-moz-appearance:textfield;width:48px}
 @media(max-width:560px){.g3{grid-template-columns:1fr 1fr}.tog-grid{grid-template-columns:1fr}.var-grid{grid-template-columns:1fr}.kpi-row{grid-template-columns:1fr 1fr}.cta-box{flex-direction:column;text-align:center}.hdr-steps{display:none}.scenar-grid{grid-template-columns:1fr}}
 @media(max-width:700px){.var-grid{grid-template-columns:1fr}.kpi-row{grid-template-columns:1fr 1fr}.scenar-grid{grid-template-columns:1fr 1fr}}
-/* Supabase */
-.field-err{font-size:11px;color:#F43F5E;margin-top:3px}
+/* User dropdown */
+.user-menu{position:relative}
+.user-btn{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.12);border:1.5px solid rgba(255,255,255,0.25);color:#fff;border-radius:var(--rm);padding:6px 12px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;transition:background .15s}
+.user-btn:hover{background:rgba(255,255,255,0.2)}
+.user-avatar{width:24px;height:24px;background:var(--green);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.user-dropdown{display:none;position:absolute;top:calc(100% + 8px);right:0;background:var(--white);border:0.5px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow-lg);min-width:200px;z-index:200;overflow:hidden}
+.user-dropdown.open{display:block}
+.user-dd-header{padding:12px 14px;border-bottom:0.5px solid var(--border);background:var(--bg)}
+.user-dd-name{font-size:13px;font-weight:600;color:var(--navy)}
+.user-dd-email{font-size:11px;color:var(--text-2);margin-top:1px;word-break:break-all}
+.user-dd-item{display:flex;align-items:center;gap:10px;padding:10px 14px;font-size:13px;color:var(--text);cursor:pointer;transition:background .1s;border:none;background:none;width:100%;text-align:left;font-family:inherit}
+.user-dd-item:hover{background:var(--blue-ll);color:var(--blue)}
+.user-dd-item.danger:hover{background:#FEE2E2;color:#991B1B}
+.user-dd-sep{height:0.5px;background:var(--border);margin:4px 0}
 </style>
 </head>
 <body>
@@ -208,7 +220,27 @@ input[type=range]{width:100%;accent-color:var(--blue);margin-bottom:12px;cursor:
     <div><div class="logo-t">svjenergie</div><div class="logo-s">fve kalkulačka pro bytové domy</div></div>
   </a>
   <div style="display:flex;align-items:center;gap:10px">
-    <button onclick="openModal();switchTab('login')" style="background:transparent;border:1.5px solid rgba(255,255,255,0.35);color:#fff;border-radius:var(--rm);padding:7px 14px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">Přihlásit se</button>
+    <div class="user-menu" id="userMenu">
+      <!-- Zobrazí se po přihlášení -->
+      <button class="user-btn" id="userBtn" onclick="toggleUserMenu()" style="display:none">
+        <div class="user-avatar" id="userAvatar">?</div>
+        <span id="userBtnName">Účet</span>
+        <span style="opacity:.6;font-size:10px">▾</span>
+      </button>
+      <!-- Nepřihlášený -->
+      <button id="loginBtn2" onclick="openModal();switchTab('login')" style="background:transparent;border:1.5px solid rgba(255,255,255,0.35);color:#fff;border-radius:var(--rm);padding:7px 14px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">Přihlásit se</button>
+      <!-- Dropdown -->
+      <div class="user-dropdown" id="userDropdown">
+        <div class="user-dd-header">
+          <div class="user-dd-name" id="ddName">—</div>
+          <div class="user-dd-email" id="ddEmail">—</div>
+        </div>
+        <button class="user-dd-item" onclick="closeUserMenu();openModal();switchTab('reg')">📊 Moje výpočty</button>
+        <button class="user-dd-item" onclick="closeUserMenu();openNastaveni()">⚙️ Nastavení účtu</button>
+        <div class="user-dd-sep"></div>
+        <button class="user-dd-item danger" onclick="odhlasit()">↩ Odhlásit se</button>
+      </div>
+    </div>
     <nav class="hdr-steps" id="stepDots"></nav>
   </div>
 </header>
@@ -859,7 +891,7 @@ function s4(){
   <div class="lock-row"><span class="lock-l">Odhadovaná sazba spol. prostor</span><span class="lock-v" id="lv_spsazba">${sp.sazba_sp}</span><span class="lock-ico">📊</span></div>
   <div class="lock-row"><span class="lock-l">Odhadovaný jistič spol. prostor</span><span class="lock-v" id="lv_jisticsp">3×${sp.jistic_sp_a}A</span><span class="lock-ico">📊</span></div>
   </div>
-  <div class="nav"><button class="btn-out" onclick="goBack()">← Zpět</button><button class="btn-prim" onclick="goNext()">Střecha →</button></div>`;
+  <div class="nav"><button class="btn-out" onclick="goBack()">← Zpět</button><button class="btn-prim" onclick="goNext()">Pokračovat →</button></div>`;
 }
 
 function togZar(k){
@@ -1542,6 +1574,42 @@ if(window.location.hash==='#registrace') setTimeout(()=>{
   // Vymazat z localStorage
   ['pending_reg_email','pending_reg_jmeno','pending_reg_tel','pending_reg_svj'].forEach(k=>localStorage.removeItem(k));
 },800);
+
+// ================================================================
+// USER MENU
+// ================================================================
+function toggleUserMenu(){document.getElementById('userDropdown').classList.toggle('open');}
+function closeUserMenu(){document.getElementById('userDropdown').classList.remove('open');}
+document.addEventListener('click',function(e){const m=document.getElementById('userMenu');if(m&&!m.contains(e.target))closeUserMenu();});
+
+async function checkUser(){
+  const token=localStorage.getItem('supa_access_token');
+  if(!token) return;
+  try{
+    const r=await fetch(SUPA_URL+'/auth/v1/user',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+token}});
+    if(!r.ok){localStorage.removeItem('supa_access_token');return;}
+    const u=await r.json();
+    if(!u.id) return;
+    const name=u.user_metadata?.full_name||u.email?.split('@')[0]||'Účet';
+    const initials=name.trim().split(' ').map(n=>n[0]||'').join('').toUpperCase().slice(0,2)||'U';
+    document.getElementById('userBtn').style.display='flex';
+    document.getElementById('loginBtn2').style.display='none';
+    document.getElementById('userAvatar').textContent=initials;
+    document.getElementById('userBtnName').textContent=name.split(' ')[0];
+    document.getElementById('ddName').textContent=name;
+    document.getElementById('ddEmail').textContent=u.email;
+    unlockPremium();
+  }catch(e){console.warn('checkUser:',e);}
+}
+
+function odhlasit(){
+  localStorage.removeItem('supa_access_token');
+  sessionStorage.removeItem('premium_unlocked');
+  closeUserMenu();
+  window.location.reload();
+}
+
+setTimeout(checkUser,200);
 
 render();
 </script>
