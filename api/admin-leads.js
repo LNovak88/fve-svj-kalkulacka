@@ -40,8 +40,9 @@ export default async function handler(req, res) {
       }
     });
     const data = await r.json();
+    const leads = Array.isArray(data) ? data : [];
     res.setHeader('Cache-Control', 'no-store');
-    return res.status(200).json(data);
+    return res.status(200).json(leads);
   }
 
   // PATCH — změnit stav leadu
