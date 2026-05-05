@@ -163,6 +163,14 @@ a.email-link:hover{color:var(--blue)}
         <option value="spravce">Správci</option>
         <option value="vlastnik">Vlastníci</option>
       </select>
+      <select class="filter" id="dateFilter" onchange="filterLeads()">
+        <option value="">Celé období</option>
+        <option value="7">Posledních 7 dní</option>
+        <option value="30">Posledních 30 dní</option>
+        <option value="90">Posledních 90 dní</option>
+        <option value="365">Poslední rok</option>
+      </select>
+      <button class="btn-refresh" onclick="exportCSV()" style="background:var(--green-l);border-color:#A3D8B8;color:#1A5C32">&#8595; Export CSV</button>
       <button class="btn-refresh" onclick="loadLeads()">&#8635; Obnovit</button>
     </div>
 
@@ -283,13 +291,65 @@ function filterLeads(){
   var q=document.getElementById('searchInput').value.toLowerCase();
   var stav=document.getElementById('stavFilter').value;
   var poz=document.getElementById('poziceFilter').value;
+  var days=parseInt(document.getElementById('dateFilter').value)||0;
+  var now=new Date();
   var filtered=ALL_LEADS.filter(function(l){
     var matchQ=!q||(l.jmeno||'').toLowerCase().includes(q)||(l.email||'').toLowerCase().includes(q)||(l.svj||'').toLowerCase().includes(q);
     var matchS=!stav||l.stav===stav;
     var matchP=!poz||l.pozice===poz;
-    return matchQ&&matchS&&matchP;
+    var matchD=!days||((now-new Date(l.created_at))<days*24*3600*1000);
+    return matchQ&&matchS&&matchP&&matchD;
   });
   renderTable(filtered);
+}
+
+function exportCSV(){
+  var q=document.getElementById('searchInput').value.toLowerCase();
+  var stav=document.getElementById('stavFilter').value;
+  var poz=document.getElementById('poziceFilter').value;
+  var days=parseInt(document.getElementById('dateFilter').value)||0;
+  var now=new Date();
+  var filtered=ALL_LEADS.filter(function(l){
+    var matchQ=!q||(l.jmeno||'').toLowerCase().includes(q)||(l.email||'').toLowerCase().includes(q)||(l.svj||'').toLowerCase().includes(q);
+    var matchS=!stav||l.stav===stav;
+    var matchP=!poz||l.pozice===poz;
+    var matchD=!days||((now-new Date(l.created_at))<days*24*3600*1000);
+    return matchQ&&matchS&&matchP&&matchD;
+  });
+
+  var cols=['Datum','Jméno','Email','Telefon','SVJ','Pozice','kWp','Stav','Adresa','Bytů','Pater','Distributor','Zarizeni','TC','EV'];
+  var rows=[cols.join(';')];
+  filtered.forEach(function(l){
+    var p={};
+    try{p=JSON.parse(typeof l.params==='string'?l.params:JSON.stringify(l.params||{}));if(typeof p==='string')p=JSON.parse(p);}catch(e){}
+    var row=[
+      fmtDate(l.created_at),
+      l.jmeno||'',
+      l.email||'',
+      l.telefon||'',
+      l.svj||'',
+      prelozPozici(l.pozice),
+      l.kwp||'',
+      l.stav||'',
+      p.adresa_domu||p.lokace||'',
+      l.bytu||'',
+      l.pater||'',
+      l.dist||'',
+      l.zarizeni||'',
+      l.tc?'ano':'ne',
+      l.ev||0
+    ].map(function(v){return '"'+String(v).replace(/"/g,'""')+'"';});
+    rows.push(row.join(';'));
+  });
+
+  var csv='\uFEFF'+rows.join('\n'); // BOM pro Excel
+  var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url;
+  a.download='svjenergie-leady-'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 function renderTable(leads){
@@ -370,24 +430,30 @@ function openDetail(id){
         return '<option value="'+s+'"'+(l.stav===s?' selected':'')+'>'+s+'</option>';
       }).join('')+
     '</select></div>'+
-    (l.params?'<div style="margin-top:12px"><div style="font-size:11px;font-weight:600;color:var(--text-2);margin-bottom:6px;letter-spacing:.4px">PARAMETRY KALKULAČKY</div><div style="background:var(--bg);border-radius:var(--rm);padding:10px;font-size:11px;color:var(--text-2);line-height:1.8">'+
+    (l.params?'<div style="margin-top:12px"><div style="font-size:11px;font-weight:600;color:var(--text-2);margin-bottom:6px;letter-spacing:.4px">PARAMETRY KALKULAČKY</div><div style="background:var(--bg);border-radius:var(--rm);padding:10px;font-size:12px;color:var(--text-2);line-height:2">'+
       (function(){
         try{
-          var p=JSON.parse(l.params);
+          var raw=l.params;
+          var p=typeof raw==='string'?JSON.parse(raw):raw;
+          if(typeof p==='string') p=JSON.parse(p); // double encoded
           var rows=[];
-          if(p.lokace) rows.push('📍 '+p.lokace);
-          if(p.bytu) rows.push('🏠 '+p.bytu+' bytů');
-          if(p.kwp) rows.push('⚡ '+p.kwp+' kWp');
-          if(p.zarizeni) rows.push('🔌 '+p.zarizeni.join(', '));
-          if(p.strTyp) rows.push('🏗️ Střecha: '+p.strTyp+' ('+p.sklon+'°)');
-          if(p.dist) rows.push('📡 '+p.dist);
-          if(p.topeni) rows.push('🔥 Topení: '+p.topeni);
-          if(p.tc) rows.push('♨️ Tepelné čerpadlo');
-          if(p.ev>0) rows.push('🔌 EV nabíječek: '+p.ev);
-          if(p.adresa_domu) rows.push('🏠 Adresa: '+p.adresa_domu);
-          if(p.zdroj) rows.push('📋 Zdroj: '+p.zdroj);
+          if(p.lokace||p.adresa_domu) rows.push('📍 <strong>Adresa:</strong> '+(p.lokace||p.adresa_domu));
+          if(p.adresa_kontakt) rows.push('📬 <strong>Kontaktní adresa:</strong> '+p.adresa_kontakt);
+          if(p.bytu) rows.push('🏠 <strong>Bytů:</strong> '+p.bytu+(p.vchodu?' | Vchodů: '+p.vchodu:'')+(p.pater?' | Pater: '+p.pater:''));
+          if(p.vytahu||p.cerpadla) rows.push('🔧 <strong>Výtahy:</strong> '+(p.vytahu||0)+' | <strong>Čerpadla:</strong> '+(p.cerpadla||0));
+          if(p.topeni) rows.push('🔥 <strong>Topení:</strong> '+p.topeni+(p.tuv?' | Centrální TUV':'')+(p.zatepleno?' | Zatepleno':''));
+          if(p.okna) rows.push('🪟 <strong>Okna:</strong> '+p.okna);
+          if(p.zarizeni) rows.push('🔌 <strong>Spotřebiče:</strong> '+(Array.isArray(p.zarizeni)?p.zarizeni.join(', '):p.zarizeni));
+          if(p.tc) rows.push('♨️ <strong>Plánované TČ:</strong> ano');
+          if(p.ev>0) rows.push('🚗 <strong>EV nabíječek:</strong> '+p.ev);
+          if(p.hhSlider!==undefined) rows.push('👥 <strong>Domácnosti:</strong> '+(p.hhSlider<25?'Převážně pracující':p.hhSlider>75?'Převážně senioři':'Vyvážený mix')+' ('+p.hhSlider+'%)');
+          if(p.dist) rows.push('📡 <strong>Distributor:</strong> '+p.dist);
+          if(p.strTyp) rows.push('🏗️ <strong>Střecha:</strong> '+p.strTyp+' | Sklon: '+(p.sklon||25)+'° | Azimut: '+(p.azimut||0)+'°');
+          if(p.kwp) rows.push('⚡ <strong>Navrhovaný výkon:</strong> '+p.kwp+' kWp');
+          if(p.sp_mwh) rows.push('📊 <strong>SP spotřeba:</strong> '+parseFloat(p.sp_mwh).toFixed(1)+' MWh/rok');
+          if(p.zdroj) rows.push('📋 <strong>Zdroj:</strong> '+p.zdroj);
           return rows.join('<br>')||'—';
-        }catch(e){return '—';}
+        }catch(e){return 'Chyba parsování: '+e.message;}
       })()+
     '</div></div>':'')+
   '</div>';
