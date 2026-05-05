@@ -85,24 +85,54 @@ input:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-l)}
 const SUPA_URL='https://aeypeepckmbejdcotdss.supabase.co';
 const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFleXBlZXBja21iZWpkY290ZHNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTkyNjAsImV4cCI6MjA5Mjk3NTI2MH0.JjYiI3bcL1ds1vAkFq59Z0WhNCLAd8oekX6GF4Zq5bA';
 
-// Získat access_token z URL hash (Supabase ho posílá v odkazu)
-function getTokenFromHash(){
+// Získat tokeny z URL — Supabase posílá v hash (#) nebo query (?)
+function getTokenFromUrl(){
+  // Zkusit hash
   const hash=window.location.hash.substring(1);
-  const params=new URLSearchParams(hash);
-  return{
-    access_token: params.get('access_token'),
-    refresh_token: params.get('refresh_token'),
-    type: params.get('type')
+  const hashParams=new URLSearchParams(hash);
+  if(hashParams.get('access_token')) return{
+    access_token: hashParams.get('access_token'),
+    refresh_token: hashParams.get('refresh_token'),
+    type: hashParams.get('type')
   };
+  // Zkusit query string
+  const queryParams=new URLSearchParams(window.location.search);
+  if(queryParams.get('access_token')) return{
+    access_token: queryParams.get('access_token'),
+    refresh_token: queryParams.get('refresh_token'),
+    type: queryParams.get('type')
+  };
+  // Zkusit token_hash (novější Supabase formát)
+  const token_hash=hashParams.get('token_hash')||queryParams.get('token_hash');
+  const type=hashParams.get('type')||queryParams.get('type');
+  if(token_hash) return{token_hash, type, access_token:null};
+  return{access_token:null, type:null};
 }
 
-const {access_token, type}=getTokenFromHash();
+const tokenData=getTokenFromUrl();
+let access_token=tokenData.access_token;
+const token_hash=tokenData.token_hash;
+const urlType=tokenData.type;
 
-// Pokud není token nebo není recovery typ — chyba
-if(!access_token || type !== 'recovery'){
-  showAlert('err','Neplatný nebo expirovaný odkaz. Požádejte o nový reset hesla.');
-  document.getElementById('formWrap').style.display='none';
+async function init(){
+  // Novější Supabase — vyměnit token_hash za session
+  if(token_hash&&(urlType==='recovery'||urlType==='signup')){
+    try{
+      const r=await fetch(SUPA_URL+'/auth/v1/verify',{
+        method:'POST',
+        headers:{'apikey':SUPA_KEY,'Content-Type':'application/json'},
+        body:JSON.stringify({token_hash, type:urlType})
+      });
+      const d=await r.json();
+      if(d.access_token){access_token=d.access_token;return;}
+    }catch(e){}
+  }
+  if(!access_token){
+    showAlert('err','Neplatný nebo expirovaný odkaz. Požádejte o nový reset hesla.');
+    document.getElementById('formWrap').style.display='none';
+  }
 }
+init();
 
 function checkStr(pw){
   const s=document.getElementById('str'),h=document.getElementById('strHint');
