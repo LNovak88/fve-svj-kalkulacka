@@ -85,6 +85,116 @@ input:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-l)}
 const SUPA_URL='https://aeypeepckmbejdcotdss.supabase.co';
 const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFleXBlZXBja21iZWpkY290ZHNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTkyNjAsImV4cCI6MjA5Mjk3NTI2MH0.JjYiI3bcL1ds1vAkFq59Z0WhNCLAd8oekX6GF4Zq5bA';
 
+// Globální session token — nastaví se po výměně
+let SESSION_TOKEN = null;
+
+function showAlert(type,msg){
+  const el=document.getElementById('alertBox');
+  el.className='alert '+type;
+  el.textContent=msg;
+  el.style.display='block';
+}
+
+function checkStr(pw){
+  const s=document.getElementById('str'),h=document.getElementById('strHint');
+  const strong=pw.length>=10&&/[A-Z]/.test(pw)&&/[0-9]/.test(pw);
+  const ok=pw.length>=8;
+  s.className='pw-strength'+(strong?' strong':ok?' ok':pw.length?' weak':'');
+  h.textContent=strong?'Silné heslo':ok?'Přidejte číslo nebo velké písmeno':'Minimálně 8 znaků';
+}
+
+function tog(id,btn){
+  const el=document.getElementById(id);
+  el.type=el.type==='password'?'text':'password';
+  btn.textContent=el.type==='password'?'👁':'🔒';
+}
+
+// Parsovat všechny možné formáty URL které Supabase posílá
+async function init(){
+  const hash=window.location.hash.substring(1);
+  const hp=new URLSearchParams(hash);
+  const qp=new URLSearchParams(window.location.search);
+
+  const get=k=>hp.get(k)||qp.get(k)||null;
+
+  const access_token=get('access_token');
+  const token_hash=get('token_hash');
+  const type=get('type');
+
+  console.log('URL type:', type, 'access_token:', !!access_token, 'token_hash:', !!token_hash);
+
+  // Případ 1 — starý formát: access_token přímo v URL
+  if(access_token && access_token.split('.').length===3){
+    SESSION_TOKEN=access_token;
+    return;
+  }
+
+  // Případ 2 — nový formát: token_hash → vyměnit za session
+  if(token_hash){
+    try{
+      const r=await fetch(SUPA_URL+'/auth/v1/verify',{
+        method:'POST',
+        headers:{'apikey':SUPA_KEY,'Content-Type':'application/json'},
+        body:JSON.stringify({token_hash, type:type||'recovery'})
+      });
+      const d=await r.json();
+      console.log('verify response:', d);
+      if(d.access_token){
+        SESSION_TOKEN=d.access_token;
+        return;
+      }
+      throw new Error(d.message||d.error_description||'Neplatný token');
+    }catch(e){
+      showAlert('err','Odkaz je neplatný nebo expirovaný: '+e.message+'. Požádejte o nový.');
+      document.getElementById('formWrap').style.display='none';
+      return;
+    }
+  }
+
+  // Nic nenalezeno
+  showAlert('err','Neplatný odkaz. Požádejte o nový reset hesla.');
+  document.getElementById('formWrap').style.display='none';
+}
+
+async function submitReset(){
+  const pw1=document.getElementById('pw1').value;
+  const pw2=document.getElementById('pw2').value;
+  if(!pw1||pw1.length<8){showAlert('err','Heslo musí mít alespoň 8 znaků.');return;}
+  if(pw1!==pw2){showAlert('err','Hesla se neshodují.');return;}
+  if(!SESSION_TOKEN){showAlert('err','Relace vypršela. Požádejte o nový odkaz.');return;}
+
+  const btn=document.getElementById('submitBtn');
+  const txt=document.getElementById('btnTxt');
+  btn.disabled=true;
+  txt.innerHTML='<span class="spin"></span> Ukládám…';
+
+  try{
+    const r=await fetch(SUPA_URL+'/auth/v1/user',{
+      method:'PUT',
+      headers:{
+        'apikey':SUPA_KEY,
+        'Content-Type':'application/json',
+        'Authorization':'Bearer '+SESSION_TOKEN
+      },
+      body:JSON.stringify({password:pw1})
+    });
+    const data=await r.json();
+    if(!r.ok) throw new Error(data.message||data.msg||'Chyba při změně hesla ('+r.status+')');
+
+    localStorage.setItem('supa_access_token', SESSION_TOKEN);
+    document.getElementById('formWrap').style.display='none';
+    document.getElementById('successWrap').style.display='block';
+    setTimeout(()=>window.location.href='kalkulator.html',2000);
+  }catch(e){
+    showAlert('err', e.message);
+    btn.disabled=false;
+    txt.textContent='Uložit nové heslo →';
+  }
+}
+
+init();
+</script>
+
 // Získat tokeny z URL — Supabase posílá v hash (#) nebo query (?)
 function getTokenFromUrl(){
   // Zkusit hash
