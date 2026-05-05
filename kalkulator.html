@@ -1496,7 +1496,8 @@ async function submitReg(){
     // 2. Uložit lead do Supabase
     const sp=spSpVypocet(D.bytu,D.pater,D.vytahu>0,D.vytahu,D.tuv,D.tc,D.ev,D.cerpadla);
     const telRaw=(document.getElementById('regTel')?.value||'').replace(/\s/g,'');
-    const telClean=telRaw.length===9?telRaw:null; // jen čistých 9 číslic
+    const telClean=telRaw.length===9?telRaw:null;
+    const kwpVal=parseFloat(optimKwp(D.bytu,D.zarizeni,D.ev,D.tc,sp.sp_mwh))||null;
     const leadRes=await supaFetch('/rest/v1/leads','POST',{
       jmeno:jm.trim()||'—',
       email:em,
@@ -1516,8 +1517,34 @@ async function submitReg(){
       sp_mwh:parseFloat(sp.sp_mwh)||null,
       tc:D.tc===true,
       ev:parseInt(D.ev)||0,
-      kwp:parseFloat(optimKwp(D.bytu,D.zarizeni,D.ev,D.tc,sp.sp_mwh))||null,
-      stav:'nový'
+      kwp:kwpVal,
+      stav:'nový',
+      params: JSON.stringify({
+        lokace:D.lokace||null,
+        bytu:D.bytu,
+        vchodu:D.vchodu,
+        pater:D.pater,
+        vytahu:D.vytahu,
+        cerpadla:D.cerpadla,
+        tuv:D.tuv,
+        zatepleno:D.zatepleno,
+        okna:D.okna,
+        topeni:D.topeni,
+        tc:D.tc,
+        ev:D.ev,
+        zarizeni:D.zarizeni,
+        hhSlider:D.hhSlider,
+        dist:D.dist,
+        sklon:D.sklon,
+        azimut:D.azimut,
+        strTyp:D.strTyp,
+        lat:D.lat,
+        lon:D.lon,
+        kwp:kwpVal,
+        sp_mwh:sp.sp_mwh,
+        adresa_domu:document.getElementById('regAdresa')?.value||null,
+        adresa_kontakt:document.getElementById('regSameAddr')?.checked?null:(document.getElementById('regKontAddr')?.value||null)
+      })
     });
     if(!leadRes.ok) console.warn('Lead se neuložil:', JSON.stringify(leadRes.data));
     if(data.user?.id){
