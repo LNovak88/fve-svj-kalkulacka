@@ -1495,22 +1495,31 @@ async function submitReg(){
 
     // 2. Uložit lead do Supabase
     const sp=spSpVypocet(D.bytu,D.pater,D.vytahu>0,D.vytahu,D.tuv,D.tc,D.ev,D.cerpadla);
+    const telRaw=(document.getElementById('regTel')?.value||'').replace(/\s/g,'');
+    const telClean=telRaw.length===9?telRaw:null; // jen čistých 9 číslic
     const leadRes=await supaFetch('/rest/v1/leads','POST',{
-      jmeno:jm.trim(), email:em,
-      telefon:document.getElementById('regTel')?.value.trim()||null,
+      jmeno:jm.trim()||'—',
+      email:em,
+      telefon:telClean,
       svj:document.getElementById('regSvj')?.value.trim()||null,
       pozice:document.getElementById('regPozice')?.value||null,
-      bytu:D.bytu, pater:D.pater,
-      dist:D.dist, zarizeni:D.zarizeni.join(','),
-      strecha:D.strTyp, azimut:D.azimut, sklon:D.sklon,
-      lat:D.lat||null, lon:D.lon||null,
-      sp_mwh:sp.sp_mwh, tc:D.tc, ev:D.ev,
-      kwp:optimKwp(D.bytu,D.zarizeni,D.ev,D.tc,sp.sp_mwh),
+      byty:parseInt(D.bytu)||null,
+      bytu:parseInt(D.bytu)||null,
+      pater:parseInt(D.pater)||null,
+      dist:D.dist||null,
+      zarizeni:D.zarizeni.join(',')||null,
+      strecha:D.strTyp||null,
+      azimut:parseInt(D.azimut)||0,
+      sklon:parseInt(D.sklon)||25,
+      lat:D.lat||null,
+      lon:D.lon||null,
+      sp_mwh:parseFloat(sp.sp_mwh)||null,
+      tc:D.tc===true,
+      ev:parseInt(D.ev)||0,
+      kwp:parseFloat(optimKwp(D.bytu,D.zarizeni,D.ev,D.tc,sp.sp_mwh))||null,
       stav:'nový'
     });
-    if(!leadRes.ok) console.warn('Lead se neuložil:', leadRes.data);
-
-    // 3. Uložit simulaci
+    if(!leadRes.ok) console.warn('Lead se neuložil:', JSON.stringify(leadRes.data));
     if(data.user?.id){
       const kwp=optimKwp(D.bytu,D.zarizeni,D.ev,D.tc,sp.sp_mwh);
       await supaFetch('/rest/v1/simulations','POST',{
