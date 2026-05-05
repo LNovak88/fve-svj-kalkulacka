@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — SVJ Energie</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#1E3A5F;--blue:#1B6CA8;--blue-l:#E3F0FA;--green:#2E8B4A;--green-l:#E3F4E9;--amber:#F59E0B;--amber-l:#FEF3C7;--red:#F43F5E;--text:#1E293B;--text-2:#64748B;--border:#E2E8F0;--bg:#F0F4F8;--white:#fff;--r:12px;--rm:8px;--shadow:0 1px 3px rgba(0,0,0,0.06),0 4px 16px rgba(0,0,0,0.04)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
+/* Login */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}
+.login-card{background:var(--white);border-radius:var(--r);padding:36px;max-width:380px;width:100%;box-shadow:0 8px 32px rgba(30,58,95,0.12);border:0.5px solid var(--border)}
+.login-logo{display:flex;align-items:center;gap:10px;margin-bottom:24px}
+.login-title{font-size:20px;font-weight:600;color:var(--navy);margin-bottom:4px}
+.login-sub{font-size:13px;color:var(--text-2);margin-bottom:20px}
+input{width:100%;padding:10px 13px;border:0.5px solid #CBD5E1;border-radius:var(--rm);font-size:13px;font-family:inherit;outline:none;margin-bottom:10px;transition:border-color .15s}
+input:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-l)}
+.btn-login{width:100%;padding:12px;background:var(--navy);color:#fff;border:none;border-radius:var(--rm);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;transition:opacity .15s}
+.btn-login:hover{opacity:.9}
+.login-err{font-size:12px;color:var(--red);margin-top:8px;display:none}
+/* Admin layout */
+.admin{display:none;flex-direction:column;min-height:100vh}
+.topbar{background:var(--navy);padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.topbar-logo{display:flex;align-items:center;gap:10px;color:#fff;font-size:15px;font-weight:600}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.topbar-user{font-size:12px;color:#8BA8C4}
+.btn-logout{background:transparent;border:1.5px solid rgba(255,255,255,0.25);color:#fff;border-radius:var(--rm);padding:5px 12px;font-size:12px;cursor:pointer;font-family:inherit;transition:background .15s}
+.btn-logout:hover{background:rgba(255,255,255,0.1)}
+.content{flex:1;padding:24px;max-width:1400px;margin:0 auto;width:100%}
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.stat{background:var(--white);border-radius:var(--r);padding:18px 20px;box-shadow:var(--shadow);border:0.5px solid var(--border)}
+.stat-l{font-size:12px;color:var(--text-2);margin-bottom:6px}
+.stat-v{font-size:28px;font-weight:600;color:var(--navy);line-height:1}
+.stat-s{font-size:11px;color:var(--text-2);margin-top:4px}
+.stat.green .stat-v{color:var(--green)}
+.stat.amber .stat-v{color:var(--amber)}
+/* Toolbar */
+.toolbar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.toolbar-title{font-size:16px;font-weight:600;color:var(--navy);margin-right:auto}
+.search{padding:8px 13px;border:0.5px solid var(--border);border-radius:var(--rm);font-size:13px;font-family:inherit;outline:none;width:220px;background:var(--white)}
+.search:focus{border-color:var(--blue)}
+select.filter{padding:8px 13px;border:0.5px solid var(--border);border-radius:var(--rm);font-size:13px;font-family:inherit;outline:none;background:var(--white);cursor:pointer}
+.btn-refresh{padding:8px 16px;background:var(--white);border:0.5px solid var(--border);border-radius:var(--rm);font-size:13px;cursor:pointer;font-family:inherit;color:var(--text-2);transition:all .15s}
+.btn-refresh:hover{border-color:var(--blue);color:var(--blue)}
+/* Table */
+.table-wrap{background:var(--white);border-radius:var(--r);box-shadow:var(--shadow);border:0.5px solid var(--border);overflow:hidden}
+table{width:100%;border-collapse:collapse}
+th{background:#F8FAFC;padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--text-2);letter-spacing:.4px;text-transform:uppercase;border-bottom:0.5px solid var(--border);white-space:nowrap}
+td{padding:12px 14px;border-bottom:0.5px solid var(--border);font-size:13px;color:var(--text);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#F8FAFC}
+.badge{display:inline-flex;align-items:center;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600;white-space:nowrap}
+.b-novy{background:#E0F2FE;color:#0369A1}
+.b-kontaktovan{background:var(--amber-l);color:#92400E}
+.b-uzavren{background:var(--green-l);color:#1A5C32}
+.b-ztracen{background:#FEE2E2;color:#991B1B}
+.pozice-badge{background:var(--blue-l);color:#0C4A7C;border-radius:20px;padding:2px 8px;font-size:11px}
+a.tel{color:var(--blue);text-decoration:none;font-weight:500}
+a.tel:hover{text-decoration:underline}
+a.email-link{color:var(--text-2);text-decoration:none}
+a.email-link:hover{color:var(--blue)}
+.kwp-val{font-weight:600;color:var(--navy)}
+.no-data{text-align:center;padding:48px 24px;color:var(--text-2)}
+.no-data-icon{font-size:40px;margin-bottom:12px}
+/* Stav select */
+.stav-select{border:0.5px solid var(--border);border-radius:6px;padding:3px 8px;font-size:11px;font-family:inherit;outline:none;background:var(--white);cursor:pointer}
+/* Loading */
+.loading{text-align:center;padding:48px;color:var(--text-2)}
+.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* Detail panel */
+.detail-overlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:100;backdrop-filter:blur(2px)}
+.detail-panel{position:fixed;right:0;top:0;bottom:0;width:400px;background:var(--white);box-shadow:-8px 0 32px rgba(0,0,0,.12);overflow-y:auto;padding:24px;z-index:101;transform:translateX(100%);transition:transform .3s ease}
+.detail-panel.open{transform:translateX(0)}
+.detail-close{position:absolute;top:16px;right:16px;width:32px;height:32px;border-radius:50%;border:none;background:var(--bg);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center}
+.detail-name{font-size:20px;font-weight:600;color:var(--navy);margin:8px 0 4px}
+.detail-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:0.5px solid var(--border);font-size:13px}
+.detail-row:last-child{border-bottom:none}
+.detail-label{color:var(--text-2);font-size:12px}
+.detail-val{font-weight:500;color:var(--text)}
+.detail-actions{display:flex;flex-direction:column;gap:8px;margin-top:16px}
+.btn-action{padding:10px 16px;border-radius:var(--rm);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;border:none;transition:all .15s;text-align:center;text-decoration:none;display:block}
+.btn-call{background:var(--green);color:#fff}
+.btn-email{background:var(--blue);color:#fff}
+.btn-stav{background:var(--bg);border:0.5px solid var(--border);color:var(--text)}
+@media(max-width:768px){.stats{grid-template-columns:1fr 1fr}.detail-panel{width:100%}th.hide-mob,td.hide-mob{display:none}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-wrap" id="loginWrap">
+  <div class="login-card">
+    <div class="login-logo">
+      <div style="background:#1E3A5F;border-radius:8px;width:36px;height:36px;display:flex;align-items:center;justify-content:center">
+        <svg width="28" height="28" viewBox="0 0 44 44" fill="none">
+          <circle cx="33" cy="11" r="5" fill="#F59E0B"/>
+          <rect x="4" y="22" width="11" height="18" rx="1.5" fill="none" stroke="white" stroke-width="1.8"/>
+          <rect x="17" y="16" width="13" height="24" rx="1.5" fill="none" stroke="white" stroke-width="1.8"/>
+          <rect x="32" y="19" width="9" height="21" rx="1.5" fill="none" stroke="white" stroke-width="1.8"/>
+          <polyline points="5,33 14,40 36,18" fill="none" stroke="#2E8B4A" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <span style="font-size:16px;font-weight:600;color:var(--navy)">SVJ Energie Admin</span>
+    </div>
+    <div class="login-title">Přihlášení</div>
+    <div class="login-sub">Pouze pro administrátory</div>
+    <input type="email" id="loginEmail" placeholder="E-mailová adresa" autocomplete="email">
+    <input type="password" id="loginPw" placeholder="Heslo" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="btn-login" onclick="doLogin()" id="loginBtn">Přihlásit se →</button>
+    <div class="login-err" id="loginErr"></div>
+  </div>
+</div>
+
+<!-- ADMIN -->
+<div class="admin" id="adminWrap">
+  <div class="topbar">
+    <div class="topbar-logo">
+      <svg width="24" height="24" viewBox="0 0 44 44" fill="none">
+        <circle cx="33" cy="11" r="5" fill="#F59E0B"/>
+        <rect x="4" y="22" width="11" height="18" rx="1.5" fill="none" stroke="white" stroke-width="1.8"/>
+        <rect x="17" y="16" width="13" height="24" rx="1.5" fill="none" stroke="white" stroke-width="1.8"/>
+        <rect x="32" y="19" width="9" height="21" rx="1.5" fill="none" stroke="white" stroke-width="1.8"/>
+        <polyline points="5,33 14,40 36,18" fill="none" stroke="#2E8B4A" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      SVJ Energie &mdash; Admin
+    </div>
+    <div class="topbar-right">
+      <span class="topbar-user" id="adminUserEmail"></span>
+      <button class="btn-logout" onclick="doLogout()">Odhlásit</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- Stats -->
+    <div class="stats" id="statsRow">
+      <div class="stat"><div class="stat-l">Celkem leadů</div><div class="stat-v" id="statTotal">—</div><div class="stat-s">od spuštění</div></div>
+      <div class="stat green"><div class="stat-l">Nové</div><div class="stat-v" id="statNove">—</div><div class="stat-s">čekají na kontakt</div></div>
+      <div class="stat amber"><div class="stat-l">Tento týden</div><div class="stat-v" id="statWeek">—</div><div class="stat-s">nových registrací</div></div>
+      <div class="stat"><div class="stat-l">Průměrný kWp</div><div class="stat-v" id="statKwp">—</div><div class="stat-s">navrhovaný výkon</div></div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <span class="toolbar-title">Leady</span>
+      <input type="text" class="search" id="searchInput" placeholder="Hledat jméno, email, SVJ..." oninput="filterLeads()">
+      <select class="filter" id="stavFilter" onchange="filterLeads()">
+        <option value="">Všechny stavy</option>
+        <option value="nový">Nové</option>
+        <option value="kontaktován">Kontaktováni</option>
+        <option value="uzavřen">Uzavřeno</option>
+        <option value="ztracen">Ztraceno</option>
+      </select>
+      <select class="filter" id="poziceFilter" onchange="filterLeads()">
+        <option value="">Všechny pozice</option>
+        <option value="predseda">Předsedové</option>
+        <option value="clen_vyboru">Členové výboru</option>
+        <option value="spravce">Správci</option>
+        <option value="vlastnik">Vlastníci</option>
+      </select>
+      <button class="btn-refresh" onclick="loadLeads()">&#8635; Obnovit</button>
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrap">
+      <div id="tableContent" class="loading">
+        <div class="spinner"></div>
+        Načítám leady&hellip;
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Detail panel -->
+<div class="detail-overlay" id="detailOverlay" onclick="closeDetail()"></div>
+<div class="detail-panel" id="detailPanel">
+  <button class="detail-close" onclick="closeDetail()">&#x2715;</button>
+  <div id="detailContent"></div>
+</div>
+
+<script>
+var SUPA_URL='https://aeypeepckmbejdcotdss.supabase.co';
+var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFleXBlZXBja21iZWpkY290ZHNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTkyNjAsImV4cCI6MjA5Mjk3NTI2MH0.JjYiI3bcL1ds1vAkFq59Z0WhNCLAd8oekX6GF4Zq5bA';
+
+// ADMIN EMAIL — sem přidej svůj admin email
+var ADMIN_EMAIL='lsohr@seznam.cz';
+
+var TOKEN=null;
+var ALL_LEADS=[];
+
+function prelozPozici(p){
+  var m={predseda:'Předseda SVJ',clen_vyboru:'Člen výboru',spravce:'Správce',vlastnik:'Vlastník bytu',jine:'Jiné'};
+  return m[p]||p||'—';
+}
+
+function stavBadge(s){
+  var m={nový:'b-novy',kontaktován:'b-kontaktovan',uzavřen:'b-uzavren',ztracen:'b-ztracen'};
+  var cls=m[s]||'b-novy';
+  return '<span class="badge '+cls+'">'+(s||'nový')+'</span>';
+}
+
+function fmtDate(d){
+  if(!d) return '—';
+  var dt=new Date(d);
+  return dt.toLocaleDateString('cs-CZ',{day:'2-digit',month:'2-digit',year:'numeric'})+' '+dt.toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit'});
+}
+
+async function doLogin(){
+  var em=document.getElementById('loginEmail').value.trim();
+  var pw=document.getElementById('loginPw').value;
+  var err=document.getElementById('loginErr');
+  var btn=document.getElementById('loginBtn');
+  if(!em||!pw){err.textContent='Vyplňte e-mail a heslo.';err.style.display='block';return;}
+  btn.textContent='Přihlašuji…';btn.disabled=true;
+  try{
+    var r=await fetch(SUPA_URL+'/auth/v1/token?grant_type=password',{
+      method:'POST',
+      headers:{'apikey':SUPA_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({email:em,password:pw})
+    });
+    var d=await r.json();
+    if(!r.ok) throw new Error('Nesprávné přihlašovací údaje');
+    TOKEN=d.access_token;
+    document.getElementById('adminUserEmail').textContent=em;
+    document.getElementById('loginWrap').style.display='none';
+    document.getElementById('adminWrap').style.display='flex';
+    loadLeads();
+  }catch(e){
+    err.textContent=e.message;err.style.display='block';
+    btn.textContent='Přihlásit se →';btn.disabled=false;
+  }
+}
+
+function doLogout(){
+  TOKEN=null;ALL_LEADS=[];
+  document.getElementById('loginWrap').style.display='flex';
+  document.getElementById('adminWrap').style.display='none';
+}
+
+async function loadLeads(){
+  document.getElementById('tableContent').innerHTML='<div class="loading"><div class="spinner"></div>Načítám leady&hellip;</div>';
+  try{
+    var r=await fetch(SUPA_URL+'/rest/v1/leads?order=created_at.desc&limit=500',{
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+TOKEN,'Content-Type':'application/json'}
+    });
+    if(!r.ok) throw new Error('Chyba načítání');
+    ALL_LEADS=await r.json();
+    updateStats();
+    filterLeads();
+  }catch(e){
+    document.getElementById('tableContent').innerHTML='<div class="no-data"><div class="no-data-icon">⚠️</div>Chyba: '+e.message+'</div>';
+  }
+}
+
+function updateStats(){
+  var total=ALL_LEADS.length;
+  var nove=ALL_LEADS.filter(function(l){return !l.stav||l.stav==='nový';}).length;
+  var week=0;
+  var now=new Date();
+  ALL_LEADS.forEach(function(l){
+    var d=new Date(l.created_at);
+    if((now-d)<7*24*3600*1000) week++;
+  });
+  var kwps=ALL_LEADS.filter(function(l){return l.kwp>0;}).map(function(l){return parseFloat(l.kwp);});
+  var avgKwp=kwps.length?Math.round(kwps.reduce(function(a,b){return a+b;},0)/kwps.length*10)/10:0;
+  document.getElementById('statTotal').textContent=total;
+  document.getElementById('statNove').textContent=nove;
+  document.getElementById('statWeek').textContent=week;
+  document.getElementById('statKwp').textContent=avgKwp||'—';
+}
+
+function filterLeads(){
+  var q=document.getElementById('searchInput').value.toLowerCase();
+  var stav=document.getElementById('stavFilter').value;
+  var poz=document.getElementById('poziceFilter').value;
+  var filtered=ALL_LEADS.filter(function(l){
+    var matchQ=!q||(l.jmeno||'').toLowerCase().includes(q)||(l.email||'').toLowerCase().includes(q)||(l.svj||'').toLowerCase().includes(q);
+    var matchS=!stav||l.stav===stav;
+    var matchP=!poz||l.pozice===poz;
+    return matchQ&&matchS&&matchP;
+  });
+  renderTable(filtered);
+}
+
+function renderTable(leads){
+  if(!leads.length){
+    document.getElementById('tableContent').innerHTML='<div class="no-data"><div class="no-data-icon">📭</div>Žádné leady nenalezeny</div>';
+    return;
+  }
+  var rows=leads.map(function(l,i){
+    return '<tr onclick="openDetail(\''+l.id+'\')" style="cursor:pointer">'+
+      '<td>'+fmtDate(l.created_at)+'</td>'+
+      '<td><strong>'+(l.jmeno||'—')+'</strong></td>'+
+      '<td><a class="email-link" href="mailto:'+l.email+'" onclick="event.stopPropagation()">'+l.email+'</a></td>'+
+      '<td>'+(l.telefon?'<a class="tel" href="tel:'+l.telefon+'" onclick="event.stopPropagation()">'+l.telefon+'</a>':'—')+'</td>'+
+      '<td class="hide-mob">'+(l.svj||'—')+'</td>'+
+      '<td class="hide-mob">'+(l.pozice?'<span class="pozice-badge">'+prelozPozici(l.pozice)+'</span>':'—')+'</td>'+
+      '<td class="hide-mob">'+(l.kwp?'<span class="kwp-val">'+l.kwp+' kWp</span>':'—')+'</td>'+
+      '<td>'+stavBadge(l.stav)+'</td>'+
+      '<td onclick="event.stopPropagation()">'+
+        '<select class="stav-select" onchange="changeStav(\''+l.id+'\',this.value)">'+
+          ['nový','kontaktován','uzavřen','ztracen'].map(function(s){
+            return '<option value="'+s+'"'+(l.stav===s?' selected':'')+'>'+s+'</option>';
+          }).join('')+
+        '</select>'+
+      '</td>'+
+    '</tr>';
+  }).join('');
+
+  document.getElementById('tableContent').innerHTML=
+    '<table>'+
+      '<thead><tr>'+
+        '<th>Datum</th><th>Jméno</th><th>E-mail</th><th>Telefon</th>'+
+        '<th class="hide-mob">SVJ</th><th class="hide-mob">Pozice</th>'+
+        '<th class="hide-mob">kWp</th><th>Stav</th><th>Změnit stav</th>'+
+      '</tr></thead>'+
+      '<tbody>'+rows+'</tbody>'+
+    '</table>';
+}
+
+async function changeStav(id, stav){
+  await fetch(SUPA_URL+'/rest/v1/leads?id=eq.'+id,{
+    method:'PATCH',
+    headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+TOKEN,'Content-Type':'application/json','Prefer':'return=minimal'},
+    body:JSON.stringify({stav:stav})
+  });
+  var lead=ALL_LEADS.find(function(l){return l.id===id;});
+  if(lead) lead.stav=stav;
+  updateStats();
+}
+
+function openDetail(id){
+  var l=ALL_LEADS.find(function(x){return x.id===id;});
+  if(!l) return;
+  var html='<div style="margin-top:8px">'+
+    '<div class="detail-name">'+(l.jmeno||'—')+'</div>'+
+    '<div style="font-size:12px;color:var(--text-2);margin-bottom:16px">'+fmtDate(l.created_at)+'</div>'+
+    '<div class="detail-actions">'+
+      (l.telefon?'<a class="btn-action btn-call" href="tel:'+l.telefon+'">📞 Zavolat: '+l.telefon+'</a>':'')+
+      '<a class="btn-action btn-email" href="mailto:'+l.email+'">✉️ Napsat e-mail</a>'+
+    '</div>'+
+    '<div style="margin-top:20px">'+
+    [
+      ['E-mail',l.email||'—'],
+      ['Telefon',l.telefon||'—'],
+      ['SVJ',l.svj||'—'],
+      ['Pozice',prelozPozici(l.pozice)],
+      ['Adresa domu',l.adresa_domu||l.adresa||'—'],
+      ['Distributor',l.dist||'—'],
+      ['Počet bytů',l.bytu||l.byty||'—'],
+      ['Navrhovaný kWp',l.kwp?l.kwp+' kWp':'—'],
+      ['Stav',l.stav||'nový'],
+    ].map(function(r){
+      return '<div class="detail-row"><span class="detail-label">'+r[0]+'</span><span class="detail-val">'+r[1]+'</span></div>';
+    }).join('')+
+    '</div>'+
+    '<div style="margin-top:16px"><label style="font-size:11px;font-weight:600;color:var(--text-2);display:block;margin-bottom:6px;letter-spacing:.4px">ZMĚNIT STAV</label>'+
+    '<select class="stav-select" style="width:100%;padding:8px 12px;font-size:13px" onchange="changeStav(\''+l.id+'\',this.value);document.getElementById(\'detailPanel\').querySelector(\'.detail-val:last-of-type\').textContent=this.value">'+
+      ['nový','kontaktován','uzavřen','ztracen'].map(function(s){
+        return '<option value="'+s+'"'+(l.stav===s?' selected':'')+'>'+s+'</option>';
+      }).join('')+
+    '</select></div>'+
+    (l.zarizeni?'<div style="margin-top:12px;padding:10px;background:var(--bg);border-radius:var(--rm);font-size:12px;color:var(--text-2)">Zařízení: '+l.zarizeni+'</div>':'')+
+  '</div>';
+
+  document.getElementById('detailContent').innerHTML=html;
+  document.getElementById('detailPanel').classList.add('open');
+  document.getElementById('detailOverlay').style.display='block';
+}
+
+function closeDetail(){
+  document.getElementById('detailPanel').classList.remove('open');
+  document.getElementById('detailOverlay').style.display='none';
+}
+
+// Enter na přihlášení
+document.getElementById('loginEmail').addEventListener('keydown',function(e){if(e.key==='Enter')document.getElementById('loginPw').focus();});
+</script>
+</body>
+</html>
