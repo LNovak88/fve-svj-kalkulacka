@@ -12,24 +12,22 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}
 .card{background:var(--white);border-radius:var(--r);padding:36px;max-width:420px;width:100%;box-shadow:0 8px 32px rgba(30,58,95,0.12);border:0.5px solid var(--border)}
-.logo{display:flex;align-items:center;gap:10px;margin-bottom:24px;text-decoration:none}
-.logo-box{width:40px;height:40px;background:var(--blue);border-radius:var(--rm);display:flex;align-items:center;justify-content:center}
+.logo{display:flex;align-items:center;gap:12px;margin-bottom:24px;text-decoration:none}
 .logo-t{font-size:16px;font-weight:600;color:var(--navy)}
 h1{font-family:'DM Serif Display',serif;font-size:22px;color:var(--navy);margin-bottom:6px}
 .sub{font-size:13px;color:var(--text-2);margin-bottom:22px;line-height:1.5}
 .field{margin-bottom:12px}
-label{display:block;font-size:12px;color:var(--text-2);margin-bottom:4px;font-weight:500}
+label{display:block;font-size:11px;font-weight:600;color:var(--text-2);margin-bottom:4px;letter-spacing:.4px}
 input{width:100%;padding:11px 13px;border:0.5px solid #CBD5E1;border-radius:var(--rm);font-size:13px;font-family:inherit;outline:none;transition:border-color .15s}
 input:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-l)}
 .pw-wrap{position:relative}
 .pw-wrap input{padding-right:42px}
 .pw-eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;color:var(--text-2)}
-.pw-strength{height:3px;border-radius:2px;margin-top:4px;background:var(--border);transition:all .3s}
-.pw-strength.weak{background:#F43F5E;width:33%}.pw-strength.ok{background:#F59E0B;width:66%}.pw-strength.strong{background:var(--green);width:100%}
+.pw-strength{height:3px;border-radius:2px;margin-top:4px;background:var(--border);transition:all .3s;width:0}
 .pw-hint{font-size:10px;color:var(--text-2);margin-top:2px}
-.btn{width:100%;padding:14px;background:linear-gradient(135deg,var(--blue) 0%,#1557a0 100%);color:#fff;border:none;border-radius:var(--rm);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:6px;transition:opacity .15s;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn{width:100%;padding:14px;background:linear-gradient(135deg,var(--blue) 0%,#1557a0 100%);color:#fff;border:none;border-radius:var(--rm);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:6px;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .15s}
 .btn:hover{opacity:.9}
-.alert{padding:12px 14px;border-radius:var(--rm);font-size:13px;margin-bottom:14px;display:none}
+.alert{padding:12px 14px;border-radius:var(--rm);font-size:13px;margin-bottom:14px;display:none;line-height:1.5}
 .alert.err{background:#FEE2E2;border:1px solid #FCA5A5;color:#991B1B}
 .alert.ok{background:var(--green-l);border:1px solid #A3D8B8;color:#1A5C32}
 .spin{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite}
@@ -39,10 +37,18 @@ input:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-l)}
 <body>
 <div class="card">
   <a href="https://www.svjenergie.cz" class="logo">
-    <div class="logo-box">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-        <path d="M5 17L12 7L19 17" stroke="#2E8B4A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        <rect x="7" y="15" width="10" height="2" rx="1" fill="#2E8B4A" opacity=".8"/>
+    <div style="background:#1E3A5F;border-radius:8px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+      <svg width="34" height="34" viewBox="0 0 44 44" fill="none">
+        <circle cx="33" cy="11" r="5" fill="#F59E0B"/>
+        <line x1="33" y1="4" x2="33" y2="2" stroke="#F59E0B" stroke-width="1.8" stroke-linecap="round"/>
+        <line x1="38" y1="6" x2="40" y2="4" stroke="#F59E0B" stroke-width="1.8" stroke-linecap="round"/>
+        <line x1="40" y1="11" x2="42" y2="11" stroke="#F59E0B" stroke-width="1.8" stroke-linecap="round"/>
+        <line x1="28" y1="6" x2="26" y2="4" stroke="#F59E0B" stroke-width="1.8" stroke-linecap="round"/>
+        <rect x="4" y="22" width="11" height="18" rx="1.5" fill="none" stroke="white" stroke-width="1.8"/>
+        <rect x="17" y="16" width="13" height="24" rx="1.5" fill="none" stroke="white" stroke-width="1.8"/>
+        <rect x="32" y="19" width="9" height="21" rx="1.5" fill="none" stroke="white" stroke-width="1.8"/>
+        <line x1="3" y1="40" x2="42" y2="40" stroke="white" stroke-width="1.8" stroke-linecap="round" opacity=".4"/>
+        <polyline points="5,33 14,40 36,18" fill="none" stroke="#2E8B4A" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </div>
     <span class="logo-t">svjenergie</span>
@@ -54,268 +60,132 @@ input:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-l)}
     <h1>Nastavit nové heslo</h1>
     <p class="sub">Zadejte nové heslo pro váš účet SVJ Energie.</p>
     <div class="field">
-      <label>Nové heslo</label>
+      <label>NOVÉ HESLO</label>
       <div class="pw-wrap">
         <input type="password" id="pw1" placeholder="Minimálně 8 znaků" oninput="checkStr(this.value)" autocomplete="new-password">
-        <button class="pw-eye" onclick="tog('pw1',this)" type="button">👁</button>
+        <button class="pw-eye" onclick="tog('pw1',this)" type="button">&#128065;</button>
         <div class="pw-strength" id="str"></div>
         <div class="pw-hint" id="strHint"></div>
       </div>
     </div>
     <div class="field">
-      <label>Potvrdit heslo</label>
+      <label>POTVRDIT HESLO</label>
       <div class="pw-wrap">
         <input type="password" id="pw2" placeholder="Zopakujte heslo" autocomplete="new-password">
-        <button class="pw-eye" onclick="tog('pw2',this)" type="button">👁</button>
+        <button class="pw-eye" onclick="tog('pw2',this)" type="button">&#128065;</button>
       </div>
     </div>
     <button class="btn" id="submitBtn" onclick="submitReset()">
-      <span id="btnTxt">Uložit nové heslo →</span>
+      <span id="btnTxt">Uložit nové heslo &rarr;</span>
     </button>
   </div>
 
   <div id="successWrap" style="display:none;text-align:center;padding:20px 0">
-    <div style="font-size:48px;margin-bottom:12px">✅</div>
+    <div style="font-size:48px;margin-bottom:12px">&#9989;</div>
     <h1 style="margin-bottom:8px">Heslo změněno!</h1>
-    <p class="sub">Přesměrováváme vás na kalkulačku…</p>
+    <p class="sub">Přesměrováváme vás na kalkulačku&hellip;</p>
   </div>
 </div>
-
 <script>
-const SUPA_URL='https://aeypeepckmbejdcotdss.supabase.co';
-const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFleXBlZXBja21iZWpkY290ZHNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTkyNjAsImV4cCI6MjA5Mjk3NTI2MH0.JjYiI3bcL1ds1vAkFq59Z0WhNCLAd8oekX6GF4Zq5bA';
+var SUPA_URL='https://aeypeepckmbejdcotdss.supabase.co';
+var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFleXBlZXBja21iZWpkY290ZHNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTkyNjAsImV4cCI6MjA5Mjk3NTI2MH0.JjYiI3bcL1ds1vAkFq59Z0WhNCLAd8oekX6GF4Zq5bA';
+var SESSION_TOKEN=null;
 
-// Globální session token — nastaví se po výměně
-let SESSION_TOKEN = null;
-
-function showAlert(type,msg){
-  const el=document.getElementById('alertBox');
-  el.className='alert '+type;
+function showAlert(t,msg){
+  var el=document.getElementById('alertBox');
+  el.className='alert '+t;
   el.textContent=msg;
   el.style.display='block';
 }
 
 function checkStr(pw){
-  const s=document.getElementById('str'),h=document.getElementById('strHint');
-  const strong=pw.length>=10&&/[A-Z]/.test(pw)&&/[0-9]/.test(pw);
-  const ok=pw.length>=8;
-  s.className='pw-strength'+(strong?' strong':ok?' ok':pw.length?' weak':'');
+  var s=document.getElementById('str');
+  var h=document.getElementById('strHint');
+  var strong=pw.length>=10&&/[A-Z]/.test(pw)&&/[0-9]/.test(pw);
+  var ok=pw.length>=8;
+  s.style.background=strong?'#2E8B4A':ok?'#F59E0B':pw.length?'#F43F5E':'#E2E8F0';
+  s.style.width=strong?'100%':ok?'66%':pw.length?'33%':'0';
   h.textContent=strong?'Silné heslo':ok?'Přidejte číslo nebo velké písmeno':'Minimálně 8 znaků';
 }
 
 function tog(id,btn){
-  const el=document.getElementById(id);
+  var el=document.getElementById(id);
   el.type=el.type==='password'?'text':'password';
-  btn.textContent=el.type==='password'?'👁':'🔒';
+  btn.textContent=el.type==='password'?'\uD83D\uDC41':'🔒';
 }
 
-// Parsovat všechny možné formáty URL které Supabase posílá
-async function init(){
-  const hash=window.location.hash.substring(1);
-  const hp=new URLSearchParams(hash);
-  const qp=new URLSearchParams(window.location.search);
+function init(){
+  var hp=new URLSearchParams(window.location.hash.substring(1));
+  var qp=new URLSearchParams(window.location.search);
+  function get(k){return hp.get(k)||qp.get(k)||null;}
 
-  const get=k=>hp.get(k)||qp.get(k)||null;
+  var access_token=get('access_token');
+  var token_hash=get('token_hash');
+  var type=get('type');
 
-  const access_token=get('access_token');
-  const token_hash=get('token_hash');
-  const type=get('type');
-
-  console.log('URL type:', type, 'access_token:', !!access_token, 'token_hash:', !!token_hash);
-
-  // Případ 1 — starý formát: access_token přímo v URL
   if(access_token && access_token.split('.').length===3){
     SESSION_TOKEN=access_token;
     return;
   }
 
-  // Případ 2 — nový formát: token_hash → vyměnit za session
   if(token_hash){
-    try{
-      const r=await fetch(SUPA_URL+'/auth/v1/verify',{
-        method:'POST',
-        headers:{'apikey':SUPA_KEY,'Content-Type':'application/json'},
-        body:JSON.stringify({token_hash, type:type||'recovery'})
-      });
-      const d=await r.json();
-      console.log('verify response:', d);
-      if(d.access_token){
-        SESSION_TOKEN=d.access_token;
-        return;
+    fetch(SUPA_URL+'/auth/v1/verify',{
+      method:'POST',
+      headers:{'apikey':SUPA_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({token_hash:token_hash, type:type||'recovery'})
+    }).then(function(r){return r.json();}).then(function(d){
+      if(d.access_token){SESSION_TOKEN=d.access_token;}
+      else{
+        showAlert('err','Odkaz je neplatný nebo expirovaný. Požádejte o nový reset hesla.');
+        document.getElementById('formWrap').style.display='none';
       }
-      throw new Error(d.message||d.error_description||'Neplatný token');
-    }catch(e){
-      showAlert('err','Odkaz je neplatný nebo expirovaný: '+e.message+'. Požádejte o nový.');
+    }).catch(function(){
+      showAlert('err','Chyba připojení. Zkuste to znovu.');
       document.getElementById('formWrap').style.display='none';
-      return;
-    }
+    });
+    return;
   }
 
-  // Nic nenalezeno
   showAlert('err','Neplatný odkaz. Požádejte o nový reset hesla.');
   document.getElementById('formWrap').style.display='none';
 }
 
-async function submitReset(){
-  const pw1=document.getElementById('pw1').value;
-  const pw2=document.getElementById('pw2').value;
+function submitReset(){
+  var pw1=document.getElementById('pw1').value;
+  var pw2=document.getElementById('pw2').value;
   if(!pw1||pw1.length<8){showAlert('err','Heslo musí mít alespoň 8 znaků.');return;}
   if(pw1!==pw2){showAlert('err','Hesla se neshodují.');return;}
   if(!SESSION_TOKEN){showAlert('err','Relace vypršela. Požádejte o nový odkaz.');return;}
 
-  const btn=document.getElementById('submitBtn');
-  const txt=document.getElementById('btnTxt');
+  var btn=document.getElementById('submitBtn');
+  var txt=document.getElementById('btnTxt');
   btn.disabled=true;
-  txt.innerHTML='<span class="spin"></span> Ukládám…';
+  txt.innerHTML='<span class="spin"></span> Ukládám&hellip;';
 
-  try{
-    const r=await fetch(SUPA_URL+'/auth/v1/user',{
-      method:'PUT',
-      headers:{
-        'apikey':SUPA_KEY,
-        'Content-Type':'application/json',
-        'Authorization':'Bearer '+SESSION_TOKEN
-      },
-      body:JSON.stringify({password:pw1})
+  fetch(SUPA_URL+'/auth/v1/user',{
+    method:'PUT',
+    headers:{
+      'apikey':SUPA_KEY,
+      'Content-Type':'application/json',
+      'Authorization':'Bearer '+SESSION_TOKEN
+    },
+    body:JSON.stringify({password:pw1})
+  }).then(function(r){
+    return r.json().then(function(data){
+      if(!r.ok) throw new Error(data.message||data.msg||'Chyba při změně hesla');
+      localStorage.setItem('supa_access_token',SESSION_TOKEN);
+      document.getElementById('formWrap').style.display='none';
+      document.getElementById('successWrap').style.display='block';
+      setTimeout(function(){window.location.href='kalkulator.html';},2000);
     });
-    const data=await r.json();
-    if(!r.ok) throw new Error(data.message||data.msg||'Chyba při změně hesla ('+r.status+')');
-
-    localStorage.setItem('supa_access_token', SESSION_TOKEN);
-    document.getElementById('formWrap').style.display='none';
-    document.getElementById('successWrap').style.display='block';
-    setTimeout(()=>window.location.href='kalkulator.html',2000);
-  }catch(e){
-    showAlert('err', e.message);
+  }).catch(function(e){
+    showAlert('err',e.message);
     btn.disabled=false;
-    txt.textContent='Uložit nové heslo →';
-  }
+    txt.textContent='Uložit nové heslo \u2192';
+  });
 }
 
 init();
-</script>
-
-// Získat tokeny z URL — Supabase posílá v hash (#) nebo query (?)
-function getTokenFromUrl(){
-  // Zkusit hash
-  const hash=window.location.hash.substring(1);
-  const hashParams=new URLSearchParams(hash);
-  if(hashParams.get('access_token')) return{
-    access_token: hashParams.get('access_token'),
-    refresh_token: hashParams.get('refresh_token'),
-    type: hashParams.get('type')
-  };
-  // Zkusit query string
-  const queryParams=new URLSearchParams(window.location.search);
-  if(queryParams.get('access_token')) return{
-    access_token: queryParams.get('access_token'),
-    refresh_token: queryParams.get('refresh_token'),
-    type: queryParams.get('type')
-  };
-  // Zkusit token_hash (novější Supabase formát)
-  const token_hash=hashParams.get('token_hash')||queryParams.get('token_hash');
-  const type=hashParams.get('type')||queryParams.get('type');
-  if(token_hash) return{token_hash, type, access_token:null};
-  return{access_token:null, type:null};
-}
-
-const tokenData=getTokenFromUrl();
-let access_token=tokenData.access_token;
-const token_hash=tokenData.token_hash;
-const urlType=tokenData.type;
-
-async function init(){
-  // Novější Supabase — vyměnit token_hash za session
-  if(token_hash&&(urlType==='recovery'||urlType==='signup')){
-    try{
-      const r=await fetch(SUPA_URL+'/auth/v1/verify',{
-        method:'POST',
-        headers:{'apikey':SUPA_KEY,'Content-Type':'application/json'},
-        body:JSON.stringify({token_hash, type:urlType})
-      });
-      const d=await r.json();
-      if(d.access_token){access_token=d.access_token;return;}
-    }catch(e){}
-  }
-  if(!access_token){
-    showAlert('err','Neplatný nebo expirovaný odkaz. Požádejte o nový reset hesla.');
-    document.getElementById('formWrap').style.display='none';
-  }
-}
-init();
-
-function checkStr(pw){
-  const s=document.getElementById('str'),h=document.getElementById('strHint');
-  const strong=pw.length>=10&&/[A-Z]/.test(pw)&&/[0-9]/.test(pw);
-  const ok=pw.length>=8;
-  s.className='pw-strength'+(strong?' strong':ok?' ok':pw.length?' weak':'');
-  h.textContent=strong?'Silné heslo':ok?'Přidejte číslo nebo velké písmeno':'Minimálně 8 znaků';
-}
-
-function tog(id,btn){
-  const el=document.getElementById(id);
-  el.type=el.type==='password'?'text':'password';
-  btn.textContent=el.type==='password'?'👁':'🔒';
-}
-
-function showAlert(type,msg){
-  const el=document.getElementById('alertBox');
-  el.className='alert '+type;
-  el.textContent=msg;
-  el.style.display='block';
-}
-
-async function submitReset(){
-  const pw1=document.getElementById('pw1').value;
-  const pw2=document.getElementById('pw2').value;
-  if(!pw1||pw1.length<8){showAlert('err','Heslo musí mít alespoň 8 znaků.');return;}
-  if(pw1!==pw2){showAlert('err','Hesla se neshodují.');return;}
-
-  const btn=document.getElementById('submitBtn');
-  const txt=document.getElementById('btnTxt');
-  btn.disabled=true;
-  txt.innerHTML='<span class="spin"></span> Ukládám…';
-
-  try{
-    // Krok 1 — vyměnit token za platnou session
-    let sessionToken=access_token;
-    if(token_hash){
-      const vr=await fetch(SUPA_URL+'/auth/v1/verify',{
-        method:'POST',
-        headers:{'apikey':SUPA_KEY,'Content-Type':'application/json'},
-        body:JSON.stringify({token_hash, type:urlType||'recovery'})
-      });
-      const vd=await vr.json();
-      if(!vr.ok) throw new Error(vd.message||'Neplatný nebo expirovaný odkaz.');
-      sessionToken=vd.access_token;
-    }
-
-    if(!sessionToken) throw new Error('Neplatný token. Požádejte o nový reset hesla.');
-
-    // Krok 2 — změnit heslo
-    const r=await fetch(SUPA_URL+'/auth/v1/user',{
-      method:'PUT',
-      headers:{
-        'apikey':SUPA_KEY,
-        'Content-Type':'application/json',
-        'Authorization':'Bearer '+sessionToken
-      },
-      body:JSON.stringify({password:pw1})
-    });
-    const data=await r.json();
-    if(!r.ok) throw new Error(data.message||data.msg||'Chyba při změně hesla');
-
-    localStorage.setItem('supa_access_token', sessionToken);
-    document.getElementById('formWrap').style.display='none';
-    document.getElementById('successWrap').style.display='block';
-    setTimeout(()=>window.location.href='kalkulator.html',2000);
-
-  }catch(e){
-    showAlert('err', e.message);
-    btn.disabled=false;
-    txt.textContent='Uložit nové heslo →';
-  }
-}
 </script>
 </body>
 </html>
