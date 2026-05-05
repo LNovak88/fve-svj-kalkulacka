@@ -1495,19 +1495,20 @@ async function submitReg(){
 
     // 2. Uložit lead do Supabase
     const sp=spSpVypocet(D.bytu,D.pater,D.vytahu>0,D.vytahu,D.tuv,D.tc,D.ev,D.cerpadla);
-    await supaFetch('/rest/v1/leads','POST',{
-      jmeno:jm, email:em,
+    const leadRes=await supaFetch('/rest/v1/leads','POST',{
+      jmeno:jm.trim(), email:em,
       telefon:document.getElementById('regTel')?.value.trim()||null,
       svj:document.getElementById('regSvj')?.value.trim()||null,
       pozice:document.getElementById('regPozice')?.value||null,
-      byty:D.bytu, pater:D.pater,
+      bytu:D.bytu, pater:D.pater,
       dist:D.dist, zarizeni:D.zarizeni.join(','),
       strecha:D.strTyp, azimut:D.azimut, sklon:D.sklon,
       lat:D.lat||null, lon:D.lon||null,
       sp_mwh:sp.sp_mwh, tc:D.tc, ev:D.ev,
       kwp:optimKwp(D.bytu,D.zarizeni,D.ev,D.tc,sp.sp_mwh),
-      stav:'novy'
+      stav:'nový'
     });
+    if(!leadRes.ok) console.warn('Lead se neuložil:', leadRes.data);
 
     // 3. Uložit simulaci
     if(data.user?.id){
