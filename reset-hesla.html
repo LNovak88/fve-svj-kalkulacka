@@ -167,20 +167,39 @@ async function submitReset(){
   txt.innerHTML='<span class="spin"></span> Ukládám…';
 
   try{
+    // Krok 1 — vyměnit token za platnou session
+    let sessionToken=access_token;
+    if(token_hash){
+      const vr=await fetch(SUPA_URL+'/auth/v1/verify',{
+        method:'POST',
+        headers:{'apikey':SUPA_KEY,'Content-Type':'application/json'},
+        body:JSON.stringify({token_hash, type:urlType||'recovery'})
+      });
+      const vd=await vr.json();
+      if(!vr.ok) throw new Error(vd.message||'Neplatný nebo expirovaný odkaz.');
+      sessionToken=vd.access_token;
+    }
+
+    if(!sessionToken) throw new Error('Neplatný token. Požádejte o nový reset hesla.');
+
+    // Krok 2 — změnit heslo
     const r=await fetch(SUPA_URL+'/auth/v1/user',{
       method:'PUT',
-      headers:{'apikey':SUPA_KEY,'Content-Type':'application/json','Authorization':'Bearer '+access_token},
+      headers:{
+        'apikey':SUPA_KEY,
+        'Content-Type':'application/json',
+        'Authorization':'Bearer '+sessionToken
+      },
       body:JSON.stringify({password:pw1})
     });
     const data=await r.json();
-    if(!r.ok) throw new Error(data.message||'Chyba při změně hesla');
+    if(!r.ok) throw new Error(data.message||data.msg||'Chyba při změně hesla');
 
-    // Uložit token pro přihlášení
-    localStorage.setItem('supa_access_token', access_token);
-
+    localStorage.setItem('supa_access_token', sessionToken);
     document.getElementById('formWrap').style.display='none';
     document.getElementById('successWrap').style.display='block';
     setTimeout(()=>window.location.href='kalkulator.html',2000);
+
   }catch(e){
     showAlert('err', e.message);
     btn.disabled=false;
