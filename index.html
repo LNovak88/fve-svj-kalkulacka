@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SVJ Energie — FVE kalkulačka pro bytové domy | Ušetřete na elektřině</title>
-<meta name="description" content="Zjistěte za 2 minuty, kolik ušetří váš bytový dům na fotovoltaice. Bezplatná kalkulačka FVE pro SVJ a správce bytových domů. Reálná data, přesné výpočty.">
+<meta name="description" content="Zjistěte za 2 minuty, kolik ušetří váš bytový dům díky fotovoltaice. Bezplatná kalkulačka FVE pro SVJ a správce bytových domů. Reálná data, přesné výpočty.">
 <meta name="keywords" content="FVE SVJ, fotovoltaika bytový dům, solární panely SVJ, kalkulačka FVE, úspory elektřiny SVJ, EDC sdílení energie, komunitní energetika">
 <link rel="canonical" href="https://www.svjenergie.cz">
 <meta property="og:title" content="SVJ Energie — Kolik ušetří váš bytový dům na FVE?">
@@ -1028,27 +1028,63 @@ function formatScrollTel(el){
   document.getElementById('scrollTelIcon').textContent = el.value.length > 3 ? (ok ? '✅' : '❌') : '';
 }
 
-function submitScrollReg(){
+async function submitScrollReg(){
   var gdpr = document.getElementById('scrollGdpr');
   if(!gdpr || !gdpr.checked){
-    shake(gdpr.parentElement);
-    showScrollErr(gdpr.parentElement, 'Pro registraci je nutný souhlas se zpracováním osobních údajů.');
+    shake(gdpr?.parentElement||document.getElementById('scrollBtn'));
+    showScrollErr(document.getElementById('scrollBtn').parentElement, 'Pro registraci je nutný souhlas se zpracováním osobních údajů.');
     return;
   }
-  var jmeno = (document.getElementById('scrollJmeno').value.trim()+' '+( document.getElementById('scrollPrijmeni')?.value.trim()||'')).trim();
+  var jmeno = (document.getElementById('scrollJmeno').value.trim()+' '+(document.getElementById('scrollPrijmeni')?.value.trim()||'')).trim();
   var email = document.getElementById('scrollEmail').value.trim();
   var tel = document.getElementById('scrollTel').value.trim();
   var svj = document.getElementById('scrollSvj')?.value.trim()||'';
   var pozice = document.getElementById('scrollPozice')?.value||'';
+  var adresa = document.getElementById('scrollAdresa')?.value.trim()||'';
+  var kontAddr = document.getElementById('scrollSameAddr')?.checked ? adresa : (document.getElementById('scrollKontAddr')?.value.trim()||'');
 
-  if(!email || !email.includes('@')){shake(document.getElementById('scrollEmail'));return;}
+  if(!email||!email.includes('@')){shake(document.getElementById('scrollEmail'));return;}
   if(!jmeno){shake(document.getElementById('scrollJmeno'));return;}
 
-  localStorage.setItem('pending_reg_email', email);
-  localStorage.setItem('pending_reg_jmeno', jmeno);
-  localStorage.setItem('pending_reg_tel', tel);
-  localStorage.setItem('pending_reg_svj', svj);
-  window.location.href = 'kalkulator.html#registrace';
+  // Generovat dočasné heslo — uživatel si ho nastaví přes email
+  var tmpPw = 'Svj'+Math.random().toString(36).slice(2,10)+'!';
+
+  var btn=document.getElementById('scrollBtn');
+  var txt=document.getElementById('scrollBtnTxt');
+  btn.disabled=true;
+  txt.innerHTML='<span style="display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle"></span> Registruji…';
+
+  var SUPA_URL='https://aeypeepckmbejdcotdss.supabase.co';
+  var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFleXBlZXBja21iZWpkY290ZHNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTkyNjAsImV4cCI6MjA5Mjk3NTI2MH0.JjYiI3bcL1ds1vAkFq59Z0WhNCLAd8oekX6GF4Zq5bA';
+
+  try{
+    // 1. Registrace
+    var r=await fetch(SUPA_URL+'/auth/v1/signup',{
+      method:'POST',
+      headers:{'apikey':SUPA_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({email:email,password:tmpPw,data:{full_name:jmeno,phone:tel,svj:svj,pozice:pozice,adresa_domu:adresa,adresa_kontakt:kontAddr}})
+    });
+    var data=await r.json();
+    if(!r.ok) throw new Error(prelozChybuIndex(data.msg||data.error_description||'Chyba registrace'));
+
+    // 2. Uložit lead
+    await fetch(SUPA_URL+'/rest/v1/leads',{
+      method:'POST',
+      headers:{'apikey':SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+      body:JSON.stringify({jmeno:jmeno,email:email,telefon:tel||null,svj:svj||null,pozice:pozice||null,lat:window._scrollLat||null,lon:window._scrollLon||null,stav:'novy'})
+    });
+
+    // 3. Zobrazit úspěch
+    document.getElementById('sPanelReg').style.display='none';
+    document.getElementById('sSuccess').style.display='block';
+    document.getElementById('sSuccessTitle').textContent='Registrace úspěšná!';
+    document.getElementById('sSuccessDesc').textContent='Zkontrolujte e-mail '+email+' — pošleme vám odkaz pro nastavení hesla.';
+
+  }catch(e){
+    btn.disabled=false;
+    txt.textContent='Registrovat se nezávazně →';
+    showScrollErr(btn.parentElement, e.message);
+  }
 }
 
 function showScrollErr(el, msg){
