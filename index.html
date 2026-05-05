@@ -314,8 +314,8 @@ footer{background:var(--navy);padding:40px 5vw 24px;color:#8BA8C4}
   <div class="nav-links">
     <a href="#jak-to-funguje" class="btn-nav-ghost">Jak to funguje</a>
     <a href="#moznosti" class="btn-nav-ghost">Možnosti</a>
-    <button onclick="openScrollModal('login')" class="btn-nav-ghost" style="border-color:var(--blue);color:var(--blue);cursor:pointer;font-family:inherit;font-size:13px">Přihlásit se</button>
-    <a href="kalkulator.html" class="btn-nav-cta">Spočítat →</a>
+    <button onclick="openScrollModal('login')" class="btn-nav-ghost" style="border-color:var(--blue);color:var(--blue);cursor:pointer;font-family:inherit;font-size:13px;padding:8px 16px;border-radius:var(--rm)">Přihlásit se</button>
+    <button onclick="openScrollModal('reg')" class="btn-nav-cta" style="cursor:pointer;font-family:inherit;font-size:13px">Registrovat se →</button>
   </div>
 </nav>
 
@@ -821,10 +821,22 @@ initCookies();
     <div id="sPanelReg">
       <p style="font-size:13px;color:#64748B;margin-bottom:14px">Registrace je bezplatná. Naše oddělení vás kontaktuje s nabídkou na míru.</p>
       <div style="display:flex;flex-direction:column;gap:10px">
-        <div><label style="font-size:11px;font-weight:600;color:#64748B;display:block;margin-bottom:4px;letter-spacing:.4px">JMÉNO A PŘÍJMENÍ</label><input type="text" id="scrollJmeno" placeholder="Jan Novák" autocomplete="name" style="width:100%;padding:10px 13px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;font-family:inherit;outline:none"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div><label style="font-size:11px;font-weight:600;color:#64748B;display:block;margin-bottom:4px;letter-spacing:.4px">JMÉNO</label><input type="text" id="scrollJmeno" placeholder="Jan" autocomplete="given-name" style="width:100%;padding:10px 13px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;font-family:inherit;outline:none"></div>
+          <div><label style="font-size:11px;font-weight:600;color:#64748B;display:block;margin-bottom:4px;letter-spacing:.4px">PŘÍJMENÍ</label><input type="text" id="scrollPrijmeni" placeholder="Novák" autocomplete="family-name" style="width:100%;padding:10px 13px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;font-family:inherit;outline:none"></div>
+        </div>
         <div><label style="font-size:11px;font-weight:600;color:#64748B;display:block;margin-bottom:4px;letter-spacing:.4px">E-MAILOVÁ ADRESA</label><input type="email" id="scrollEmail" placeholder="jan@svj.cz" autocomplete="email" style="width:100%;padding:10px 13px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;font-family:inherit;outline:none"></div>
         <div><label style="font-size:11px;font-weight:600;color:#64748B;display:block;margin-bottom:4px;letter-spacing:.4px">TELEFON</label><div style="position:relative"><input type="tel" id="scrollTel" placeholder="603 123 456" autocomplete="tel" oninput="formatScrollTel(this)" style="width:100%;padding:10px 40px 10px 13px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;font-family:inherit;outline:none"><span id="scrollTelIcon" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none"></span></div></div>
         <div><label style="font-size:11px;font-weight:600;color:#64748B;display:block;margin-bottom:4px;letter-spacing:.4px">NÁZEV SVJ <span style="font-weight:400;text-transform:none;letter-spacing:0">(volitelné)</span></label><input type="text" id="scrollSvj" placeholder="SVJ Ke Školce 12" style="width:100%;padding:10px 13px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;font-family:inherit;outline:none"></div>
+        <div><label style="font-size:11px;font-weight:600;color:#64748B;display:block;margin-bottom:4px;letter-spacing:.4px">POZICE V SVJ <span style="font-weight:400;text-transform:none;letter-spacing:0">(volitelné)</span></label>
+        <select id="scrollPozice" style="width:100%;padding:10px 13px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;font-family:inherit;outline:none;background:#fff;color:#1E293B">
+          <option value="">Vyberte pozici…</option>
+          <option value="predseda">Předseda SVJ</option>
+          <option value="clen_vyboru">Člen výboru SVJ</option>
+          <option value="spravce">Profesionální správce</option>
+          <option value="vlastnik">Vlastník bytu</option>
+          <option value="jine">Jiné</option>
+        </select></div>
         <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer">
           <input type="checkbox" id="scrollGdpr" style="width:16px;height:16px;min-width:16px;margin-top:2px;accent-color:#2E8B4A;cursor:pointer;flex-shrink:0;appearance:checkbox;-webkit-appearance:checkbox">
           <span style="font-size:12px;color:#64748B;line-height:1.5">Souhlasím se <a href="gdpr.html" target="_blank" style="color:#1B6CA8">zpracováním osobních údajů</a> a <a href="podminky.html" target="_blank" style="color:#1B6CA8">obchodními podmínkami</a>.</span>
@@ -970,10 +982,11 @@ function submitScrollReg(){
     showScrollErr(gdpr.parentElement, 'Pro registraci je nutný souhlas se zpracováním osobních údajů.');
     return;
   }
+  var jmeno = (document.getElementById('scrollJmeno').value.trim()+' '+( document.getElementById('scrollPrijmeni')?.value.trim()||'')).trim();
   var email = document.getElementById('scrollEmail').value.trim();
-  var jmeno = document.getElementById('scrollJmeno').value.trim();
   var tel = document.getElementById('scrollTel').value.trim();
   var svj = document.getElementById('scrollSvj')?.value.trim()||'';
+  var pozice = document.getElementById('scrollPozice')?.value||'';
 
   if(!email || !email.includes('@')){shake(document.getElementById('scrollEmail'));return;}
   if(!jmeno){shake(document.getElementById('scrollJmeno'));return;}
