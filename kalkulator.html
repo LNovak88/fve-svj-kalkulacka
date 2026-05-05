@@ -266,31 +266,26 @@ input[type=range]{width:100%;accent-color:var(--blue);margin-bottom:12px;cursor:
         <div class="benefit"><span class="benefit-icon">🏛️</span>Detail NZÚ: bezúročný úvěr + bonus za zranitelné domácnosti</div>
         <div class="benefit"><span class="benefit-icon">📋</span>PDF shrnutí pro schůzi SVJ</div>
         <div class="modal-form">
-          <input type="text" id="regJmeno" placeholder="Jméno a příjmení" autocomplete="name">
-          <input type="email" id="regEmail" placeholder="E-mailová adresa" autocomplete="email">
-          <div style="position:relative">
-            <input type="tel" id="regTel" placeholder="Telefon (např. 603 123 456)" autocomplete="tel" oninput="formatTel(this)">
-            <span id="telIcon" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none"></span>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div><label style="display:block;font-size:11px;font-weight:600;color:var(--text-2);margin-bottom:4px;letter-spacing:.4px">JMÉNO</label><input type="text" id="regJmeno" placeholder="Jan" autocomplete="given-name"></div>
+            <div><label style="display:block;font-size:11px;font-weight:600;color:var(--text-2);margin-bottom:4px;letter-spacing:.4px">PŘÍJMENÍ</label><input type="text" id="regPrijmeni" placeholder="Novák" autocomplete="family-name"></div>
           </div>
-          <input type="text" id="regSvj" placeholder="Název SVJ nebo bytového domu (volitelné)">
+          <div><label style="display:block;font-size:11px;font-weight:600;color:var(--text-2);margin-bottom:4px;letter-spacing:.4px">E-MAILOVÁ ADRESA</label><input type="email" id="regEmail" placeholder="jan@svj.cz" autocomplete="email"></div>
+          <div><label style="display:block;font-size:11px;font-weight:600;color:var(--text-2);margin-bottom:4px;letter-spacing:.4px">TELEFON</label><div style="position:relative"><input type="tel" id="regTel" placeholder="603 123 456" autocomplete="tel" oninput="formatTel(this)"><span id="telIcon" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none"></span></div></div>
+          <div><label style="display:block;font-size:11px;font-weight:600;color:var(--text-2);margin-bottom:4px;letter-spacing:.4px">NÁZEV SVJ <span style="font-weight:400;text-transform:none;letter-spacing:0">(volitelné)</span></label><input type="text" id="regSvj" placeholder="SVJ Ke Školce 12"></div>
+          <div><label style="display:block;font-size:11px;font-weight:600;color:var(--text-2);margin-bottom:4px;letter-spacing:.4px">POZICE V SVJ <span style="font-weight:400;text-transform:none;letter-spacing:0">(volitelné)</span></label>
           <select id="regPozice" style="width:100%;padding:10px 13px;border:0.5px solid #CBD5E1;border-radius:var(--rm);font-size:13px;color:var(--text);background:var(--white);font-family:inherit;outline:none">
-            <option value="">Vaše pozice v SVJ (volitelné)</option>
+            <option value="">Vyberte pozici…</option>
             <option value="predseda">Předseda SVJ</option>
             <option value="clen_vyboru">Člen výboru SVJ</option>
             <option value="spravce">Profesionální správce</option>
             <option value="vlastnik">Vlastník bytu</option>
             <option value="jine">Jiné</option>
-          </select>
-          <div class="pw-wrap">
-            <input type="password" id="regPw" placeholder="Heslo (min. 8 znaků)" autocomplete="new-password" oninput="checkPwStrength(this.value)">
-            <button class="pw-eye" onclick="togglePw('regPw',this)" type="button">👁</button>
-            <div class="pw-strength" id="pwStrength"></div>
-            <div class="pw-hint" id="pwHint"></div>
-          </div>
-          <div class="pw-wrap">
-            <input type="password" id="regPw2" placeholder="Potvrdit heslo" autocomplete="new-password">
-            <button class="pw-eye" onclick="togglePw('regPw2',this)" type="button">👁</button>
-          </div>
+          </select></div>
+          <div><label style="display:block;font-size:11px;font-weight:600;color:var(--text-2);margin-bottom:4px;letter-spacing:.4px">HESLO</label>
+          <div class="pw-wrap"><input type="password" id="regPw" placeholder="Minimálně 8 znaků" autocomplete="new-password" oninput="checkPwStrength(this.value)"><button class="pw-eye" onclick="togglePw('regPw',this)" type="button">👁</button><div class="pw-strength" id="pwStrength"></div><div class="pw-hint" id="pwHint"></div></div></div>
+          <div><label style="display:block;font-size:11px;font-weight:600;color:var(--text-2);margin-bottom:4px;letter-spacing:.4px">POTVRDIT HESLO</label>
+          <div class="pw-wrap"><input type="password" id="regPw2" placeholder="Zopakujte heslo" autocomplete="new-password"><button class="pw-eye" onclick="togglePw('regPw2',this)" type="button">👁</button></div></div>
           <!-- GDPR souhlas -->
           <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:12px;color:var(--text-2);font-weight:400;margin-top:4px">
             <input type="checkbox" id="regGdpr" style="width:16px;height:16px;min-width:16px;flex-shrink:0;margin-top:1px;accent-color:var(--blue);cursor:pointer;display:inline-block;appearance:checkbox;-webkit-appearance:checkbox;opacity:1;visibility:visible">
@@ -1463,7 +1458,7 @@ function checkPwStrength(pw){const s=document.getElementById('pwStrength'),h=doc
 function formatTel(el){let v=el.value.replace(/\D/g,'');if(v.startsWith('420'))v=v.slice(3);if(v.length>9)v=v.slice(0,9);el.value=v.replace(/(\d{3})(?=\d)/g,'$1 ').trim();document.getElementById('telIcon').textContent=v.length===9?'✅':'';}
 
 async function submitReg(){
-  const jm=document.getElementById('regJmeno')?.value.trim();
+  const jm=(document.getElementById('regJmeno')?.value.trim()||'')+' '+(document.getElementById('regPrijmeni')?.value.trim()||'');
   const em=document.getElementById('regEmail')?.value.trim();
   const pw=document.getElementById('regPw')?.value;
   const pw2=document.getElementById('regPw2')?.value;
