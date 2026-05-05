@@ -817,6 +817,7 @@ initCookies();
     <div style="display:flex;gap:0;margin-bottom:18px;border-bottom:1.5px solid #E2E8F0">
       <button id="sTabReg" onclick="switchScrollTab('reg')" style="flex:1;padding:10px;background:none;border:none;font-size:13px;font-weight:500;cursor:pointer;color:#1B6CA8;border-bottom:2px solid #1B6CA8;margin-bottom:-1.5px;font-family:inherit">Registrace</button>
       <button id="sTabLogin" onclick="switchScrollTab('login')" style="flex:1;padding:10px;background:none;border:none;font-size:13px;font-weight:500;cursor:pointer;color:#64748B;border-bottom:2px solid transparent;margin-bottom:-1.5px;font-family:inherit">Přihlášení</button>
+      <button id="sTabReset" onclick="switchScrollTab('reset')" style="flex:1;padding:10px;background:none;border:none;font-size:13px;font-weight:500;cursor:pointer;color:#64748B;border-bottom:2px solid transparent;margin-bottom:-1.5px;font-family:inherit">Reset hesla</button>
     </div>
     <div id="sPanelReg">
       <p style="font-size:13px;color:#64748B;margin-bottom:14px">Registrace je bezplatná. Naše oddělení vás kontaktuje s nabídkou na míru.</p>
@@ -873,7 +874,15 @@ initCookies();
         <div><label style="font-size:11px;font-weight:600;color:#64748B;display:block;margin-bottom:4px;letter-spacing:.4px">E-MAILOVÁ ADRESA</label><input type="email" id="scrollLoginEmail" placeholder="jan@svj.cz" autocomplete="email" style="width:100%;padding:10px 13px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;font-family:inherit;outline:none"></div>
         <div><label style="font-size:11px;font-weight:600;color:#64748B;display:block;margin-bottom:4px;letter-spacing:.4px">HESLO</label><div style="position:relative"><input type="password" id="scrollLoginPw" placeholder="Vaše heslo" autocomplete="current-password" style="width:100%;padding:10px 40px 10px 13px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;font-family:inherit;outline:none"><button onclick="var e=document.getElementById('scrollLoginPw');e.type=e.type==='password'?'text':'password';this.textContent=e.type==='password'?'👁':'🔒'" type="button" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;color:#64748B">👁</button></div></div>
         <button onclick="submitScrollLogin()" style="width:100%;padding:14px;background:linear-gradient(135deg,#1B6CA8,#1557a0);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit" id="scrollLoginBtn"><span id="scrollLoginBtnTxt">Přihlásit se →</span></button>
-        <p style="font-size:12px;color:#64748B;text-align:center"><a href="kalkulator.html" style="color:#1B6CA8">Zapomněl jsem heslo</a></p>
+        <p style="font-size:12px;color:#64748B;text-align:center"><a href="kalkulator.html" style="color:#1B6CA8" onclick="event.preventDefault();openScrollModal('reset')">Zapomněl jsem heslo</a></p>
+      </div>
+    </div>
+    <div id="sPanelReset" style="display:none">
+      <p style="font-size:13px;color:#64748B;margin-bottom:14px">Zadejte svůj e-mail — pošleme vám odkaz pro nastavení nového hesla.</p>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div><label style="font-size:11px;font-weight:600;color:#64748B;display:block;margin-bottom:4px;letter-spacing:.4px">E-MAILOVÁ ADRESA</label><input type="email" id="scrollResetEmail" placeholder="jan@svj.cz" autocomplete="email" style="width:100%;padding:10px 13px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;font-family:inherit;outline:none"></div>
+        <button onclick="submitScrollReset()" style="width:100%;padding:14px;background:linear-gradient(135deg,#1B6CA8,#1557a0);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit" id="scrollResetBtn"><span id="scrollResetBtnTxt">Odeslat odkaz →</span></button>
+        <p style="font-size:12px;color:#64748B;text-align:center"><a href="#" onclick="event.preventDefault();switchScrollTab('login')" style="color:#1B6CA8">← Zpět na přihlášení</a></p>
       </div>
     </div>
     <div id="sSuccess" style="display:none;text-align:center;padding:20px 0">
@@ -940,11 +949,28 @@ function openScrollModal(tab){
 }
 
 function switchScrollTab(tab){
-  const isReg=tab==='reg';
-  document.getElementById('sPanelReg').style.display=isReg?'':'none';
-  document.getElementById('sPanelLogin').style.display=isReg?'none':'';
-  document.getElementById('sTabReg').style.cssText='flex:1;padding:10px;background:none;border:none;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;margin-bottom:-1.5px;border-bottom:2px solid '+(isReg?'#1B6CA8':'transparent')+';color:'+(isReg?'#1B6CA8':'#64748B');
-  document.getElementById('sTabLogin').style.cssText='flex:1;padding:10px;background:none;border:none;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;margin-bottom:-1.5px;border-bottom:2px solid '+(!isReg?'#1B6CA8':'transparent')+';color:'+(!isReg?'#1B6CA8':'#64748B');
+  ['reg','login','reset'].forEach(t=>{
+    const panel=document.getElementById('sPanel'+t.charAt(0).toUpperCase()+t.slice(1));
+    const btn=document.getElementById('sTab'+t.charAt(0).toUpperCase()+t.slice(1));
+    if(panel) panel.style.display=t===tab?'':'none';
+    if(btn) btn.style.cssText='flex:1;padding:10px;background:none;border:none;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;margin-bottom:-1.5px;border-bottom:2px solid '+(t===tab?'#1B6CA8':'transparent')+';color:'+(t===tab?'#1B6CA8':'#64748B');
+  });
+}
+
+async function submitScrollReset(){
+  var em=document.getElementById('scrollResetEmail')?.value.trim();
+  if(!em||!em.includes('@')){shake(document.getElementById('scrollResetEmail'));return;}
+  var btn=document.getElementById('scrollResetBtn');
+  var txt=document.getElementById('scrollResetBtnTxt');
+  btn.disabled=true; txt.innerHTML='<span style="display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle"></span> Odesílám…';
+  var SUPA_URL='https://aeypeepckmbejdcotdss.supabase.co';
+  var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFleXBlZXBja21iZWpkY290ZHNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTkyNjAsImV4cCI6MjA5Mjk3NTI2MH0.JjYiI3bcL1ds1vAkFq59Z0WhNCLAd8oekX6GF4Zq5bA';
+  try{
+    var r=await fetch(SUPA_URL+'/auth/v1/recover',{method:'POST',headers:{'apikey':SUPA_KEY,'Content-Type':'application/json'},body:JSON.stringify({email:em,options:{emailRedirectTo:'https://www.svjenergie.cz/reset-hesla.html'}})});
+    document.getElementById('sPanelReset').innerHTML='<div style="text-align:center;padding:20px 0"><div style="font-size:40px;margin-bottom:10px">📧</div><div style="font-size:16px;font-weight:600;color:#1E3A5F;margin-bottom:6px">Odkaz odeslán!</div><div style="font-size:13px;color:#64748B">Zkontrolujte e-mail <strong>'+em+'</strong>.</div></div>';
+  }catch(e){
+    btn.disabled=false; txt.textContent='Odeslat odkaz →';
+  }
 }
 
 async function submitScrollLogin(){
