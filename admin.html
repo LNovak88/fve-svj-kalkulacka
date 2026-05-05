@@ -370,7 +370,26 @@ function openDetail(id){
         return '<option value="'+s+'"'+(l.stav===s?' selected':'')+'>'+s+'</option>';
       }).join('')+
     '</select></div>'+
-    (l.zarizeni?'<div style="margin-top:12px;padding:10px;background:var(--bg);border-radius:var(--rm);font-size:12px;color:var(--text-2)">Zařízení: '+l.zarizeni+'</div>':'')+
+    (l.params?'<div style="margin-top:12px"><div style="font-size:11px;font-weight:600;color:var(--text-2);margin-bottom:6px;letter-spacing:.4px">PARAMETRY KALKULAČKY</div><div style="background:var(--bg);border-radius:var(--rm);padding:10px;font-size:11px;color:var(--text-2);line-height:1.8">'+
+      (function(){
+        try{
+          var p=JSON.parse(l.params);
+          var rows=[];
+          if(p.lokace) rows.push('📍 '+p.lokace);
+          if(p.bytu) rows.push('🏠 '+p.bytu+' bytů');
+          if(p.kwp) rows.push('⚡ '+p.kwp+' kWp');
+          if(p.zarizeni) rows.push('🔌 '+p.zarizeni.join(', '));
+          if(p.strTyp) rows.push('🏗️ Střecha: '+p.strTyp+' ('+p.sklon+'°)');
+          if(p.dist) rows.push('📡 '+p.dist);
+          if(p.topeni) rows.push('🔥 Topení: '+p.topeni);
+          if(p.tc) rows.push('♨️ Tepelné čerpadlo');
+          if(p.ev>0) rows.push('🔌 EV nabíječek: '+p.ev);
+          if(p.adresa_domu) rows.push('🏠 Adresa: '+p.adresa_domu);
+          if(p.zdroj) rows.push('📋 Zdroj: '+p.zdroj);
+          return rows.join('<br>')||'—';
+        }catch(e){return '—';}
+      })()+
+    '</div></div>':'')+
   '</div>';
 
   document.getElementById('detailContent').innerHTML=html;
