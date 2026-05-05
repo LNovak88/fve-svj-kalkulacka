@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nastavit nové heslo | SVJ Energie</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#1E3A5F;--blue:#1B6CA8;--blue-l:#E3F0FA;--green:#2E8B4A;--green-l:#E3F4E9;--text:#1E293B;--text-2:#64748B;--border:#E2E8F0;--bg:#F8FAFB;--white:#ffffff;--r:14px;--rm:8px}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}
+.card{background:var(--white);border-radius:var(--r);padding:36px;max-width:420px;width:100%;box-shadow:0 8px 32px rgba(30,58,95,0.12);border:0.5px solid var(--border)}
+.logo{display:flex;align-items:center;gap:10px;margin-bottom:24px;text-decoration:none}
+.logo-box{width:40px;height:40px;background:var(--blue);border-radius:var(--rm);display:flex;align-items:center;justify-content:center}
+.logo-t{font-size:16px;font-weight:600;color:var(--navy)}
+h1{font-family:'DM Serif Display',serif;font-size:22px;color:var(--navy);margin-bottom:6px}
+.sub{font-size:13px;color:var(--text-2);margin-bottom:22px;line-height:1.5}
+.field{margin-bottom:12px}
+label{display:block;font-size:12px;color:var(--text-2);margin-bottom:4px;font-weight:500}
+input{width:100%;padding:11px 13px;border:0.5px solid #CBD5E1;border-radius:var(--rm);font-size:13px;font-family:inherit;outline:none;transition:border-color .15s}
+input:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-l)}
+.pw-wrap{position:relative}
+.pw-wrap input{padding-right:42px}
+.pw-eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;color:var(--text-2)}
+.pw-strength{height:3px;border-radius:2px;margin-top:4px;background:var(--border);transition:all .3s}
+.pw-strength.weak{background:#F43F5E;width:33%}.pw-strength.ok{background:#F59E0B;width:66%}.pw-strength.strong{background:var(--green);width:100%}
+.pw-hint{font-size:10px;color:var(--text-2);margin-top:2px}
+.btn{width:100%;padding:14px;background:linear-gradient(135deg,var(--blue) 0%,#1557a0 100%);color:#fff;border:none;border-radius:var(--rm);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:6px;transition:opacity .15s;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn:hover{opacity:.9}
+.alert{padding:12px 14px;border-radius:var(--rm);font-size:13px;margin-bottom:14px;display:none}
+.alert.err{background:#FEE2E2;border:1px solid #FCA5A5;color:#991B1B}
+.alert.ok{background:var(--green-l);border:1px solid #A3D8B8;color:#1A5C32}
+.spin{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="card">
+  <a href="https://www.svjenergie.cz" class="logo">
+    <div class="logo-box">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <path d="M5 17L12 7L19 17" stroke="#2E8B4A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <rect x="7" y="15" width="10" height="2" rx="1" fill="#2E8B4A" opacity=".8"/>
+      </svg>
+    </div>
+    <span class="logo-t">svjenergie</span>
+  </a>
+
+  <div id="alertBox" class="alert"></div>
+
+  <div id="formWrap">
+    <h1>Nastavit nové heslo</h1>
+    <p class="sub">Zadejte nové heslo pro váš účet SVJ Energie.</p>
+    <div class="field">
+      <label>Nové heslo</label>
+      <div class="pw-wrap">
+        <input type="password" id="pw1" placeholder="Minimálně 8 znaků" oninput="checkStr(this.value)" autocomplete="new-password">
+        <button class="pw-eye" onclick="tog('pw1',this)" type="button">👁</button>
+        <div class="pw-strength" id="str"></div>
+        <div class="pw-hint" id="strHint"></div>
+      </div>
+    </div>
+    <div class="field">
+      <label>Potvrdit heslo</label>
+      <div class="pw-wrap">
+        <input type="password" id="pw2" placeholder="Zopakujte heslo" autocomplete="new-password">
+        <button class="pw-eye" onclick="tog('pw2',this)" type="button">👁</button>
+      </div>
+    </div>
+    <button class="btn" id="submitBtn" onclick="submitReset()">
+      <span id="btnTxt">Uložit nové heslo →</span>
+    </button>
+  </div>
+
+  <div id="successWrap" style="display:none;text-align:center;padding:20px 0">
+    <div style="font-size:48px;margin-bottom:12px">✅</div>
+    <h1 style="margin-bottom:8px">Heslo změněno!</h1>
+    <p class="sub">Přesměrováváme vás na kalkulačku…</p>
+  </div>
+</div>
+
+<script>
+const SUPA_URL='https://aeypeepckmbejdcotdss.supabase.co';
+const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFleXBlZXBja21iZWpkY290ZHNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTkyNjAsImV4cCI6MjA5Mjk3NTI2MH0.JjYiI3bcL1ds1vAkFq59Z0WhNCLAd8oekX6GF4Zq5bA';
+
+// Získat access_token z URL hash (Supabase ho posílá v odkazu)
+function getTokenFromHash(){
+  const hash=window.location.hash.substring(1);
+  const params=new URLSearchParams(hash);
+  return{
+    access_token: params.get('access_token'),
+    refresh_token: params.get('refresh_token'),
+    type: params.get('type')
+  };
+}
+
+const {access_token, type}=getTokenFromHash();
+
+// Pokud není token nebo není recovery typ — chyba
+if(!access_token || type !== 'recovery'){
+  showAlert('err','Neplatný nebo expirovaný odkaz. Požádejte o nový reset hesla.');
+  document.getElementById('formWrap').style.display='none';
+}
+
+function checkStr(pw){
+  const s=document.getElementById('str'),h=document.getElementById('strHint');
+  const strong=pw.length>=10&&/[A-Z]/.test(pw)&&/[0-9]/.test(pw);
+  const ok=pw.length>=8;
+  s.className='pw-strength'+(strong?' strong':ok?' ok':pw.length?' weak':'');
+  h.textContent=strong?'Silné heslo':ok?'Přidejte číslo nebo velké písmeno':'Minimálně 8 znaků';
+}
+
+function tog(id,btn){
+  const el=document.getElementById(id);
+  el.type=el.type==='password'?'text':'password';
+  btn.textContent=el.type==='password'?'👁':'🔒';
+}
+
+function showAlert(type,msg){
+  const el=document.getElementById('alertBox');
+  el.className='alert '+type;
+  el.textContent=msg;
+  el.style.display='block';
+}
+
+async function submitReset(){
+  const pw1=document.getElementById('pw1').value;
+  const pw2=document.getElementById('pw2').value;
+  if(!pw1||pw1.length<8){showAlert('err','Heslo musí mít alespoň 8 znaků.');return;}
+  if(pw1!==pw2){showAlert('err','Hesla se neshodují.');return;}
+
+  const btn=document.getElementById('submitBtn');
+  const txt=document.getElementById('btnTxt');
+  btn.disabled=true;
+  txt.innerHTML='<span class="spin"></span> Ukládám…';
+
+  try{
+    const r=await fetch(SUPA_URL+'/auth/v1/user',{
+      method:'PUT',
+      headers:{'apikey':SUPA_KEY,'Content-Type':'application/json','Authorization':'Bearer '+access_token},
+      body:JSON.stringify({password:pw1})
+    });
+    const data=await r.json();
+    if(!r.ok) throw new Error(data.message||'Chyba při změně hesla');
+
+    // Uložit token pro přihlášení
+    localStorage.setItem('supa_access_token', access_token);
+
+    document.getElementById('formWrap').style.display='none';
+    document.getElementById('successWrap').style.display='block';
+    setTimeout(()=>window.location.href='kalkulator.html',2000);
+  }catch(e){
+    showAlert('err', e.message);
+    btn.disabled=false;
+    txt.textContent='Uložit nové heslo →';
+  }
+}
+</script>
+</body>
+</html>
