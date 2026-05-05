@@ -272,6 +272,22 @@ input[type=range]{width:100%;accent-color:var(--blue);margin-bottom:12px;cursor:
           </div>
           <div><label style="display:block;font-size:11px;font-weight:600;color:var(--text-2);margin-bottom:4px;letter-spacing:.4px">E-MAILOVÁ ADRESA</label><input type="email" id="regEmail" placeholder="jan@svj.cz" autocomplete="email"></div>
           <div><label style="display:block;font-size:11px;font-weight:600;color:var(--text-2);margin-bottom:4px;letter-spacing:.4px">TELEFON</label><div style="position:relative"><input type="tel" id="regTel" placeholder="603 123 456" autocomplete="tel" oninput="formatTel(this)"><span id="telIcon" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none"></span></div></div>
+          <!-- Adresa bytového domu s autocomplete -->
+          <div><label style="display:block;font-size:11px;font-weight:600;color:var(--text-2);margin-bottom:4px;letter-spacing:.4px">ADRESA BYTOVÉHO DOMU</label>
+            <div style="position:relative">
+              <input type="text" id="regAdresa" placeholder="Např. Praha 4, Nuselská 12" autocomplete="off" oninput="regAcInput(this)" style="width:100%;padding:10px 13px;border:0.5px solid #CBD5E1;border-radius:var(--rm);font-size:13px;font-family:inherit;outline:none">
+              <div id="regAcList" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:0.5px solid #CBD5E1;border-radius:var(--rm);z-index:300;box-shadow:0 8px 24px rgba(0,0,0,.1);overflow:hidden"></div>
+            </div>
+          </div>
+          <!-- Kontaktní adresa -->
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text-2)">
+            <input type="checkbox" id="regSameAddr" checked onchange="toggleRegKontAddr()" style="width:15px;height:15px;accent-color:var(--blue);cursor:pointer;appearance:checkbox;-webkit-appearance:checkbox">
+            <span>Kontaktní adresa je stejná jako adresa domu</span>
+          </label>
+          <div id="regKontAddrWrap" style="display:none">
+            <label style="display:block;font-size:11px;font-weight:600;color:var(--text-2);margin-bottom:4px;letter-spacing:.4px">KONTAKTNÍ ADRESA</label>
+            <input type="text" id="regKontAddr" placeholder="Ulice, město" autocomplete="street-address" style="width:100%;padding:10px 13px;border:0.5px solid #CBD5E1;border-radius:var(--rm);font-size:13px;font-family:inherit;outline:none">
+          </div>
           <div><label style="display:block;font-size:11px;font-weight:600;color:var(--text-2);margin-bottom:4px;letter-spacing:.4px">NÁZEV SVJ <span style="font-weight:400;text-transform:none;letter-spacing:0">(volitelné)</span></label><input type="text" id="regSvj" placeholder="SVJ Ke Školce 12"></div>
           <div><label style="display:block;font-size:11px;font-weight:600;color:var(--text-2);margin-bottom:4px;letter-spacing:.4px">POZICE V SVJ <span style="font-weight:400;text-transform:none;letter-spacing:0">(volitelné)</span></label>
           <select id="regPozice" style="width:100%;padding:10px 13px;border:0.5px solid #CBD5E1;border-radius:var(--rm);font-size:13px;color:var(--text);background:var(--white);font-family:inherit;outline:none">
@@ -1570,9 +1586,48 @@ if(window.location.hash==='#registrace') setTimeout(()=>{
   ['pending_reg_email','pending_reg_jmeno','pending_reg_tel','pending_reg_svj'].forEach(k=>localStorage.removeItem(k));
 },800);
 
-// ================================================================
-// USER MENU
-// ================================================================
+// Adresa v registračním modalu — autocomplete
+let _regAcTimer=null;
+function regAcInput(el){
+  clearTimeout(_regAcTimer);
+  const v=el.value.trim();
+  const list=document.getElementById('regAcList');
+  if(!list) return;
+  if(v.length<3){list.style.display='none';return;}
+  _regAcTimer=setTimeout(async()=>{
+    try{
+      const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(v+', Česká republika')}&format=json&limit=5&countrycodes=cz`,{headers:{'User-Agent':'SVJEnergie/1.0'}});
+      const data=await r.json();
+      if(!data.length){list.style.display='none';return;}
+      list.innerHTML=data.map(d=>`<div onclick="pickRegAddr('${(d.display_name||'').replace(/'/g,"\\'")}','${d.lat}','${d.lon}')" style="padding:9px 13px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .1s;color:#1E293B" onmouseover="this.style.background='#E3F0FA'" onmouseout="this.style.background=''">📍 ${d.display_name}</div>`).join('');
+      list.style.display='block';
+    }catch(e){}
+  },400);
+}
+function pickRegAddr(name,lat,lon){
+  const el=document.getElementById('regAdresa');
+  const list=document.getElementById('regAcList');
+  if(el) el.value=name.split(',').slice(0,3).join(', ');
+  if(list) list.style.display='none';
+  // Uložit pro lead
+  window._regLat=parseFloat(lat);
+  window._regLon=parseFloat(lon);
+  // Předvyplnit i adresu domu D pokud je prázdná
+  if(!D.lokace){D.lokace=el?.value||'';D.lat=window._regLat;D.lon=window._regLon;}
+}
+document.addEventListener('click',function(e){
+  const list=document.getElementById('regAcList');
+  const inp=document.getElementById('regAdresa');
+  if(list&&inp&&!inp.contains(e.target)&&!list.contains(e.target)) list.style.display='none';
+});
+function toggleRegKontAddr(){
+  const wrap=document.getElementById('regKontAddrWrap');
+  const chk=document.getElementById('regSameAddr');
+  if(wrap) wrap.style.display=chk?.checked?'none':'block';
+}
+
+// Pokračovat tlačítko — přejmenovat Další na Pokračovat
+
 function toggleUserMenu(){document.getElementById('userDropdown').classList.toggle('open');}
 function closeUserMenu(){document.getElementById('userDropdown').classList.remove('open');}
 document.addEventListener('click',function(e){const m=document.getElementById('userMenu');if(m&&!m.contains(e.target))closeUserMenu();});
