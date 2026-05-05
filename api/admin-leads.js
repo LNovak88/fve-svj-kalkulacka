@@ -36,10 +36,16 @@ export default async function handler(req, res) {
       headers: {
         'apikey': SERVICE_KEY,
         'Authorization': 'Bearer ' + SERVICE_KEY,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Prefer': 'return=representation'
       }
     });
-    const data = await r.json();
+    const text = await r.text();
+    console.log('Supabase response status:', r.status);
+    console.log('Supabase response:', text.substring(0, 200));
+    let data;
+    try { data = JSON.parse(text); } catch(e) { data = []; }
     const leads = Array.isArray(data) ? data : [];
     res.setHeader('Cache-Control', 'no-store');
     return res.status(200).json(leads);
