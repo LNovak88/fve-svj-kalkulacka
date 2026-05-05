@@ -254,6 +254,7 @@ async function loadLeads(){
       throw new Error('HTTP '+r.status+': '+errText);
     }
     ALL_LEADS=await r.json();
+    if(!Array.isArray(ALL_LEADS)) ALL_LEADS=[];
     updateStats();
     filterLeads();
   }catch(e){
