@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SVJ Energie — FVE kalkulačka pro bytové domy | Ušetřete na elektřině</title>
-<meta name="description" content="Zjistěte za 2 minuty, kolik ušetří váš bytový dům díky fotovoltaice. Bezplatná kalkulačka FVE pro SVJ a správce bytových domů. Reálná data, přesné výpočty.">
+<meta name="description" content="Zjistěte za 2 minuty, kolik ušetří váš bytový dům na fotovoltaice. Bezplatná kalkulačka FVE pro SVJ a správce bytových domů. Reálná data, přesné výpočty.">
 <meta name="keywords" content="FVE SVJ, fotovoltaika bytový dům, solární panely SVJ, kalkulačka FVE, úspory elektřiny SVJ, EDC sdílení energie, komunitní energetika">
 <link rel="canonical" href="https://www.svjenergie.cz">
 <meta property="og:title" content="SVJ Energie — Kolik ušetří váš bytový dům na FVE?">
@@ -853,6 +853,12 @@ initCookies();
           <option value="vlastnik">Vlastník bytu</option>
           <option value="jine">Jiné</option>
         </select></div>
+        <div><label style="font-size:11px;font-weight:600;color:#64748B;display:block;margin-bottom:4px;letter-spacing:.4px">HESLO</label>
+        <div style="position:relative"><input type="password" id="scrollPw" placeholder="Minimálně 8 znaků" autocomplete="new-password" style="width:100%;padding:10px 40px 10px 13px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;font-family:inherit;outline:none" oninput="checkScrollPw(this.value)"><button onclick="var e=document.getElementById('scrollPw');e.type=e.type==='password'?'text':'password';this.textContent=e.type==='password'?'👁':'🔒'" type="button" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;color:#64748B">👁</button></div>
+        <div id="scrollPwStr" style="height:3px;border-radius:2px;margin-top:4px;background:#E2E8F0;transition:all .3s"></div>
+        <div id="scrollPwHint" style="font-size:10px;color:#64748B;margin-top:2px"></div></div>
+        <div><label style="font-size:11px;font-weight:600;color:#64748B;display:block;margin-bottom:4px;letter-spacing:.4px">POTVRDIT HESLO</label>
+        <div style="position:relative"><input type="password" id="scrollPw2" placeholder="Zopakujte heslo" autocomplete="new-password" style="width:100%;padding:10px 40px 10px 13px;border:1px solid #CBD5E1;border-radius:8px;font-size:13px;font-family:inherit;outline:none"><button onclick="var e=document.getElementById('scrollPw2');e.type=e.type==='password'?'text':'password';this.textContent=e.type==='password'?'👁':'🔒'" type="button" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;color:#64748B">👁</button></div></div>
         <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer">
           <input type="checkbox" id="scrollGdpr" style="width:16px;height:16px;min-width:16px;margin-top:2px;accent-color:#2E8B4A;cursor:pointer;flex-shrink:0;appearance:checkbox;-webkit-appearance:checkbox">
           <span style="font-size:12px;color:#64748B;line-height:1.5">Souhlasím se <a href="gdpr.html" target="_blank" style="color:#1B6CA8">zpracováním osobních údajů</a> a <a href="podminky.html" target="_blank" style="color:#1B6CA8">obchodními podmínkami</a>.</span>
@@ -1028,6 +1034,17 @@ function formatScrollTel(el){
   document.getElementById('scrollTelIcon').textContent = el.value.length > 3 ? (ok ? '✅' : '❌') : '';
 }
 
+function checkScrollPw(pw){
+  const s=document.getElementById('scrollPwStr');
+  const h=document.getElementById('scrollPwHint');
+  if(!s) return;
+  const strong=pw.length>=10&&/[A-Z]/.test(pw)&&/[0-9]/.test(pw);
+  const ok=pw.length>=8;
+  s.style.background=strong?'#2E8B4A':ok?'#F59E0B':pw.length?'#F43F5E':'#E2E8F0';
+  s.style.width=strong?'100%':ok?'66%':pw.length?'33%':'0%';
+  if(h) h.textContent=strong?'Silné heslo':ok?'Přidejte číslo nebo velké písmeno':'Minimálně 8 znaků';
+}
+
 async function submitScrollReg(){
   var gdpr = document.getElementById('scrollGdpr');
   if(!gdpr || !gdpr.checked){
@@ -1042,12 +1059,13 @@ async function submitScrollReg(){
   var pozice = document.getElementById('scrollPozice')?.value||'';
   var adresa = document.getElementById('scrollAdresa')?.value.trim()||'';
   var kontAddr = document.getElementById('scrollSameAddr')?.checked ? adresa : (document.getElementById('scrollKontAddr')?.value.trim()||'');
+  var pw = document.getElementById('scrollPw')?.value||'';
+  var pw2 = document.getElementById('scrollPw2')?.value||'';
 
   if(!email||!email.includes('@')){shake(document.getElementById('scrollEmail'));return;}
   if(!jmeno){shake(document.getElementById('scrollJmeno'));return;}
-
-  // Generovat dočasné heslo — uživatel si ho nastaví přes email
-  var tmpPw = 'Svj'+Math.random().toString(36).slice(2,10)+'!';
+  if(!pw||pw.length<8){shake(document.getElementById('scrollPw'));showScrollErr(document.getElementById('scrollPw').parentElement,'Heslo musí mít alespoň 8 znaků.');return;}
+  if(pw!==pw2){shake(document.getElementById('scrollPw2'));showScrollErr(document.getElementById('scrollPw2').parentElement,'Hesla se neshodují.');return;}
 
   var btn=document.getElementById('scrollBtn');
   var txt=document.getElementById('scrollBtnTxt');
@@ -1062,7 +1080,7 @@ async function submitScrollReg(){
     var r=await fetch(SUPA_URL+'/auth/v1/signup',{
       method:'POST',
       headers:{'apikey':SUPA_KEY,'Content-Type':'application/json'},
-      body:JSON.stringify({email:email,password:tmpPw,data:{full_name:jmeno,phone:tel,svj:svj,pozice:pozice,adresa_domu:adresa,adresa_kontakt:kontAddr}})
+      body:JSON.stringify({email:email,password:pw,data:{full_name:jmeno,phone:tel,svj:svj,pozice:pozice,adresa_domu:adresa,adresa_kontakt:kontAddr}})
     });
     var data=await r.json();
     if(!r.ok) throw new Error(prelozChybuIndex(data.msg||data.error_description||'Chyba registrace'));
@@ -1074,11 +1092,10 @@ async function submitScrollReg(){
       body:JSON.stringify({jmeno:jmeno,email:email,telefon:tel||null,svj:svj||null,pozice:pozice||null,lat:window._scrollLat||null,lon:window._scrollLon||null,stav:'novy'})
     });
 
-    // 3. Zobrazit úspěch
     document.getElementById('sPanelReg').style.display='none';
     document.getElementById('sSuccess').style.display='block';
     document.getElementById('sSuccessTitle').textContent='Registrace úspěšná!';
-    document.getElementById('sSuccessDesc').textContent='Zkontrolujte e-mail '+email+' — pošleme vám odkaz pro nastavení hesla.';
+    document.getElementById('sSuccessDesc').textContent='Zkontrolujte e-mail '+email+' — potvrďte svou adresu a přihlaste se.';
 
   }catch(e){
     btn.disabled=false;
