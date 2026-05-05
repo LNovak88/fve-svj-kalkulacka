@@ -1112,10 +1112,28 @@ async function submitScrollReg(){
     if(!r.ok) throw new Error(prelozChybuIndex(data.msg||data.error_description||'Chyba registrace'));
 
     // 2. Uložit lead
+    var telRaw2=(tel||'').replace(/\s/g,'');
+    var telClean2=telRaw2.length===9?telRaw2:null;
     await fetch(SUPA_URL+'/rest/v1/leads',{
       method:'POST',
       headers:{'apikey':SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
-      body:JSON.stringify({jmeno:jmeno,email:email,telefon:tel||null,svj:svj||null,pozice:pozice||null,lat:window._scrollLat||null,lon:window._scrollLon||null,stav:'novy'})
+      body:JSON.stringify({
+        jmeno:jmeno||'—',
+        email:email,
+        telefon:telClean2,
+        svj:svj||null,
+        pozice:pozice||null,
+        lat:window._scrollLat||null,
+        lon:window._scrollLon||null,
+        stav:'nový',
+        params:JSON.stringify({
+          adresa_domu:adresa||null,
+          adresa_kontakt:kontAddr||null,
+          svj:svj||null,
+          pozice:pozice||null,
+          zdroj:'index'
+        })
+      })
     });
 
     document.getElementById('sPanelReg').style.display='none';
