@@ -235,8 +235,8 @@ input[type=range]{width:100%;accent-color:var(--blue);margin-bottom:12px;cursor:
           <div class="user-dd-name" id="ddName">—</div>
           <div class="user-dd-email" id="ddEmail">—</div>
         </div>
-        <button class="user-dd-item" onclick="closeUserMenu();openModal();switchTab('reg')">📊 Moje výpočty</button>
-        <button class="user-dd-item" onclick="closeUserMenu();openNastaveni()">⚙️ Nastavení účtu</button>
+        <a href="moje-vypocty.html" class="user-dd-item" style="text-decoration:none;display:flex;align-items:center;gap:10px;padding:10px 14px;font-size:13px;color:var(--text);cursor:pointer;transition:background .1s" onmouseover="this.style.background='var(--blue-ll)'" onmouseout="this.style.background=''">📊 Moje výpočty</a>
+        <a href="profil.html" class="user-dd-item" style="text-decoration:none;display:flex;align-items:center;gap:10px;padding:10px 14px;font-size:13px;color:var(--text);cursor:pointer;transition:background .1s" onmouseover="this.style.background='var(--blue-ll)'" onmouseout="this.style.background=''">⚙️ Nastavení účtu</a>
         <div class="user-dd-sep"></div>
         <button class="user-dd-item danger" onclick="odhlasit()">↩ Odhlásit se</button>
       </div>
@@ -1106,6 +1106,7 @@ function s6(){
     const resEl=document.getElementById('resBody');
     if(resEl) resEl.innerHTML=renderResults(R_rychly);
     setTimeout(()=>drawCf(R_rychly.cf),50);
+    autoSaveSimulace(R_rychly);
     // 2. Pokud máme adresu — načti PVGIS na pozadí a tiše přepočítej
     if(D.lat&&D.lon){
       if(pvgisEl) pvgisEl.innerHTML='<div class="pvgis-loading"><div class="pvgis-spinner"></div><span>Zpřesňuji data z PVGIS EU JRC pro vaši adresu…</span></div>';
@@ -1114,6 +1115,7 @@ function s6(){
         const R_presny=vypoctiVse(vyroba);
         if(resEl) resEl.innerHTML=renderResults(R_presny);
         setTimeout(()=>drawCf(R_presny.cf),50);
+        autoSaveSimulace(R_presny);
         if(pvgisEl) pvgisEl.innerHTML=`<div style="font-size:12px;color:var(--green);padding:8px 0;">✅ Zpřesněno reálnými daty PVGIS pro: <strong>${D.lokace}</strong></div>`;
       } else {
         if(pvgisEl) pvgisEl.innerHTML=`<div style="font-size:12px;color:var(--amber);padding:8px 0;">⚠️ PVGIS nedostupné — použit krajový průměr ${Math.round(pvgisKrajKwh(D.lat,D.lon,D.sklon,D.azimut))} kWh/kWp/rok</div>`;
@@ -1600,6 +1602,51 @@ function unlockPremium(){
   document.querySelectorAll('.scenare-wrap .scenare-blur').forEach(c=>c.classList.remove('scenare-blur'));
   document.querySelectorAll('.scenare-overlay').forEach(c=>c.remove());
   sessionStorage.setItem('premium_unlocked','true');
+}
+
+async function autoSaveSimulace(R){
+  const token=localStorage.getItem('supa_access_token');
+  if(!token) return;
+  try{
+    // Ověřit uživatele
+    const ru=await fetch(SUPA_URL+'/auth/v1/user',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+token}});
+    if(!ru.ok) return;
+    const user=await ru.json();
+    if(!user.id) return;
+
+    // Zkontrolovat počet simulací
+    const rs=await fetch(SUPA_URL+'/rest/v1/simulations?user_id=eq.'+user.id+'&order=created_at.asc&select=id,created_at',{
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+token}
+    });
+    const sims=await rs.json();
+
+    // Pokud má 5+ simulací, smazat nejstarší
+    if(Array.isArray(sims)&&sims.length>=5){
+      const nejstarsi=sims[0];
+      await fetch(SUPA_URL+'/rest/v1/simulations?id=eq.'+nejstarsi.id,{
+        method:'DELETE',
+        headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+token,'Prefer':'return=minimal'}
+      });
+    }
+
+    // Uložit novou simulaci
+    const nazev=(D.lokace||'Bez adresy')+' · '+D.bytu+' bytů · '+R.kwp+' kWp';
+    await supaFetch('/rest/v1/simulations','POST',{
+      user_id:user.id,
+      name:nazev,
+      params:JSON.stringify({...D,kwp:R.kwp}),
+      result:JSON.stringify({
+        uspora_rok:R.uspora_rok,
+        nav:R.nav,
+        kum25:R.kum25,
+        investice:R.investice,
+        vyroba_mwh:R.vyroba_mwh
+      })
+    });
+    console.log('Simulace uložena:', nazev);
+  }catch(e){
+    console.warn('Chyba uložení simulace:', e);
+  }
 }
 
 (function checkPremiumOnLoad(){
