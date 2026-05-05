@@ -185,10 +185,10 @@ a.email-link:hover{color:var(--blue)}
 
 <script>
 var SUPA_URL='https://aeypeepckmbejdcotdss.supabase.co';
-var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFleXBlZXBja21iZWpkY290ZHNzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NzM5OTI2MCwiZXhwIjoyMDkyOTc1MjYwfQ.MKEIKTbFXkyf96mkuWproK6CmmKpUo0MTNVNRBbxVdg';
+var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFleXBlZXBja21iZWpkY290ZHNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTkyNjAsImV4cCI6MjA5Mjk3NTI2MH0.JjYiI3bcL1ds1vAkFq59Z0WhNCLAd8oekX6GF4Zq5bA';
 
 // ADMIN EMAIL — sem přidej svůj admin email
-var ADMIN_EMAIL='lnovak88@seznam.cz';
+var ADMIN_EMAIL='lsohr@seznam.cz';
 
 var TOKEN=null;
 var ALL_LEADS=[];
@@ -246,10 +246,13 @@ function doLogout(){
 async function loadLeads(){
   document.getElementById('tableContent').innerHTML='<div class="loading"><div class="spinner"></div>Načítám leady&hellip;</div>';
   try{
-    var r=await fetch(SUPA_URL+'/rest/v1/leads?order=created_at.desc&limit=500',{
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+TOKEN,'Content-Type':'application/json'}
+    var r=await fetch('/api/admin-leads',{
+      headers:{'Authorization':'Bearer '+TOKEN,'Content-Type':'application/json','Accept':'application/json'}
     });
-    if(!r.ok) throw new Error('Chyba načítání');
+    if(!r.ok){
+      var errText=await r.text();
+      throw new Error('HTTP '+r.status+': '+errText);
+    }
     ALL_LEADS=await r.json();
     updateStats();
     filterLeads();
@@ -325,10 +328,10 @@ function renderTable(leads){
 }
 
 async function changeStav(id, stav){
-  await fetch(SUPA_URL+'/rest/v1/leads?id=eq.'+id,{
+  await fetch('/api/admin-leads',{
     method:'PATCH',
-    headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+TOKEN,'Content-Type':'application/json','Prefer':'return=minimal'},
-    body:JSON.stringify({stav:stav})
+    headers:{'Authorization':'Bearer '+TOKEN,'Content-Type':'application/json'},
+    body:JSON.stringify({id:id,stav:stav})
   });
   var lead=ALL_LEADS.find(function(l){return l.id===id;});
   if(lead) lead.stav=stav;
