@@ -958,8 +958,33 @@ async function spustVypocet(){
 // ================================================================
 async function ulozSimulaci(res, payload){
   if(!USER) return;
+
+  // Vypočítat klíčové výsledky
+  const sim = res.sim || {};
+  const cf  = res.cf  || [];
+  const cvt = (res.cvt||6610) / 1000;
+  const cnt = (res.cnt||4070) / 1000;
+  const cpr = (D.cena_pretoky||1.5) / 1000;
+  const uspora_rok = cf[0]?.uspora_celkem ||
+    Math.round((sim.vlastni_vt_kwh||0)*cvt + (sim.vlastni_nt_kwh||0)*cnt + (sim.pretoky_kwh||0)*cpr);
+  const nav = cf.findIndex(r=>r.kumulativni>=0)+1 || null;
+  const kum25 = cf[24]?.kumulativni || 0;
+  const vyroba_mwh = Math.round((sim.vyroba_kwh||0)/100)/10;
+  const nazev = `${D.lokace||'Bez adresy'} · ${D.bytu} bytů · ${res.kwp} kWp`;
+
+  const vysledky = {
+    uspora_rok, nav, kum25,
+    investice: res.inv,
+    vyroba_mwh,
+    kwp: res.kwp,
+    vlastni_kwh: Math.round(sim.vlastni_kwh||0),
+    pretoky_kwh: Math.round(sim.pretoky_kwh||0),
+    mira_vs: Math.round((sim.mira_vs||0)*100),
+    mira_sob: Math.round((sim.mira_sob||0)*100),
+  };
+
   try{
-    // Smazat nejstarší pokud je 5+
+    // 1. Uložit do simulations (max 5, smazat nejstarší)
     const vsechny = await fetch(
       `${SUPA_URL}/rest/v1/simulations?user_id=eq.${USER.id}&order=created_at.asc&select=id`,
       {headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getToken()}}
@@ -971,21 +996,83 @@ async function ulozSimulaci(res, payload){
         headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getToken(),'Prefer':'return=minimal'}
       });
     }
-    const nazev = `${D.lokace||'Bez adresy'} · ${D.bytu} bytů · ${res.kwp} kWp`;
     await supaFetch('/rest/v1/simulations','POST',{
       user_id: USER.id,
       name: nazev,
       params: JSON.stringify(payload),
-      result: JSON.stringify({
-        uspora_rok: res.sim?.vlastni_kwh ? Math.round(res.sim.vlastni_kwh * res.cvt / 1000) : 0,
-        nav: res.cf?.findIndex(r=>r.kumulativni>=0)+1 || null,
-        kum25: res.cf?.[24]?.kumulativni || 0,
-        investice: res.inv,
-        vyroba_mwh: Math.round((res.sim?.vyroba_kwh||0)/100)/10,
-        kwp: res.kwp,
-      }),
+      result: JSON.stringify(vysledky),
     });
-  }catch(e){ console.warn('Chyba uložení:', e); }
+  }catch(e){ console.warn('Chyba uložení simulace:', e); }
+
+  try{
+    // 2. Uložit/aktualizovat výsledky v leads (hledat lead dle emailu uživatele)
+    // Nejdřív zkusit najít existující lead
+    const existLead = await fetch(
+      `${SUPA_URL}/rest/v1/leads?email=eq.${encodeURIComponent(USER.email)}&select=id&limit=1`,
+      {headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getToken()}}
+    );
+    const leads = await existLead.json();
+
+    const leadData = {
+      // Vstupní parametry
+      kwp: res.kwp,
+      bytu: parseInt(D.bytu)||null,
+      pater: parseInt(D.pater)||null,
+      dist: D.dist||null,
+      lat: D.lat||null,
+      lon: D.lon||null,
+      tc: D.tc===true,
+      ev: parseInt(D.ev)||0,
+      stav: 'nový',
+      // Výsledky výpočtu v params
+      params: JSON.stringify({
+        // Vstup
+        lokace: D.lokace||null,
+        bytu: D.bytu, vchodu: D.vchodu, pater: D.pater,
+        dist: D.dist, sazba: payload.sazba,
+        kwp: res.kwp, sklon: D.sklon, azimut: D.azimut,
+        model: D.model, bat: D.bat,
+        sp_by_vt_mwh: payload.sp_by_vt_mwh,
+        sp_by_nt_mwh: payload.sp_by_nt_mwh,
+        sp_sp_mwh: payload.sp_sp_mwh,
+        cena_invest: res.inv,
+        splatnost: D.splatnost,
+        rust_cen: D.rust_cen,
+        // Výsledky
+        uspora_rok,
+        uspora_byt_mes: Math.round(uspora_rok/(D.bytu||1)/12),
+        nav,
+        kum25,
+        vyroba_mwh,
+        vlastni_kwh: Math.round(sim.vlastni_kwh||0),
+        mira_vs: Math.round((sim.mira_vs||0)*100),
+        mira_sob: Math.round((sim.mira_sob||0)*100),
+        zdroj: 'kalkulator-pro',
+        vypocet_cas: new Date().toISOString(),
+      }),
+    };
+
+    if(Array.isArray(leads) && leads.length > 0){
+      // Aktualizovat existující lead
+      await fetch(`${SUPA_URL}/rest/v1/leads?id=eq.${leads[0].id}`,{
+        method:'PATCH',
+        headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getToken(),'Content-Type':'application/json','Prefer':'return=minimal'},
+        body: JSON.stringify(leadData),
+      });
+    } else {
+      // Vytvořit nový lead
+      const name = USER.user_metadata?.full_name || USER.email?.split('@')[0] || '—';
+      await supaFetch('/rest/v1/leads','POST',{
+        ...leadData,
+        jmeno: name,
+        email: USER.email,
+        telefon: USER.user_metadata?.phone||null,
+        svj: USER.user_metadata?.svj||null,
+        pozice: USER.user_metadata?.pozice||null,
+      });
+    }
+    console.log('Výsledky uloženy do leads:', nazev);
+  }catch(e){ console.warn('Chyba uložení do leads:', e); }
 }
 
 // ================================================================
