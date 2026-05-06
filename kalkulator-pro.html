@@ -462,8 +462,8 @@ async function getVypoctyDnes(){
 async function updateLimitBar(){
   if(!USER) return;
   const sims = await getVypoctyDnes();
-  const pouzito = sims.length;
-  const zbyvá = Math.max(0, LIMIT_VYPOCTU - pouzito);
+  const pouzito = Array.isArray(sims) ? sims.length : 0;
+  const zbyva = Math.max(0, LIMIT_VYPOCTU - pouzito);
   const bar = document.getElementById('limitBar');
   const dots = document.getElementById('limitDots');
   const txt  = document.getElementById('limitTxt');
@@ -475,12 +475,12 @@ async function updateLimitBar(){
     dotsHtml += `<div class="limit-dot ${cls}"></div>`;
   }
   dots.innerHTML = dotsHtml;
-  if(zbývá === 0){
+  if(zbyva === 0){
     txt.innerHTML = `<strong style="color:var(--rose)">Dosáhli jste limitu ${LIMIT_VYPOCTU} výpočtů za ${LIMIT_HODIN} hodin.</strong> Nový výpočet bude možný po ${LIMIT_HODIN} hodinách.`;
   } else {
-    txt.innerHTML = `Zbývají <strong>${zbývá} z ${LIMIT_VYPOCTU} výpočtů</strong> za posledních ${LIMIT_HODIN} hodin`;
+    txt.innerHTML = `Zbývají <strong>${zbyva} z ${LIMIT_VYPOCTU} výpočtů</strong> za posledních ${LIMIT_HODIN} hodin`;
   }
-  return zbývá > 0;
+  return zbyva > 0;
 }
 
 async function checkLimit(){
