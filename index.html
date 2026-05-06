@@ -710,6 +710,32 @@ window.addEventListener('scroll',function(){
   document.getElementById('mainNav').classList.toggle('scrolled',window.scrollY>20);
 });
 
+// ── Přihlášený uživatel → přesměrovat tlačítka kalkulačky na PRO verzi ──
+(function(){
+  var token = localStorage.getItem('supa_access_token');
+  if(!token) return;
+  // Ověřit token a přepsat href tlačítek na kalkulator-pro.html
+  fetch('https://aeypeepckmbejdcotdss.supabase.co/auth/v1/user',{
+    headers:{
+      'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFleXBlZXBja21iZWpkY290ZHNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTkyNjAsImV4cCI6MjA5Mjk3NTI2MH0.JjYiI3bcL1ds1vAkFq59Z0WhNCLAd8oekX6GF4Zq5bA',
+      'Authorization':'Bearer '+token
+    }
+  }).then(function(r){
+    if(!r.ok){localStorage.removeItem('supa_access_token');return;}
+    return r.json();
+  }).then(function(u){
+    if(!u||!u.id) return;
+    // Přepsat všechna tlačítka kalkulačky na PRO verzi
+    document.querySelectorAll('a[href="kalkulator.html"], a[href="kalkulator.html#registrace"]').forEach(function(a){
+      a.href = 'kalkulator-pro.html';
+    });
+    // Přepsat i inline onclick na hv-btn
+    document.querySelectorAll('[onclick*="kalkulator.html"]').forEach(function(el){
+      el.setAttribute('onclick', "window.location.href='kalkulator-pro.html'");
+    });
+  }).catch(function(){});
+})();
+
 // ── Fade up on scroll ──
 var observer=new IntersectionObserver(function(entries){
   entries.forEach(function(e){if(e.isIntersecting)e.target.classList.add('visible');});
@@ -988,8 +1014,8 @@ async function submitScrollLogin(){
     document.getElementById('sPanelLogin').style.display='none';
     document.getElementById('sSuccess').style.display='block';
     document.getElementById('sSuccessTitle').textContent='Přihlášení úspěšné!';
-    document.getElementById('sSuccessDesc').textContent='Přesměrováváme vás na kalkulačku…';
-    setTimeout(()=>window.location.href='kalkulator.html',1500);
+    document.getElementById('sSuccessDesc').textContent='Přesměrováváme vás na PRO kalkulačku…';
+    setTimeout(()=>window.location.href='kalkulator-pro.html',1500);
   }catch(e){
     btn.disabled=false; txt.textContent='Přihlásit se →';
     alert(e.message);
@@ -1139,7 +1165,14 @@ async function submitScrollReg(){
     document.getElementById('sPanelReg').style.display='none';
     document.getElementById('sSuccess').style.display='block';
     document.getElementById('sSuccessTitle').textContent='Registrace úspěšná!';
-    document.getElementById('sSuccessDesc').textContent='Zkontrolujte e-mail '+email+' — potvrďte svou adresu a přihlaste se.';
+    // Pokud máme access_token (bez potvrzení emailu), rovnou přesměrovat
+    if(data.access_token){
+      localStorage.setItem('supa_access_token', data.access_token);
+      document.getElementById('sSuccessDesc').textContent='Přesměrováváme vás na PRO kalkulačku…';
+      setTimeout(()=>window.location.href='kalkulator-pro.html', 1500);
+    } else {
+      document.getElementById('sSuccessDesc').textContent='Zkontrolujte e-mail '+email+' — potvrďte svou adresu a přihlaste se.';
+    }
 
   }catch(e){
     btn.disabled=false;
