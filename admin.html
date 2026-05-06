@@ -32,7 +32,7 @@ input:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-l)}
 .btn-logout:hover{background:rgba(255,255,255,0.1)}
 .content{flex:1;padding:24px;max-width:1400px;margin:0 auto;width:100%}
 /* Stats */
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:24px}
 .stat{background:var(--white);border-radius:var(--r);padding:18px 20px;box-shadow:var(--shadow);border:0.5px solid var(--border)}
 .stat-l{font-size:12px;color:var(--text-2);margin-bottom:6px}
 .stat-v{font-size:28px;font-weight:600;color:var(--navy);line-height:1}
@@ -143,6 +143,7 @@ a.email-link:hover{color:var(--blue)}
       <div class="stat green"><div class="stat-l">Nové</div><div class="stat-v" id="statNove">—</div><div class="stat-s">čekají na kontakt</div></div>
       <div class="stat amber"><div class="stat-l">Tento týden</div><div class="stat-v" id="statWeek">—</div><div class="stat-s">nových registrací</div></div>
       <div class="stat"><div class="stat-l">Průměrný kWp</div><div class="stat-v" id="statKwp">—</div><div class="stat-s">navrhovaný výkon</div></div>
+      <div class="stat green"><div class="stat-l">Průměrná úspora/rok</div><div class="stat-v" id="statUspora" style="font-size:18px">—</div><div class="stat-s">z PRO výpočtů</div></div>
     </div>
 
     <!-- Toolbar -->
@@ -281,10 +282,17 @@ function updateStats(){
   });
   var kwps=ALL_LEADS.filter(function(l){return l.kwp>0;}).map(function(l){return parseFloat(l.kwp);});
   var avgKwp=kwps.length?Math.round(kwps.reduce(function(a,b){return a+b;},0)/kwps.length*10)/10:0;
+  // Průměrná úspora z params
+  var uspory=ALL_LEADS.map(function(l){
+    try{var p=JSON.parse(typeof l.params==='string'?l.params:JSON.stringify(l.params||{}));if(typeof p==='string')p=JSON.parse(p);return p.uspora_rok?Math.round(p.uspora_rok):0;}catch(e){return 0;}
+  }).filter(function(v){return v>0;});
+  var avgUspora=uspory.length?Math.round(uspory.reduce(function(a,b){return a+b;},0)/uspory.length):0;
   document.getElementById('statTotal').textContent=total;
   document.getElementById('statNove').textContent=nove;
   document.getElementById('statWeek').textContent=week;
-  document.getElementById('statKwp').textContent=avgKwp||'—';
+  document.getElementById('statKwp').textContent=avgKwp?avgKwp+' kWp':'—';
+  var statU=document.getElementById('statUspora');
+  if(statU) statU.textContent=avgUspora?avgUspora.toLocaleString('cs-CZ')+' Kč':'—';
 }
 
 function filterLeads(){
@@ -317,7 +325,7 @@ function exportCSV(){
     return matchQ&&matchS&&matchP&&matchD;
   });
 
-  var cols=['Datum','Jméno','Email','Telefon','SVJ','Pozice','kWp','Stav','Adresa','Bytů','Pater','Distributor','Zarizeni','TC','EV'];
+  var cols=['Datum','Jméno','Email','Telefon','SVJ','Pozice','kWp','Stav','Adresa','Bytů','Distributor','Model','Roční úspora (Kč)','Návratnost (let)','Kumulativ 25 let (Kč)','Investice (Kč)','Výroba (MWh/rok)','Vlastní spotřeba (%)','Zdroj'];
   var rows=[cols.join(';')];
   filtered.forEach(function(l){
     var p={};
@@ -329,15 +337,19 @@ function exportCSV(){
       l.telefon||'',
       l.svj||'',
       prelozPozici(l.pozice),
-      l.kwp||'',
+      p.kwp||l.kwp||'',
       l.stav||'',
-      p.adresa_domu||p.lokace||'',
-      l.bytu||'',
-      l.pater||'',
-      l.dist||'',
-      l.zarizeni||'',
-      l.tc?'ano':'ne',
-      l.ev||0
+      p.lokace||p.adresa_domu||'',
+      p.bytu||l.bytu||'',
+      p.dist||l.dist||'',
+      p.model||'',
+      p.uspora_rok?Math.round(p.uspora_rok):'',
+      p.nav||'',
+      p.kum25?Math.round(p.kum25):'',
+      p.cena_invest?Math.round(p.cena_invest):'',
+      p.vyroba_mwh||'',
+      p.mira_vs||'',
+      p.zdroj||'web',
     ].map(function(v){return '"'+String(v).replace(/"/g,'""')+'"';});
     rows.push(row.join(';'));
   });
@@ -402,61 +414,100 @@ async function changeStav(id, stav){
 function openDetail(id){
   var l=ALL_LEADS.find(function(x){return x.id===id;});
   if(!l) return;
+
+  // Parsovat params
+  var p={};
+  try{
+    var raw=l.params;
+    p=typeof raw==='string'?JSON.parse(raw):raw;
+    if(typeof p==='string') p=JSON.parse(p);
+  }catch(e){}
+
+  // Výsledky výpočtu
+  var maPro = p.zdroj==='kalkulator-pro' || p.uspora_rok;
+  var vysledkyHtml = '';
+  if(maPro && p.uspora_rok){
+    vysledkyHtml =
+      '<div style="margin-top:16px;background:var(--green-l);border:1px solid #A3D8B8;border-radius:var(--r);padding:14px 16px">'+
+      '<div style="font-size:11px;font-weight:600;color:#1A5C32;margin-bottom:10px;letter-spacing:.4px">📊 VÝSLEDKY PRO VÝPOČTU</div>'+
+      [
+        ['Roční úspora',p.uspora_rok?Math.round(p.uspora_rok).toLocaleString('cs-CZ')+' Kč':'—'],
+        ['Úspora / byt / měsíc',p.uspora_byt_mes?p.uspora_byt_mes.toLocaleString('cs-CZ')+' Kč':'—'],
+        ['Návratnost investice',p.nav?p.nav+' let':'—'],
+        ['Kumulativ 25 let',p.kum25?Math.round(p.kum25).toLocaleString('cs-CZ')+' Kč':'—'],
+        ['Výroba FVE',p.vyroba_mwh?p.vyroba_mwh+' MWh/rok':'—'],
+        ['Vlastní spotřeba',p.mira_vs?p.mira_vs+' %':'—'],
+        ['Soběstačnost',p.mira_sob?p.mira_sob+' %':'—'],
+        ['Celková investice',p.cena_invest?Math.round(p.cena_invest).toLocaleString('cs-CZ')+' Kč':'—'],
+        ['Výpočet proveden',p.vypocet_cas?fmtDate(p.vypocet_cas):'—'],
+      ].map(function(r){
+        return '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:0.5px solid rgba(0,0,0,0.06);font-size:12px">'+
+          '<span style="color:#2E6B40">'+r[0]+'</span>'+
+          '<strong style="color:#1A5C32">'+r[1]+'</strong>'+
+        '</div>';
+      }).join('')+
+      '</div>';
+  }
+
   var html='<div style="margin-top:8px">'+
     '<div class="detail-name">'+(l.jmeno||'—')+'</div>'+
     '<div style="font-size:12px;color:var(--text-2);margin-bottom:16px">'+fmtDate(l.created_at)+'</div>'+
     '<div class="detail-actions">'+
       (l.telefon?'<a class="btn-action btn-call" href="tel:'+l.telefon+'">📞 Zavolat: '+l.telefon+'</a>':'')+
-      '<a class="btn-action btn-email" href="mailto:'+l.email+'">✉️ Napsat e-mail</a>'+
+      '<a class="btn-action btn-email" href="mailto:'+l.email+'?subject=SVJ Energie — FVE kalkulačka&body=Dobrý den '+l.jmeno+',%0A%0A">✉️ Napsat e-mail</a>'+
     '</div>'+
+
+    // Základní info
     '<div style="margin-top:20px">'+
     [
       ['E-mail',l.email||'—'],
       ['Telefon',l.telefon||'—'],
       ['SVJ',l.svj||'—'],
       ['Pozice',prelozPozici(l.pozice)],
-      ['Adresa domu',l.adresa_domu||l.adresa||'—'],
-      ['Distributor',l.dist||'—'],
-      ['Počet bytů',l.bytu||l.byty||'—'],
-      ['Navrhovaný kWp',l.kwp?l.kwp+' kWp':'—'],
-      ['Stav',l.stav||'nový'],
+      ['Adresa domu',p.lokace||l.adresa_domu||'—'],
+      ['Distributor',p.dist||l.dist||'—'],
+      ['Počet bytů',p.bytu||l.bytu||'—'],
+      ['Navrhovaný výkon',(p.kwp||l.kwp)?(p.kwp||l.kwp)+' kWp':'—'],
+      ['Model sdílení',p.model||'—'],
+      ['Stav',stavBadge(l.stav)],
     ].map(function(r){
       return '<div class="detail-row"><span class="detail-label">'+r[0]+'</span><span class="detail-val">'+r[1]+'</span></div>';
     }).join('')+
     '</div>'+
-    '<div style="margin-top:16px"><label style="font-size:11px;font-weight:600;color:var(--text-2);display:block;margin-bottom:6px;letter-spacing:.4px">ZMĚNIT STAV</label>'+
-    '<select class="stav-select" style="width:100%;padding:8px 12px;font-size:13px" onchange="changeStav(\''+l.id+'\',this.value);document.getElementById(\'detailPanel\').querySelector(\'.detail-val:last-of-type\').textContent=this.value">'+
+
+    // Výsledky PRO výpočtu
+    vysledkyHtml +
+
+    // Změnit stav
+    '<div style="margin-top:16px">'+
+    '<label style="font-size:11px;font-weight:600;color:var(--text-2);display:block;margin-bottom:6px;letter-spacing:.4px">ZMĚNIT STAV</label>'+
+    '<select class="stav-select" style="width:100%;padding:8px 12px;font-size:13px" onchange="changeStav(\''+l.id+'\',this.value)">'+
       ['nový','kontaktován','uzavřen','ztracen'].map(function(s){
         return '<option value="'+s+'"'+(l.stav===s?' selected':'')+'>'+s+'</option>';
       }).join('')+
     '</select></div>'+
-    (l.params?'<div style="margin-top:12px"><div style="font-size:11px;font-weight:600;color:var(--text-2);margin-bottom:6px;letter-spacing:.4px">PARAMETRY KALKULAČKY</div><div style="background:var(--bg);border-radius:var(--rm);padding:10px;font-size:12px;color:var(--text-2);line-height:2">'+
+
+    // Parametry kalkulačky
+    (Object.keys(p).length?
+    '<div style="margin-top:12px">'+
+    '<div style="font-size:11px;font-weight:600;color:var(--text-2);margin-bottom:6px;letter-spacing:.4px">PARAMETRY KALKULAČKY</div>'+
+    '<div style="background:var(--bg);border-radius:var(--rm);padding:10px;font-size:12px;color:var(--text-2);line-height:2">'+
       (function(){
-        try{
-          var raw=l.params;
-          var p=typeof raw==='string'?JSON.parse(raw):raw;
-          if(typeof p==='string') p=JSON.parse(p); // double encoded
-          var rows=[];
-          if(p.lokace||p.adresa_domu) rows.push('📍 <strong>Adresa:</strong> '+(p.lokace||p.adresa_domu));
-          if(p.adresa_kontakt) rows.push('📬 <strong>Kontaktní adresa:</strong> '+p.adresa_kontakt);
-          if(p.bytu) rows.push('🏠 <strong>Bytů:</strong> '+p.bytu+(p.vchodu?' | Vchodů: '+p.vchodu:'')+(p.pater?' | Pater: '+p.pater:''));
-          if(p.vytahu||p.cerpadla) rows.push('🔧 <strong>Výtahy:</strong> '+(p.vytahu||0)+' | <strong>Čerpadla:</strong> '+(p.cerpadla||0));
-          if(p.topeni) rows.push('🔥 <strong>Topení:</strong> '+p.topeni+(p.tuv?' | Centrální TUV':'')+(p.zatepleno?' | Zatepleno':''));
-          if(p.okna) rows.push('🪟 <strong>Okna:</strong> '+p.okna);
-          if(p.zarizeni) rows.push('🔌 <strong>Spotřebiče:</strong> '+(Array.isArray(p.zarizeni)?p.zarizeni.join(', '):p.zarizeni));
-          if(p.tc) rows.push('♨️ <strong>Plánované TČ:</strong> ano');
-          if(p.ev>0) rows.push('🚗 <strong>EV nabíječek:</strong> '+p.ev);
-          if(p.hhSlider!==undefined) rows.push('👥 <strong>Domácnosti:</strong> '+(p.hhSlider<25?'Převážně pracující':p.hhSlider>75?'Převážně senioři':'Vyvážený mix')+' ('+p.hhSlider+'%)');
-          if(p.dist) rows.push('📡 <strong>Distributor:</strong> '+p.dist);
-          if(p.strTyp) rows.push('🏗️ <strong>Střecha:</strong> '+p.strTyp+' | Sklon: '+(p.sklon||25)+'° | Azimut: '+(p.azimut||0)+'°');
-          if(p.kwp) rows.push('⚡ <strong>Navrhovaný výkon:</strong> '+p.kwp+' kWp');
-          if(p.sp_mwh) rows.push('📊 <strong>SP spotřeba:</strong> '+parseFloat(p.sp_mwh).toFixed(1)+' MWh/rok');
-          if(p.zdroj) rows.push('📋 <strong>Zdroj:</strong> '+p.zdroj);
-          return rows.join('<br>')||'—';
-        }catch(e){return 'Chyba parsování: '+e.message;}
+        var rows=[];
+        if(p.lokace) rows.push('📍 <strong>Adresa:</strong> '+p.lokace);
+        if(p.bytu) rows.push('🏠 <strong>Bytů:</strong> '+p.bytu+(p.vchodu?' | Vchodů: '+p.vchodu:'')+(p.pater?' | Pater: '+p.pater:''));
+        if(p.dist) rows.push('📡 <strong>Distributor:</strong> '+p.dist+(p.sazba?' | Sazba: '+p.sazba:''));
+        if(p.kwp) rows.push('⚡ <strong>Výkon FVE:</strong> '+p.kwp+' kWp'+(p.sklon?' | Sklon: '+p.sklon+'°':'')+(p.azimut?' | Azimut: '+p.azimut+'°':''));
+        if(p.bat>0) rows.push('🔋 <strong>Baterie:</strong> '+p.bat+' kWh');
+        if(p.sp_by_vt_mwh) rows.push('📊 <strong>Spotřeba bytu VT:</strong> '+p.sp_by_vt_mwh+' MWh/rok');
+        if(p.sp_sp_mwh) rows.push('📊 <strong>Spotřeba SP:</strong> '+parseFloat(p.sp_sp_mwh).toFixed(1)+' MWh/rok');
+        if(p.cena_invest) rows.push('💰 <strong>Investice:</strong> '+Math.round(p.cena_invest).toLocaleString('cs-CZ')+' Kč');
+        if(p.splatnost) rows.push('🏦 <strong>Splatnost NZÚ:</strong> '+p.splatnost+' let');
+        if(p.model) rows.push('🔄 <strong>Model sdílení:</strong> '+p.model);
+        return rows.join('<br>')||'—';
       })()+
-    '</div></div>':'')+
-  '</div>';
+    '</div></div>':'')
+  +'</div>';
 
   document.getElementById('detailContent').innerHTML=html;
   document.getElementById('detailPanel').classList.add('open');
