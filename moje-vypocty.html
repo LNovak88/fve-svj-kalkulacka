@@ -134,8 +134,8 @@ function renderSims(sims){
       '<div class="empty">'+
         '<div class="empty-icon">📊</div>'+
         '<div class="empty-title">Zatím žádné výpočty</div>'+
-        '<p>Spusťte kalkulačku a váš výpočet se automaticky uloží.</p>'+
-        '<a href="kalkulator.html" class="btn-new">Spustit kalkulačku →</a>'+
+        '<p>Spusťte PRO kalkulačku a váš výpočet se automaticky uloží.</p>'+
+        '<a href="kalkulator-pro.html" class="btn-new">Spustit PRO kalkulačku →</a>'+
       '</div>';
     return;
   }
@@ -170,14 +170,13 @@ function renderSims(sims){
     '</div>';
   }).join('');
 
-  html+='<div style="text-align:center;margin-top:20px"><a href="kalkulator.html" class="btn-new">+ Nový výpočet</a></div>';
+  html+='<div style="text-align:center;margin-top:20px"><a href="kalkulator-pro.html" class="btn-new">+ Nový výpočet</a></div>';
   document.getElementById('simList').innerHTML='<div class="sim-grid">'+html+'</div>';
 }
 
 function otevritVypocet(id){
-  // Uložit ID do sessionStorage a přejít na kalkulačku
   sessionStorage.setItem('load_sim_id',id);
-  window.location.href='kalkulator.html#vypocet';
+  window.location.href='kalkulator-pro.html';
 }
 
 async function smazatVypocet(id){
