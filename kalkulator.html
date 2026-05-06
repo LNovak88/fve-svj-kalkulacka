@@ -1560,7 +1560,7 @@ async function submitReg(){
 
     document.getElementById('regFormWrap').style.display='none';
     document.getElementById('regSuccess').style.display='block';
-    setTimeout(()=>{closeModal();unlockPremium();},1800);
+    setTimeout(()=>{closeModal();unlockPremium();window.location.href='kalkulator-pro.html';},1800);
   }catch(e){
     setBtnLoading('regBtn','regBtnTxt',false,'Registrovat se nezávazně →');
     showFieldErr(document.getElementById('regEmail'),e.message);
@@ -1576,8 +1576,8 @@ async function submitLogin(){
     const {ok,data}=await supaFetch('/auth/v1/token?grant_type=password','POST',{email:em,password:pw});
     if(!ok)throw new Error(data.error_description||'Nesprávné přihlašovací údaje');
     if(data.access_token) localStorage.setItem('supa_access_token',data.access_token);
-    document.getElementById('regFormWrap').innerHTML='<div class="success-box"><div class="success-icon">✅</div><div class="success-title">Přihlášení úspěšné!</div><div class="success-desc">Přesměrováváme vás na plné výsledky…</div></div>';
-    setTimeout(()=>{closeModal();unlockPremium();},1500);
+    document.getElementById('regFormWrap').innerHTML='<div class="success-box"><div class="success-icon">✅</div><div class="success-title">Přihlášení úspěšné!</div><div class="success-desc">Přesměrováváme vás na PRO kalkulačku…</div></div>';
+    setTimeout(()=>{closeModal();unlockPremium();window.location.href='kalkulator-pro.html';},1500);
   }catch(e){setBtnLoading('loginBtn','loginBtnTxt',false,'Přihlásit se →');showFieldErr(document.getElementById('loginEmail'),e.message);}
 }
 
@@ -1723,6 +1723,11 @@ async function checkUser(){
     if(!r.ok){localStorage.removeItem('supa_access_token');return;}
     const u=await r.json();
     if(!u.id) return;
+    // Přihlášený uživatel → přesměrovat na PRO kalkulačku (ne přes hash #registrace)
+    if(!window.location.hash || window.location.hash===''){
+      window.location.href='kalkulator-pro.html';
+      return;
+    }
     const name=u.user_metadata?.full_name||u.email?.split('@')[0]||'Účet';
     const initials=name.trim().split(' ').map(n=>n[0]||'').join('').toUpperCase().slice(0,2)||'U';
     document.getElementById('userBtn').style.display='flex';
