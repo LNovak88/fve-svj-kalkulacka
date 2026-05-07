@@ -415,16 +415,19 @@ function openDetail(id){
   var l=ALL_LEADS.find(function(x){return x.id===id;});
   if(!l) return;
 
-  // Parsovat params
-  var p={};
+  // Parsovat params — bezpečně
+  var p = {};
   try{
-    var raw=l.params;
-    p=typeof raw==='string'?JSON.parse(raw):raw;
-    if(typeof p==='string') p=JSON.parse(p);
-  }catch(e){}
+    var raw = l.params;
+    if(raw){
+      p = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      if(typeof p === 'string') p = JSON.parse(p);
+    }
+  }catch(e){ p = {}; }
+  if(!p || typeof p !== 'object') p = {};
 
   // Výsledky výpočtu
-  var maPro = p.zdroj==='kalkulator-pro' || p.uspora_rok;
+  var maPro = !!(p && (p.zdroj === 'kalkulator-pro' || p.uspora_rok));
   var vysledkyHtml = '';
   if(maPro && p.uspora_rok){
     vysledkyHtml =
