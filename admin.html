@@ -400,7 +400,37 @@ function renderTable(leads){
     '</table>';
 }
 
-async function changeStav(id, stav){
+async function nacistSimulaceUzivatele(email){
+  // Najít user_id dle emailu přes admin API
+  try{
+    var r = await fetch('/api/admin-leads?action=user_sims&email='+encodeURIComponent(email),{
+      headers:{'Authorization':'Bearer '+TOKEN}
+    });
+    if(!r.ok) return;
+    var data = await r.json();
+    if(!data.simulations||!data.simulations.length) return;
+    var sims = data.simulations;
+    var html = '<div style="margin-top:20px">'+
+      '<div style="font-size:11px;font-weight:600;color:var(--text-2);margin-bottom:10px;letter-spacing:.4px">📊 VÝPOČTY UŽIVATELE ('+sims.length+')</div>'+
+      sims.map(function(s){
+        var res={};
+        try{res=JSON.parse(s.result||'{}');}catch(e){}
+        return '<div style="background:var(--bg);border:0.5px solid var(--border);border-radius:var(--rm);padding:10px 12px;margin-bottom:8px;font-size:12px">'+
+          '<div style="font-weight:600;color:var(--navy);margin-bottom:4px">'+s.name+'</div>'+
+          '<div style="color:var(--text-2);font-size:11px;margin-bottom:6px">'+fmtDate(s.created_at)+'</div>'+
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">'+
+            (res.uspora_rok?'<span style="color:var(--green)">💰 '+Math.round(res.uspora_rok).toLocaleString('cs-CZ')+' Kč/rok</span>':'')+
+            (res.nav?'<span>⏱ Návratnost: '+res.nav+' let</span>':'')+
+            (res.kum25?'<span>📈 25 let: '+Math.round(res.kum25/1000)+'k Kč</span>':'')+
+            (res.kwp?'<span>⚡ '+res.kwp+' kWp</span>':'')+
+          '</div>'+
+        '</div>';
+      }).join('')+
+    '</div>';
+    var content = document.getElementById('detailContent');
+    if(content) content.innerHTML += html;
+  }catch(e){ console.warn('Chyba načtení simulací:', e); }
+}
   await fetch('/api/admin-leads',{
     method:'PATCH',
     headers:{'Authorization':'Bearer '+TOKEN,'Content-Type':'application/json'},
@@ -515,6 +545,9 @@ function openDetail(id){
   document.getElementById('detailContent').innerHTML=html;
   document.getElementById('detailPanel').classList.add('open');
   document.getElementById('detailOverlay').style.display='block';
+
+  // Načíst simulace uživatele dle emailu
+  nacistSimulaceUzivatele(l.email);
 }
 
 function closeDetail(){
