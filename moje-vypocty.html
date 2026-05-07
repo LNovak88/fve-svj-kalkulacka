@@ -120,7 +120,7 @@ async function init(){
 }
 
 function renderSims(sims){
-  // Limit box
+  SIMS = sims; // uložit globálně pro PDF
   var count=sims.length;
   var limitEl=document.getElementById('limitBox');
   if(count>=MAX_FREE){
@@ -183,7 +183,8 @@ function renderSims(sims){
         (kum25?' a za 25 let dům vydělá celkem <strong>'+Math.round(kum25).toLocaleString('cs-CZ')+' Kč</strong>':'')+
         '</div>':'')+ 
       '<div class="sim-actions">'+
-        '<button class="btn-sim btn-open" onclick="otevritVypocet(\''+s.id+'\','+JSON.stringify(JSON.stringify(params)).slice(1,-1)+')">📊 Zobrazit výsledky →</button>'+
+        '<button class="btn-sim btn-open" onclick="otevritVypocet(\''+s.id+'\')">📊 Zobrazit výsledky →</button>'+
+        '<button class="btn-sim btn-pdf" onclick="exportSimPdf(\''+s.id+'\')" style="background:var(--navy);color:#fff;border:none;border-radius:var(--rm);padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">📄 PDF</button>'+
         '<button class="btn-sim btn-del" onclick="smazatVypocet(\''+s.id+'\')">Smazat</button>'+
       '</div>'+
     '</div>';
@@ -193,10 +194,82 @@ function renderSims(sims){
   document.getElementById('simList').innerHTML='<div class="sim-grid">'+html+'</div>';
 }
 
+var SIMS = []; // globální pro PDF export
+
 function otevritVypocet(id){
-  // Uložit ID simulace — kalkulator-pro si ji načte a zobrazí výsledky
   sessionStorage.setItem('load_sim_id', id);
   window.location.href='kalkulator-pro.html';
+}
+
+async function exportSimPdf(id){
+  const s = SIMS.find(function(x){return x.id===id;});
+  if(!s){ alert('Simulace nenalezena'); return; }
+  var params={}, result={};
+  try{params=JSON.parse(s.params||'{}');}catch(e){}
+  try{result=JSON.parse(s.result||'{}');}catch(e){}
+
+  // Načíst jsPDF
+  if(!window.jspdf){
+    var sc=document.createElement('script');
+    sc.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+    document.head.appendChild(sc);
+    await new Promise(function(r){sc.onload=r;});
+  }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const W=210, PL=15, PR=15;
+  let y=20;
+
+  // Hlavička
+  doc.setFillColor(30,58,95); doc.rect(0,0,W,28,'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(16); doc.setFont('helvetica','bold');
+  doc.text('SVJ Energie - FVE Kalkulator PRO', PL, 12);
+  doc.setFontSize(9); doc.setFont('helvetica','normal');
+  doc.text((s.name||'')+'  |  '+new Date().toLocaleDateString('cs-CZ'), PL, 22);
+  y=36;
+
+  // Verdikt
+  const nav = result.nav;
+  const verdikt = nav ? (nav<=10?'Vynikajici investice':nav<=15?'Dobra investice':nav<=20?'Prijatelna investice':'Hranicni projekt') : 'Projekt se nevrati';
+  doc.setTextColor(nav&&nav<=15?26:nav&&nav<=20?120:153, nav&&nav<=15?92:nav&&nav<=20?83:27, nav&&nav<=15?50:nav&&nav<=20?0:18);
+  doc.setFontSize(13); doc.setFont('helvetica','bold');
+  doc.text(verdikt + (nav?' - navratnost '+nav+' let':''), PL, y); y+=10;
+
+  // KPI tabulka
+  doc.setTextColor(30,58,95);
+  const bytu = params.pocet_bytu||params.bytu||1;
+  const uspora_byt_mes = result.uspora_rok ? Math.round(result.uspora_rok/bytu/12) : 0;
+  const kpi=[
+    ['Rocni uspora (rok 1)', result.uspora_rok ? Math.round(result.uspora_rok).toLocaleString('cs-CZ')+' Kc' : '—'],
+    ['Uspora / byt / mesic', uspora_byt_mes ? uspora_byt_mes+' Kc' : '—'],
+    ['Navratnost investice', nav ? nav+' let' : '—'],
+    ['Kumulativ 25 let', result.kum25 ? Math.round(result.kum25).toLocaleString('cs-CZ')+' Kc' : '—'],
+    ['Vykon FVE', (params.kwp||'—')+' kWp'],
+    ['Vyroba FVE', (result.vyroba_mwh||'—')+' MWh/rok'],
+    ['Vlastni spotreba', result.mira_vs ? result.mira_vs+' %' : '—'],
+    ['Investice celkem', result.investice ? Math.round(result.investice).toLocaleString('cs-CZ')+' Kc' : '—'],
+    ['Distributor / Sazba', (params.dist||'—')+' / '+(params.sazba||'—')],
+    ['Model sdileni', params.model||'—'],
+    ['Pocet bytu', bytu],
+  ];
+  kpi.forEach(function(r,i){
+    if(i%2===0) doc.setFillColor(248,250,251); else doc.setFillColor(255,255,255);
+    doc.rect(PL,y-4,W-PL-PR,7,'F');
+    doc.setTextColor(100,116,139); doc.setFontSize(9); doc.setFont('helvetica','normal');
+    doc.text(r[0], PL+2, y);
+    doc.setTextColor(30,58,95); doc.setFont('helvetica','bold');
+    doc.text(String(r[1]), W-PR-2, y, {align:'right'});
+    y+=7;
+  });
+  y+=8;
+
+  // Patička
+  doc.setFillColor(248,250,251); doc.rect(0,280,W,18,'F');
+  doc.setTextColor(100,116,139); doc.setFontSize(7); doc.setFont('helvetica','normal');
+  doc.text('Orientacni vypocty. Data PVGIS EU JRC. Ceny dle ceniku CEZ/EGD/PRE 1.1.2026. svjenergie.cz', W/2, 288, {align:'center'});
+
+  doc.save('SVJ-FVE-'+(s.name||'vypocet').replace(/[^a-zA-Z0-9]/g,'-').slice(0,30)+'.pdf');
 }
 
 async function smazatVypocet(id){
