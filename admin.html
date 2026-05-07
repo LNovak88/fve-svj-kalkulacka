@@ -431,6 +431,8 @@ async function nacistSimulaceUzivatele(email){
     if(content) content.innerHTML += html;
   }catch(e){ console.warn('Chyba načtení simulací:', e); }
 }
+
+async function changeStav(id, stav){
   await fetch('/api/admin-leads',{
     method:'PATCH',
     headers:{'Authorization':'Bearer '+TOKEN,'Content-Type':'application/json'},
