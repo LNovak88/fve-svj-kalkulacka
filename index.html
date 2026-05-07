@@ -320,11 +320,25 @@ footer{background:var(--navy);padding:40px 5vw 24px;color:#8BA8C4}
       <button onclick="openScrollModal('reg')" class="btn-nav-cta" style="cursor:pointer;font-family:inherit;font-size:13px">Registrovat se →</button>
     </div>
     <!-- Přihlášený (skryté, zobrazí se po ověření) -->
-    <div id="navUser" style="display:none;align-items:center;gap:8px">
-      <div id="navAvatar" style="width:32px;height:32px;background:var(--green);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff">?</div>
-      <span id="navUserName" style="font-size:13px;font-weight:500;color:var(--navy)">Účet</span>
-      <a href="kalkulator-pro.html" class="btn-nav-cta" style="font-size:13px">⚡ PRO kalkulačka</a>
-      <button onclick="navOdhlasit()" class="btn-nav-ghost" style="font-size:12px;cursor:pointer;font-family:inherit">Odhlásit</button>
+    <div id="navUser" style="display:none;align-items:center;gap:8px;position:relative">
+      <div style="position:relative">
+        <button onclick="toggleNavMenu()" style="display:flex;align-items:center;gap:8px;background:var(--blue-l);border:1.5px solid var(--blue);color:var(--navy);border-radius:var(--rm);padding:6px 14px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit">
+          <div id="navAvatar" style="width:26px;height:26px;background:var(--green);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0">?</div>
+          <span id="navUserName">Účet</span>
+          <span style="font-size:10px;opacity:.6">▾</span>
+        </button>
+        <div id="navDropdown" style="display:none;position:absolute;top:calc(100% + 8px);right:0;background:#fff;border:0.5px solid var(--border);border-radius:var(--r);box-shadow:0 8px 32px rgba(30,58,95,0.12);min-width:200px;z-index:200;overflow:hidden">
+          <div style="padding:12px 14px;border-bottom:0.5px solid var(--border);background:var(--bg)">
+            <div id="navDdName" style="font-size:13px;font-weight:600;color:var(--navy)">—</div>
+            <div id="navDdEmail" style="font-size:11px;color:var(--text-2);margin-top:1px">—</div>
+          </div>
+          <a href="kalkulator-pro.html" style="display:flex;align-items:center;gap:10px;padding:10px 14px;font-size:13px;color:var(--text);text-decoration:none;transition:background .1s" onmouseover="this.style.background='var(--blue-ll)'" onmouseout="this.style.background=''">⚡ PRO Kalkulačka</a>
+          <a href="moje-vypocty.html" style="display:flex;align-items:center;gap:10px;padding:10px 14px;font-size:13px;color:var(--text);text-decoration:none;transition:background .1s" onmouseover="this.style.background='var(--blue-ll)'" onmouseout="this.style.background=''">📊 Moje výpočty</a>
+          <a href="profil.html" style="display:flex;align-items:center;gap:10px;padding:10px 14px;font-size:13px;color:var(--text);text-decoration:none;transition:background .1s" onmouseover="this.style.background='var(--blue-ll)'" onmouseout="this.style.background=''">⚙️ Nastavení účtu</a>
+          <div style="height:0.5px;background:var(--border);margin:4px 0"></div>
+          <button onclick="navOdhlasit()" style="display:flex;align-items:center;gap:10px;padding:10px 14px;font-size:13px;color:#991B1B;border:none;background:none;width:100%;text-align:left;cursor:pointer;font-family:inherit" onmouseover="this.style.background='#FEE2E2'" onmouseout="this.style.background=''">↩ Odhlásit se</button>
+        </div>
+      </div>
     </div>
   </div>
 </nav>
@@ -742,6 +756,8 @@ window.addEventListener('scroll',function(){
     navUser.style.display='flex';
     document.getElementById('navAvatar').textContent=initials;
     document.getElementById('navUserName').textContent=name.split(' ')[0];
+    document.getElementById('navDdName').textContent=name;
+    document.getElementById('navDdEmail').textContent=u.email;
     // Přepsat tlačítka kalkulačky
     document.querySelectorAll('a[href="kalkulator.html"], a[href="kalkulator.html#registrace"]').forEach(function(a){
       a.href = 'kalkulator-pro.html';
@@ -751,6 +767,18 @@ window.addEventListener('scroll',function(){
     });
   }).catch(function(){});
 })();
+
+function toggleNavMenu(){
+  var d=document.getElementById('navDropdown');
+  d.style.display=d.style.display==='none'?'block':'none';
+}
+document.addEventListener('click',function(e){
+  var nu=document.getElementById('navUser');
+  if(nu&&!nu.contains(e.target)){
+    var d=document.getElementById('navDropdown');
+    if(d) d.style.display='none';
+  }
+});
 
 function navOdhlasit(){
   localStorage.removeItem('supa_access_token');
