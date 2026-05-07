@@ -311,11 +311,21 @@ footer{background:var(--navy);padding:40px 5vw 24px;color:#8BA8C4}
       <div class="nav-logo-s">fve kalkulačka pro bytové domy</div>
     </div>
   </a>
-  <div class="nav-links">
+  <div class="nav-links" id="navLinks">
     <a href="#jak-to-funguje" class="btn-nav-ghost">Jak to funguje</a>
     <a href="#moznosti" class="btn-nav-ghost">Možnosti</a>
-    <button onclick="openScrollModal('login')" class="btn-nav-ghost" style="border-color:var(--blue);color:var(--blue);cursor:pointer;font-family:inherit;font-size:13px;padding:8px 16px;border-radius:var(--rm)">Přihlásit se</button>
-    <button onclick="openScrollModal('reg')" class="btn-nav-cta" style="cursor:pointer;font-family:inherit;font-size:13px">Registrovat se →</button>
+    <!-- Nepřihlášený -->
+    <div id="navGuest">
+      <button onclick="openScrollModal('login')" class="btn-nav-ghost" style="border-color:var(--blue);color:var(--blue);cursor:pointer;font-family:inherit;font-size:13px;padding:8px 16px;border-radius:var(--rm)">Přihlásit se</button>
+      <button onclick="openScrollModal('reg')" class="btn-nav-cta" style="cursor:pointer;font-family:inherit;font-size:13px">Registrovat se →</button>
+    </div>
+    <!-- Přihlášený (skryté, zobrazí se po ověření) -->
+    <div id="navUser" style="display:none;align-items:center;gap:8px">
+      <div id="navAvatar" style="width:32px;height:32px;background:var(--green);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff">?</div>
+      <span id="navUserName" style="font-size:13px;font-weight:500;color:var(--navy)">Účet</span>
+      <a href="kalkulator-pro.html" class="btn-nav-cta" style="font-size:13px">⚡ PRO kalkulačka</a>
+      <button onclick="navOdhlasit()" class="btn-nav-ghost" style="font-size:12px;cursor:pointer;font-family:inherit">Odhlásit</button>
+    </div>
   </div>
 </nav>
 
@@ -714,7 +724,6 @@ window.addEventListener('scroll',function(){
 (function(){
   var token = localStorage.getItem('supa_access_token');
   if(!token) return;
-  // Ověřit token a přepsat href tlačítek na kalkulator-pro.html
   fetch('https://aeypeepckmbejdcotdss.supabase.co/auth/v1/user',{
     headers:{
       'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFleXBlZXBja21iZWpkY290ZHNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTkyNjAsImV4cCI6MjA5Mjk3NTI2MH0.JjYiI3bcL1ds1vAkFq59Z0WhNCLAd8oekX6GF4Zq5bA',
@@ -725,16 +734,29 @@ window.addEventListener('scroll',function(){
     return r.json();
   }).then(function(u){
     if(!u||!u.id) return;
-    // Přepsat všechna tlačítka kalkulačky na PRO verzi
+    // Zobrazit přihlášeného uživatele v navigaci
+    var name = u.user_metadata?.full_name || u.email?.split('@')[0] || 'Účet';
+    var initials = name.trim().split(' ').map(function(n){return n[0]||'';}).join('').toUpperCase().slice(0,2)||'U';
+    document.getElementById('navGuest').style.display='none';
+    var navUser = document.getElementById('navUser');
+    navUser.style.display='flex';
+    document.getElementById('navAvatar').textContent=initials;
+    document.getElementById('navUserName').textContent=name.split(' ')[0];
+    // Přepsat tlačítka kalkulačky
     document.querySelectorAll('a[href="kalkulator.html"], a[href="kalkulator.html#registrace"]').forEach(function(a){
       a.href = 'kalkulator-pro.html';
     });
-    // Přepsat i inline onclick na hv-btn
     document.querySelectorAll('[onclick*="kalkulator.html"]').forEach(function(el){
       el.setAttribute('onclick', "window.location.href='kalkulator-pro.html'");
     });
   }).catch(function(){});
 })();
+
+function navOdhlasit(){
+  localStorage.removeItem('supa_access_token');
+  sessionStorage.removeItem('premium_unlocked');
+  window.location.reload();
+}
 
 // ── Fade up on scroll ──
 var observer=new IntersectionObserver(function(entries){
