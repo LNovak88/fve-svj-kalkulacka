@@ -146,25 +146,44 @@ function renderSims(sims){
     try{params=JSON.parse(s.params||'{}');}catch(e){}
     try{result=JSON.parse(s.result||'{}');}catch(e){}
 
+    // Tagy
     var tags=[];
-    if(params.bytu) tags.push(params.bytu+' bytů');
+    if(params.pocet_bytu||params.bytu) tags.push((params.pocet_bytu||params.bytu)+' bytů');
     if(params.dist) tags.push(params.dist);
-    if(params.strTyp) tags.push(params.strTyp);
+    if(params.sazba) tags.push(params.sazba);
+    if(params.model) tags.push(params.model==='edc'?'EDC sdílení':params.model==='jom'?'JOM':params.model);
+    if(params.bat>0) tags.push('baterie '+params.bat+' kWh');
     if(params.tc) tags.push('TČ');
     if(params.ev>0) tags.push(params.ev+'× EV');
 
+    // Úspora na byt
+    var bytu = params.pocet_bytu||params.bytu||1;
+    var uspora_byt_mes = result.uspora_rok ? Math.round(result.uspora_rok/bytu/12) : 0;
+    var kum25 = result.kum25 || 0;
+
     return '<div class="sim-card">'+
-      '<div class="sim-date">'+fmtDate(s.created_at)+'</div>'+
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">'+
+        '<div class="sim-date">'+fmtDate(s.created_at)+'</div>'+
+        (result.nav?'<span style="background:var(--green-l);color:#1A5C32;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600">návratnost '+result.nav+' let</span>':'')+
+      '</div>'+
       '<div class="sim-name">'+s.name+'</div>'+
       (tags.length?'<div class="sim-tags">'+tags.map(function(t){return '<span class="tag">'+t+'</span>';}).join('')+'</div>':'')+
       '<div class="sim-kpis">'+
-        '<div class="sim-kpi"><div class="sim-kpi-l">Výkon</div><div class="sim-kpi-v">'+(params.kwp||'—')+'</div><div class="sim-kpi-u">kWp</div></div>'+
+        '<div class="sim-kpi"><div class="sim-kpi-l">Výkon FVE</div><div class="sim-kpi-v">'+(params.kwp||'—')+'</div><div class="sim-kpi-u">kWp</div></div>'+
         '<div class="sim-kpi green"><div class="sim-kpi-l">Roční úspora</div><div class="sim-kpi-v">'+(result.uspora_rok?fmtKc(result.uspora_rok):'—')+'</div><div class="sim-kpi-u">/rok</div></div>'+
-        '<div class="sim-kpi"><div class="sim-kpi-l">Návratnost</div><div class="sim-kpi-v">'+(result.nav||'—')+'</div><div class="sim-kpi-u">let</div></div>'+
+        '<div class="sim-kpi green"><div class="sim-kpi-l">Úspora/byt/měs</div><div class="sim-kpi-v">'+(uspora_byt_mes?uspora_byt_mes+' Kč':'—')+'</div><div class="sim-kpi-u">/měsíc</div></div>'+
         '<div class="sim-kpi"><div class="sim-kpi-l">Investice</div><div class="sim-kpi-v">'+(result.investice?Math.round(result.investice/1000)+'k':'—')+'</div><div class="sim-kpi-u">Kč</div></div>'+
+        '<div class="sim-kpi"><div class="sim-kpi-l">Výroba</div><div class="sim-kpi-v">'+(result.vyroba_mwh||'—')+'</div><div class="sim-kpi-u">MWh/rok</div></div>'+
+        '<div class="sim-kpi"><div class="sim-kpi-l">Kumulativ 25 let</div><div class="sim-kpi-v">'+(kum25?Math.round(kum25/1000)+'k':'—')+'</div><div class="sim-kpi-u">Kč</div></div>'+
       '</div>'+
+      // Přesvědčivý text
+      (result.uspora_rok && bytu>1?
+        '<div style="background:var(--green-l);border-radius:8px;padding:10px 14px;font-size:12px;color:#1A5C32;margin-bottom:10px;border-left:3px solid var(--green)">'+
+        '💡 Každý byt ušetří <strong>'+uspora_byt_mes+' Kč/měsíc</strong>'+
+        (kum25?' a za 25 let dům vydělá celkem <strong>'+Math.round(kum25).toLocaleString('cs-CZ')+' Kč</strong>':'')+
+        '</div>':'')+ 
       '<div class="sim-actions">'+
-        '<button class="btn-sim btn-open" onclick="otevritVypocet(\''+s.id+'\')">Otevřít výpočet →</button>'+
+        '<button class="btn-sim btn-open" onclick="otevritVypocet(\''+s.id+'\','+JSON.stringify(JSON.stringify(params)).slice(1,-1)+')">📊 Zobrazit výsledky →</button>'+
         '<button class="btn-sim btn-del" onclick="smazatVypocet(\''+s.id+'\')">Smazat</button>'+
       '</div>'+
     '</div>';
@@ -175,7 +194,8 @@ function renderSims(sims){
 }
 
 function otevritVypocet(id){
-  sessionStorage.setItem('load_sim_id',id);
+  // Uložit ID simulace — kalkulator-pro si ji načte a zobrazí výsledky
+  sessionStorage.setItem('load_sim_id', id);
   window.location.href='kalkulator-pro.html';
 }
 
