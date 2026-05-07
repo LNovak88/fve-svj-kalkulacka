@@ -289,7 +289,6 @@ input[type=range]{width:100%;accent-color:var(--blue);margin-bottom:12px;cursor:
         </div>
         <a href="moje-vypocty.html" class="user-dd-item">📊 Moje výpočty</a>
         <a href="profil.html" class="user-dd-item">⚙️ Nastavení účtu</a>
-        <a href="kalkulator.html" class="user-dd-item">🔙 Základní kalkulačka</a>
         <div class="user-dd-sep"></div>
         <button class="user-dd-item danger" onclick="odhlasit()">↩ Odhlásit se</button>
       </div>
@@ -1523,9 +1522,73 @@ async function exportPdf(){
 // ================================================================
 // START
 // ================================================================
+
+// Automatická baterie dle kWp (1.4× výkon, zaokrouhleno na 5 kWh)
+function autoBaterie(kwp){
+  return Math.round(kwp * 1.4 / 5) * 5;
+}
+
+// Načíst uloženou simulaci z moje-vypocty
+async function nacistUlozenouSimulaci(){
+  const simId = sessionStorage.getItem('load_sim_id');
+  if(!simId || !USER) return false;
+  sessionStorage.removeItem('load_sim_id');
+  try{
+    const r = await fetch(
+      `${SUPA_URL}/rest/v1/simulations?id=eq.${simId}&user_id=eq.${USER.id}&select=*`,
+      {headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getToken()}}
+    );
+    const arr = await r.json();
+    if(!Array.isArray(arr)||!arr.length) return false;
+    const sim = arr[0];
+    // Načíst parametry do D
+    const p = JSON.parse(sim.params||'{}');
+    if(p.pocet_bytu||p.bytu) D.bytu = p.pocet_bytu||p.bytu;
+    if(p.lokace){ D.lokace=p.lokace; }
+    if(p.lat) D.lat=p.lat;
+    if(p.lon) D.lon=p.lon;
+    if(p.dist) D.dist=p.dist;
+    if(p.sazba) D.sazba_byt=p.sazba;
+    if(p.kwp) D.kwp=p.kwp;
+    if(p.bat!==undefined) D.bat=p.bat;
+    if(p.sklon) D.sklon=p.sklon;
+    if(p.azimut!==undefined) D.azimut=p.azimut;
+    if(p.model) D.model=p.model;
+    if(p.cena_invest) D.cena_invest=p.cena_invest;
+    if(p.splatnost) D.splatnost=p.splatnost;
+    if(p.rust_cen) D.rust_cen=p.rust_cen;
+    if(p.sp_by_vt_mwh) D.sp_by_vt_mwh=p.sp_by_vt_mwh;
+    if(p.sp_by_nt_mwh!==undefined) D.sp_by_nt_mwh=p.sp_by_nt_mwh;
+    if(p.sp_sp_mwh) D.sp_sp_mwh=p.sp_sp_mwh;
+    // Přejít rovnou na výsledky
+    cur = 5;
+    return true;
+  }catch(e){ console.warn('Chyba načtení simulace:', e); return false; }
+}
+
+// Předvyplnit adresu z profilu uživatele
+function nacistAdresuZProfilu(){
+  if(!USER) return;
+  const meta = USER.user_metadata || {};
+  if(meta.adresa_domu && !D.lokace){
+    D.lokace = meta.adresa_domu;
+  }
+}
+
 (async ()=>{
   const ok = await initAuth();
-  if(ok) render();
+  if(!ok) return;
+  nacistAdresuZProfilu();
+  // Nastavit automatickou baterii pokud není zadána
+  if(!D.bat || D.bat === 0){
+    const kwp = D.kwp || optimKwp();
+    D.bat = autoBaterie(kwp);
+  }
+  // Zkusit načíst uloženou simulaci
+  const loadedSim = await nacistUlozenouSimulaci();
+  render();
+  // Pokud se načetla simulace, spustit výpočet
+  if(loadedSim) setTimeout(spustVypocet, 300);
 })();
 </script>
 </body>
