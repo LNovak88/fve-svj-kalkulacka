@@ -30,8 +30,34 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: 'Nemáte oprávnění' });
   }
 
-  // GET — načíst leady
+  // GET — načíst leady nebo simulace uživatele
   if (req.method === 'GET') {
+    // Simulace konkrétního uživatele dle emailu
+    if (req.query.action === 'user_sims' && req.query.email) {
+      // Najít user_id dle emailu
+      const uRes = await fetch(
+        SUPA_URL + '/auth/v1/admin/users?email=' + encodeURIComponent(req.query.email),
+        { headers: { 'apikey': SERVICE_KEY, 'Authorization': 'Bearer ' + SERVICE_KEY } }
+      );
+      const uData = await uRes.json();
+      const users = uData.users || [];
+      if (!users.length) return res.status(200).json({ simulations: [] });
+      const userId = users[0].id;
+      // Načíst simulace
+      const sRes = await fetch(
+        SUPA_URL + '/rest/v1/simulations?user_id=eq.' + userId + '&order=created_at.desc&limit=10',
+        {
+          headers: {
+            'apikey': SERVICE_KEY,
+            'Authorization': 'Bearer ' + SERVICE_KEY,
+            'Accept': 'application/json',
+          }
+        }
+      );
+      const sims = await sRes.json();
+      return res.status(200).json({ simulations: Array.isArray(sims) ? sims : [] });
+    }
+    // Standardní načtení leadů
     const r = await fetch(SUPA_URL + '/rest/v1/leads?order=created_at.desc&limit=500', {
       headers: {
         'apikey': SERVICE_KEY,
