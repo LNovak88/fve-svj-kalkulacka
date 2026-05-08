@@ -32,7 +32,61 @@ export default async function handler(req, res) {
 
   // GET — načíst leady nebo simulace uživatele
   if (req.method === 'GET') {
-    // Simulace konkrétního uživatele dle emailu
+    // Všechny simulace všech uživatelů (pro admin-vypocty.html)
+    if (req.query.action === 'all_sims') {
+      // Načíst všechny simulace
+      const sRes = await fetch(
+        SUPA_URL + '/rest/v1/simulations?order=created_at.desc&limit=500&select=*',
+        { headers: { 'apikey': SERVICE_KEY, 'Authorization': 'Bearer ' + SERVICE_KEY, 'Accept': 'application/json' } }
+      );
+      const sims = await sRes.json();
+      if (!Array.isArray(sims)) return res.status(200).json({ users: [] });
+
+      // Načíst uživatele přes admin API
+      const uRes = await fetch(
+        SUPA_URL + '/auth/v1/admin/users?per_page=500',
+        { headers: { 'apikey': SERVICE_KEY, 'Authorization': 'Bearer ' + SERVICE_KEY } }
+      );
+      const uData = await uRes.json();
+      const allUsers = uData.users || [];
+
+      // Načíst leady pro doplnění info (SVJ, pozice, adresa)
+      const lRes = await fetch(
+        SUPA_URL + '/rest/v1/leads?select=email,svj,pozice,jmeno&order=created_at.desc&limit=500',
+        { headers: { 'apikey': SERVICE_KEY, 'Authorization': 'Bearer ' + SERVICE_KEY, 'Accept': 'application/json' } }
+      );
+      const leads = await lRes.json();
+      const leadMap = {};
+      if (Array.isArray(leads)) leads.forEach(l => { if(l.email) leadMap[l.email] = l; });
+
+      // Seskupit simulace dle user_id
+      const userMap = {};
+      sims.forEach(s => {
+        if (!s.user_id) return;
+        if (!userMap[s.user_id]) userMap[s.user_id] = [];
+        userMap[s.user_id].push(s);
+      });
+
+      // Sestavit výsledek
+      const users = Object.entries(userMap).map(([uid, userSims]) => {
+        const authUser = allUsers.find(u => u.id === uid) || {};
+        const email = authUser.email || '';
+        const meta = authUser.user_metadata || {};
+        const lead = leadMap[email] || {};
+        return {
+          user: {
+            id: uid,
+            email,
+            full_name: meta.full_name || lead.jmeno || email.split('@')[0],
+            svj: meta.svj || lead.svj || '',
+            pozice: meta.pozice || lead.pozice || '',
+          },
+          simulations: userSims.sort((a,b) => new Date(b.created_at) - new Date(a.created_at)).slice(0,10),
+        };
+      }).sort((a,b) => new Date(b.simulations[0]?.created_at) - new Date(a.simulations[0]?.created_at));
+
+      return res.status(200).json({ users });
+    }
     if (req.query.action === 'user_sims' && req.query.email) {
       // Najít user_id dle emailu
       const uRes = await fetch(
