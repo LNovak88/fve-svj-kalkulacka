@@ -4,64 +4,88 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Nastavení účtu | SVJ Energie</title>
+<meta name="robots" content="noindex,nofollow">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet">
 <style>
-:root{--navy:#1E3A5F;--blue:#1B6CA8;--blue-l:#E3F0FA;--green:#2E8B4A;--green-l:#E3F4E9;--text:#1E293B;--text-2:#64748B;--border:#E2E8F0;--bg:#F8FAFB;--white:#fff;--r:12px;--rm:8px;--shadow:0 1px 3px rgba(0,0,0,0.06),0 4px 16px rgba(0,0,0,0.04)}
+:root{--navy:#1E3A5F;--blue:#1B6CA8;--blue-l:#E3F0FA;--blue-ll:#F0F7FD;--green:#2E8B4A;--green-l:#E3F4E9;--amber:#F59E0B;--amber-l:#FEF3C7;--rose:#F43F5E;--text:#1E293B;--text-2:#64748B;--border:#E2E8F0;--bg:#F8FAFB;--white:#fff;--r:12px;--rm:8px;--shadow:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.04);--shadow-lg:0 8px 32px rgba(30,58,95,.12)}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
-.hdr{background:var(--navy);padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between}
-.hdr-logo{display:flex;align-items:center;gap:10px;text-decoration:none}
-.hdr-logo-t{color:#fff;font-size:15px;font-weight:600}
-.hdr-links{display:flex;align-items:center;gap:12px}
-.hdr-link{color:#8BA8C4;font-size:13px;text-decoration:none;transition:color .15s}
-.hdr-link:hover{color:#fff}
-.btn-logout{background:transparent;border:1.5px solid rgba(255,255,255,0.25);color:#fff;border-radius:var(--rm);padding:5px 12px;font-size:12px;cursor:pointer;font-family:inherit}
-.page{max-width:640px;margin:0 auto;padding:32px 16px}
-.page-title{font-family:'DM Serif Display',serif;font-size:24px;color:var(--navy);margin-bottom:4px}
-.page-sub{font-size:13px;color:var(--text-2);margin-bottom:24px}
-.card{background:var(--white);border-radius:var(--r);border:0.5px solid var(--border);box-shadow:var(--shadow);margin-bottom:16px;overflow:hidden}
-.card-hdr{padding:16px 20px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:10px}
-.card-title{font-size:14px;font-weight:600;color:var(--navy)}
-.card-body{padding:20px}
-.field{margin-bottom:14px}
-.field:last-child{margin-bottom:0}
-label{display:block;font-size:11px;font-weight:600;color:var(--text-2);margin-bottom:4px;letter-spacing:.4px}
-input,select{width:100%;padding:10px 13px;border:0.5px solid #CBD5E1;border-radius:var(--rm);font-size:13px;font-family:inherit;outline:none;transition:border-color .15s;background:var(--white);color:var(--text)}
-input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-l)}
-input:disabled{background:var(--bg);color:var(--text-2);cursor:not-allowed}
-.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.btn-save{padding:11px 24px;background:var(--blue);color:#fff;border:none;border-radius:var(--rm);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:opacity .15s}
-.btn-save:hover{opacity:.9}
-.btn-save:disabled{opacity:.6;cursor:not-allowed}
-.btn-danger{padding:11px 24px;background:#FEE2E2;color:#991B1B;border:1px solid #FCA5A5;border-radius:var(--rm);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s}
-.btn-danger:hover{background:#991B1B;color:#fff}
-.alert{padding:10px 14px;border-radius:var(--rm);font-size:13px;margin-bottom:14px;display:none}
-.alert.ok{background:var(--green-l);border:1px solid #A3D8B8;color:#1A5C32}
-.alert.err{background:#FEE2E2;border:1px solid #FCA5A5;color:#991B1B}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;min-height:100vh}
+.page{max-width:800px;margin:0 auto;padding:1rem 1rem 4rem}
+.hdr{background:var(--navy);border-radius:var(--r);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;box-shadow:var(--shadow-lg)}
+.hdr-logo{display:flex;align-items:center;gap:12px;text-decoration:none}
+.logo-t{color:#fff;font-size:16px;font-weight:600}
+.logo-s{color:#8BA8C4;font-size:11px}
+.hdr-nav{display:flex;align-items:center;gap:8px}
+.btn-hdr{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:var(--rm);padding:6px 14px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;text-decoration:none;transition:background .15s}
+.btn-hdr:hover{background:rgba(255,255,255,.2)}
+.card{background:var(--white);border:0.5px solid var(--border);border-radius:var(--r);padding:24px;margin-bottom:14px;box-shadow:var(--shadow)}
+.card-title{font-family:'DM Serif Display',serif;font-size:18px;color:var(--navy);margin-bottom:4px}
+.card-sub{font-size:13px;color:var(--text-2);margin-bottom:20px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.form-full{grid-column:1/-1}
+.form-group{display:flex;flex-direction:column;gap:5px}
+label{font-size:11px;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:.5px}
+input[type=text],input[type=email],input[type=tel],input[type=password],select,textarea{width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:var(--rm);font-size:13px;color:var(--text);background:var(--white);font-family:inherit;outline:none;transition:border-color .15s,box-shadow .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-l)}
+textarea{min-height:80px;resize:vertical}
+.btn-save{background:var(--green);color:#fff;border:none;border-radius:var(--rm);padding:12px 28px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;transition:opacity .15s,transform .1s;display:flex;align-items:center;gap:8px}
+.btn-save:hover{opacity:.9;transform:translateY(-1px)}
+.btn-save:disabled{opacity:.6;cursor:default;transform:none}
+.btn-out{background:transparent;border:1.5px solid var(--border);color:var(--text-2);border-radius:var(--rm);padding:10px 20px;font-size:13px;cursor:pointer;font-family:inherit;transition:all .15s}
+.btn-out:hover{border-color:var(--rose);color:var(--rose)}
+.spin{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* Toast notifikace */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--green);color:#fff;border-radius:var(--rm);padding:12px 20px;font-size:13px;font-weight:600;box-shadow:0 8px 24px rgba(46,139,74,.4);z-index:1000;display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:transform .3s ease,opacity .3s ease}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.err{background:var(--rose);box-shadow:0 8px 24px rgba(244,63,94,.4)}
+/* Avatar */
+.avatar-wrap{display:flex;align-items:center;gap:16px;margin-bottom:20px}
+.avatar{width:64px;height:64px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:#fff;flex-shrink:0}
+.avatar-info h2{font-size:18px;font-weight:600;color:var(--navy);margin-bottom:2px}
+.avatar-info p{font-size:13px;color:var(--text-2)}
+/* Sekce */
+.section-badge{display:inline-flex;align-items:center;gap:6px;background:var(--blue-l);color:var(--blue);border-radius:20px;padding:3px 12px;font-size:11px;font-weight:600;margin-bottom:14px}
+/* Auth overlay */
+.auth-overlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,.85);z-index:1000;align-items:center;justify-content:center;backdrop-filter:blur(8px)}
+.auth-overlay.open{display:flex}
+.auth-box{background:var(--white);border-radius:16px;padding:36px;max-width:420px;width:90%;text-align:center}
+.auth-icon{font-size:48px;margin-bottom:16px}
+.auth-title{font-family:'DM Serif Display',serif;font-size:22px;color:var(--navy);margin-bottom:8px}
+.auth-desc{font-size:13px;color:var(--text-2);margin-bottom:24px}
+/* Autocomplete */
+.ac-wrap{position:relative}
+.ac-list{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--white);border:1px solid var(--border);border-radius:var(--rm);z-index:100;box-shadow:var(--shadow-lg);overflow:hidden;display:none}
+.ac-list.open{display:block}
+.ac-item{padding:9px 13px;font-size:13px;cursor:pointer;color:var(--text);transition:background .1s}
+.ac-item:hover{background:var(--blue-l)}
+/* Heslo */
 .pw-wrap{position:relative}
 .pw-wrap input{padding-right:42px}
 .pw-eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;color:var(--text-2)}
-.pw-strength{height:3px;border-radius:2px;margin-top:4px;background:var(--border);transition:all .3s;width:0}
-.pw-hint{font-size:10px;color:var(--text-2);margin-top:2px}
-.plan-box{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:var(--blue-l);border-radius:var(--rm);border:1px solid #C8DFF2}
-.plan-name{font-size:14px;font-weight:600;color:var(--navy)}
-.plan-desc{font-size:12px;color:#4A7BA8;margin-top:2px}
-.badge-plan{background:var(--green-l);color:var(--green);border-radius:20px;padding:3px 12px;font-size:11px;font-weight:600}
-.spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle}
-@keyframes spin{to{transform:rotate(360deg)}}
-.loading-page{text-align:center;padding:80px 20px;color:var(--text-2)}
-.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 12px}
-@media(max-width:560px){.g2{grid-template-columns:1fr}}
+@media(max-width:560px){.form-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-box">
+    <div class="auth-icon">🔒</div>
+    <div class="auth-title">Přihlášení vyžadováno</div>
+    <div class="auth-desc">Pro správu účtu se prosím přihlaste.</div>
+    <button onclick="window.location.href='kalkulator.html#registrace'" style="width:100%;padding:13px;background:var(--navy);color:#fff;border:none;border-radius:var(--rm);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">Přihlásit se →</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="page">
 <header class="hdr">
-  <a href="https://www.svjenergie.cz" class="hdr-logo">
-    <div style="background:#1E3A5F;border-radius:8px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1.5px solid rgba(255,255,255,0.15)">
-      <svg width="28" height="28" viewBox="0 0 44 44" fill="none">
+  <a href="/" class="hdr-logo">
+    <div style="width:40px;height:40px;background:var(--blue);border-radius:var(--rm);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+      <svg width="32" height="32" viewBox="0 0 44 44" fill="none">
         <circle cx="33" cy="11" r="5" fill="#F59E0B"/>
         <rect x="4" y="22" width="11" height="18" rx="1.5" fill="none" stroke="white" stroke-width="1.8"/>
         <rect x="17" y="16" width="13" height="24" rx="1.5" fill="none" stroke="white" stroke-width="1.8"/>
@@ -69,199 +93,323 @@ input:disabled{background:var(--bg);color:var(--text-2);cursor:not-allowed}
         <polyline points="5,33 14,40 36,18" fill="none" stroke="#2E8B4A" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </div>
-    <span class="hdr-logo-t">svjenergie</span>
+    <div><div class="logo-t">svjenergie</div><div class="logo-s">nastavení účtu</div></div>
   </a>
-  <div class="hdr-links">
-    <a href="kalkulator.html" class="hdr-link">Kalkulačka</a>
-    <a href="moje-vypocty.html" class="hdr-link">Moje výpočty</a>
-    <button class="btn-logout" onclick="odhlasit()">Odhlásit</button>
+  <div class="hdr-nav">
+    <a href="kalkulator-pro.html" class="btn-hdr">⚡ PRO Kalkulačka</a>
+    <a href="moje-vypocty.html" class="btn-hdr">📊 Moje výpočty</a>
+    <button onclick="odhlasit()" class="btn-hdr" style="background:rgba(244,63,94,.15);border-color:rgba(244,63,94,.3)">↩ Odhlásit</button>
   </div>
 </header>
 
-<div class="page" id="pageContent">
-  <div class="loading-page">
-    <div class="spinner"></div>
-    Načítám profil&hellip;
+<main id="content">
+  <div style="text-align:center;padding:40px;color:var(--text-2)">
+    <div style="width:24px;height:24px;border:2.5px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 12px"></div>
+    Načítám profil…
   </div>
+</main>
 </div>
 
 <script>
-var SUPA_URL='https://aeypeepckmbejdcotdss.supabase.co';
-var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFleXBlZXBja21iZWpkY290ZHNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTkyNjAsImV4cCI6MjA5Mjk3NTI2MH0.JjYiI3bcL1ds1vAkFq59Z0WhNCLAd8oekX6GF4Zq5bA';
-var TOKEN=localStorage.getItem('supa_access_token');
-var USER=null;
+const SUPA_URL = 'https://aeypeepckmbejdcotdss.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFleXBlZXBja21iZWpkY290ZHNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTkyNjAsImV4cCI6MjA5Mjk3NTI2MH0.JjYiI3bcL1ds1vAkFq59Z0WhNCLAd8oekX6GF4Zq5bA';
 
-if(!TOKEN){window.location.href='kalkulator.html';}
+let USER = null;
+let _acTimer = null;
 
-async function init(){
+function getToken(){ return localStorage.getItem('supa_access_token'); }
+
+// ── AUTH ──────────────────────────────────────────────────────
+async function initAuth(){
+  const token = getToken();
+  if(!token){ document.getElementById('authOverlay').classList.add('open'); return false; }
   try{
-    var r=await fetch(SUPA_URL+'/auth/v1/user',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+TOKEN}});
-    if(!r.ok) throw new Error('Neplatné přihlášení');
-    USER=await r.json();
-    renderPage();
-  }catch(e){
-    window.location.href='kalkulator.html';
-  }
-}
-
-function renderPage(){
-  var meta=USER.user_metadata||{};
-  var jmeno=(meta.full_name||'').split(' ')[0]||'';
-  var prijmeni=(meta.full_name||'').split(' ').slice(1).join(' ')||'';
-  document.getElementById('pageContent').innerHTML=
-    '<h1 class="page-title">Nastavení účtu</h1>'+
-    '<p class="page-sub">Spravujte své osobní údaje a přihlašovací informace</p>'+
-
-    // Plán
-    '<div class="card">'+
-      '<div class="card-hdr"><span style="font-size:18px">⭐</span><span class="card-title">Váš plán</span></div>'+
-      '<div class="card-body">'+
-        '<div class="plan-box">'+
-          '<div><div class="plan-name">Bezplatný plán</div><div class="plan-desc">5 výpočtů · neomezený přístup k výsledkům</div></div>'+
-          '<span class="badge-plan">Aktivní</span>'+
-        '</div>'+
-      '</div>'+
-    '</div>'+
-
-    // Osobní údaje
-    '<div class="card">'+
-      '<div class="card-hdr"><span style="font-size:18px">👤</span><span class="card-title">Osobní údaje</span></div>'+
-      '<div class="card-body">'+
-        '<div id="alertProfil" class="alert"></div>'+
-        '<div class="g2">'+
-          '<div class="field"><label>JMÉNO</label><input type="text" id="pJmeno" value="'+jmeno+'" placeholder="Jan"></div>'+
-          '<div class="field"><label>PŘÍJMENÍ</label><input type="text" id="pPrijmeni" value="'+prijmeni+'" placeholder="Novák"></div>'+
-        '</div>'+
-        '<div class="field"><label>E-MAILOVÁ ADRESA</label><input type="email" id="pEmail" value="'+(USER.email||'')+'" disabled></div>'+
-        '<div class="field"><label>TELEFON</label><input type="tel" id="pTel" value="'+(meta.phone||'')+'" placeholder="603 123 456"></div>'+
-        '<div class="field"><label>NÁZEV SVJ</label><input type="text" id="pSvj" value="'+(meta.svj||'')+'" placeholder="SVJ Ke Školce 12"></div>'+
-        '<div class="field"><label>POZICE V SVJ</label>'+
-          '<select id="pPozice">'+
-            '<option value="">Vyberte pozici…</option>'+
-            ['predseda:Předseda SVJ','clen_vyboru:Člen výboru SVJ','spravce:Profesionální správce','vlastnik:Vlastník bytu','jine:Jiné'].map(function(o){
-              var parts=o.split(':');
-              return '<option value="'+parts[0]+'"'+(meta.pozice===parts[0]?' selected':'')+'>'+parts[1]+'</option>';
-            }).join('')+
-          '</select>'+
-        '</div>'+
-        '<button class="btn-save" id="btnSaveProfil" onclick="saveProfil()">Uložit změny</button>'+
-      '</div>'+
-    '</div>'+
-
-    // Změna hesla
-    '<div class="card">'+
-      '<div class="card-hdr"><span style="font-size:18px">🔒</span><span class="card-title">Změna hesla</span></div>'+
-      '<div class="card-body">'+
-        '<div id="alertHeslo" class="alert"></div>'+
-        '<div class="field"><label>NOVÉ HESLO</label>'+
-          '<div class="pw-wrap"><input type="password" id="pHeslo" placeholder="Minimálně 8 znaků" oninput="checkPw(this.value)">'+
-          '<button class="pw-eye" onclick="togPw(\'pHeslo\',this)" type="button">&#128065;</button>'+
-          '<div class="pw-strength" id="pwStr"></div><div class="pw-hint" id="pwHint"></div></div>'+
-        '</div>'+
-        '<div class="field"><label>POTVRDIT NOVÉ HESLO</label>'+
-          '<div class="pw-wrap"><input type="password" id="pHeslo2" placeholder="Zopakujte heslo">'+
-          '<button class="pw-eye" onclick="togPw(\'pHeslo2\',this)" type="button">&#128065;</button></div>'+
-        '</div>'+
-        '<button class="btn-save" id="btnSaveHeslo" onclick="saveHeslo()">Změnit heslo</button>'+
-      '</div>'+
-    '</div>'+
-
-    // Nebezpečná zóna
-    '<div class="card">'+
-      '<div class="card-hdr"><span style="font-size:18px">⚠️</span><span class="card-title">Zrušení účtu</span></div>'+
-      '<div class="card-body">'+
-        '<p style="font-size:13px;color:var(--text-2);margin-bottom:14px">Zrušením účtu přijdete o všechny uložené výpočty. Tato akce je nevratná.</p>'+
-        '<button class="btn-danger" onclick="zrusitUcet()">Zrušit účet</button>'+
-      '</div>'+
-    '</div>';
-}
-
-async function saveProfil(){
-  var jmeno=document.getElementById('pJmeno').value.trim();
-  var prijmeni=document.getElementById('pPrijmeni').value.trim();
-  var tel=document.getElementById('pTel').value.trim();
-  var svj=document.getElementById('pSvj').value.trim();
-  var pozice=document.getElementById('pPozice').value;
-  var btn=document.getElementById('btnSaveProfil');
-  btn.disabled=true;
-  btn.innerHTML='<span class="spin"></span> Ukládám&hellip;';
-  try{
-    var r=await fetch(SUPA_URL+'/auth/v1/user',{
-      method:'PUT',
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+TOKEN,'Content-Type':'application/json'},
-      body:JSON.stringify({data:{full_name:(jmeno+' '+prijmeni).trim(),phone:tel,svj:svj,pozice:pozice}})
+    const r = await fetch(SUPA_URL+'/auth/v1/user', {
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+token}
     });
-    if(!r.ok) throw new Error('Chyba uložení');
-    showAlert('alertProfil','ok','✅ Údaje byly úspěšně uloženy.');
-  }catch(e){
-    showAlert('alertProfil','err','❌ '+e.message);
-  }
-  btn.disabled=false;
-  btn.textContent='Uložit změny';
-}
-
-async function saveHeslo(){
-  var pw1=document.getElementById('pHeslo').value;
-  var pw2=document.getElementById('pHeslo2').value;
-  if(!pw1||pw1.length<8){showAlert('alertHeslo','err','Heslo musí mít alespoň 8 znaků.');return;}
-  if(pw1!==pw2){showAlert('alertHeslo','err','Hesla se neshodují.');return;}
-  var btn=document.getElementById('btnSaveHeslo');
-  btn.disabled=true;
-  btn.innerHTML='<span class="spin"></span> Ukládám&hellip;';
-  try{
-    var r=await fetch(SUPA_URL+'/auth/v1/user',{
-      method:'PUT',
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+TOKEN,'Content-Type':'application/json'},
-      body:JSON.stringify({password:pw1})
-    });
-    if(!r.ok) throw new Error('Chyba změny hesla');
-    document.getElementById('pHeslo').value='';
-    document.getElementById('pHeslo2').value='';
-    showAlert('alertHeslo','ok','✅ Heslo bylo úspěšně změněno.');
-  }catch(e){
-    showAlert('alertHeslo','err','❌ '+e.message);
-  }
-  btn.disabled=false;
-  btn.textContent='Změnit heslo';
-}
-
-function zrusitUcet(){
-  if(!confirm('Opravdu chcete zrušit účet? Tato akce je nevratná.')) return;
-  alert('Pro zrušení účtu nás kontaktujte na gdpr@svjenergie.cz');
-}
-
-function showAlert(id,type,msg){
-  var el=document.getElementById(id);
-  if(!el) return;
-  el.className='alert '+type;
-  el.innerHTML=msg;
-  el.style.display='block';
-  setTimeout(function(){el.style.display='none';},4000);
-}
-
-function checkPw(pw){
-  var s=document.getElementById('pwStr');
-  var h=document.getElementById('pwHint');
-  var strong=pw.length>=10&&/[A-Z]/.test(pw)&&/[0-9]/.test(pw);
-  var ok=pw.length>=8;
-  s.style.background=strong?'#2E8B4A':ok?'#F59E0B':pw.length?'#F43F5E':'#E2E8F0';
-  s.style.width=strong?'100%':ok?'66%':pw.length?'33%':'0';
-  h.textContent=strong?'Silné heslo':ok?'Přidejte číslo nebo velké písmeno':'Minimálně 8 znaků';
-}
-
-function togPw(id,btn){
-  var el=document.getElementById(id);
-  el.type=el.type==='password'?'text':'password';
-  btn.textContent=el.type==='password'?'\uD83D\uDC41':'🔒';
+    if(!r.ok){ document.getElementById('authOverlay').classList.add('open'); return false; }
+    USER = await r.json();
+    renderProfile();
+    return true;
+  }catch(e){ document.getElementById('authOverlay').classList.add('open'); return false; }
 }
 
 function odhlasit(){
   localStorage.removeItem('supa_access_token');
-  sessionStorage.removeItem('premium_unlocked');
-  window.location.href='https://www.svjenergie.cz';
+  window.location.href = 'index.html';
 }
 
-init();
+// ── TOAST ─────────────────────────────────────────────────────
+function showToast(msg, isErr=false){
+  const t = document.getElementById('toast');
+  t.textContent = (isErr?'❌ ':'✅ ') + msg;
+  t.className = 'toast'+(isErr?' err':'');
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 3500);
+}
+
+// ── RENDER ────────────────────────────────────────────────────
+function renderProfile(){
+  if(!USER) return;
+  const meta = USER.user_metadata || {};
+  const name = meta.full_name || USER.email?.split('@')[0] || '—';
+  const initials = name.trim().split(' ').map(n=>n[0]||'').join('').toUpperCase().slice(0,2)||'?';
+
+  document.getElementById('content').innerHTML = `
+  <!-- Avatar + info -->
+  <div class="card">
+    <div class="avatar-wrap">
+      <div class="avatar">${initials}</div>
+      <div class="avatar-info">
+        <h2>${name}</h2>
+        <p>${USER.email}</p>
+        <p style="font-size:12px;color:var(--text-2);margin-top:2px">Člen od ${new Date(USER.created_at).toLocaleDateString('cs-CZ',{month:'long',year:'numeric'})}</p>
+      </div>
+    </div>
+
+    <!-- Osobní údaje -->
+    <div class="section-badge">👤 Osobní údaje</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Jméno</label>
+        <input type="text" id="f_jmeno" value="${meta.full_name?.split(' ')[0]||''}" placeholder="Jan">
+      </div>
+      <div class="form-group">
+        <label>Příjmení</label>
+        <input type="text" id="f_prijmeni" value="${meta.full_name?.split(' ').slice(1).join(' ')||''}" placeholder="Novák">
+      </div>
+      <div class="form-group">
+        <label>Telefon</label>
+        <input type="tel" id="f_telefon" value="${meta.phone||''}" placeholder="603 123 456">
+      </div>
+      <div class="form-group">
+        <label>Pozice v SVJ</label>
+        <select id="f_pozice">
+          <option value="">Vyberte…</option>
+          <option value="predseda" ${meta.pozice==='predseda'?'selected':''}>Předseda SVJ</option>
+          <option value="clen_vyboru" ${meta.pozice==='clen_vyboru'?'selected':''}>Člen výboru SVJ</option>
+          <option value="spravce" ${meta.pozice==='spravce'?'selected':''}>Profesionální správce</option>
+          <option value="vlastnik" ${meta.pozice==='vlastnik'?'selected':''}>Vlastník bytu</option>
+          <option value="jine" ${meta.pozice==='jine'?'selected':''}>Jiné</option>
+        </select>
+      </div>
+      <div class="form-group form-full">
+        <label>Název SVJ</label>
+        <input type="text" id="f_svj" value="${meta.svj||''}" placeholder="SVJ Ke Školce 12">
+      </div>
+    </div>
+
+    <!-- Adresa -->
+    <div class="section-badge" style="margin-top:8px">🏠 Adresa bytového domu</div>
+    <div class="form-grid">
+      <div class="form-group form-full">
+        <label>Adresa bytového domu</label>
+        <div class="ac-wrap">
+          <input type="text" id="f_adresa_domu" value="${meta.adresa_domu||''}" placeholder="Např. Praha 4, Nuselská 12" autocomplete="off" oninput="acInput('f_adresa_domu','acListDomu')">
+          <div class="ac-list" id="acListDomu"></div>
+        </div>
+      </div>
+      <div class="form-group form-full">
+        <label>Kontaktní adresa <span style="font-weight:400;text-transform:none;letter-spacing:0">(pokud se liší od adresy domu)</span></label>
+        <div class="ac-wrap">
+          <input type="text" id="f_adresa_kontakt" value="${meta.adresa_kontakt||''}" placeholder="Ulice, město" autocomplete="off" oninput="acInput('f_adresa_kontakt','acListKontakt')">
+          <div class="ac-list" id="acListKontakt"></div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Město</label>
+        <input type="text" id="f_mesto" value="${meta.mesto||''}" placeholder="Praha">
+      </div>
+      <div class="form-group">
+        <label>PSČ</label>
+        <input type="text" id="f_psc" value="${meta.psc||''}" placeholder="140 00">
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn-save" id="btnSaveMain" onclick="saveMain()">
+        <span id="btnSaveMainTxt">Uložit změny</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Změna hesla -->
+  <div class="card">
+    <div class="card-title">Změna hesla</div>
+    <div class="card-sub">Zadejte nové heslo — doporučujeme min. 10 znaků s číslem a velkým písmenem.</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Nové heslo</label>
+        <div class="pw-wrap">
+          <input type="password" id="f_pw" placeholder="Minimálně 8 znaků" oninput="checkPw(this.value)">
+          <button class="pw-eye" onclick="togglePw('f_pw',this)" type="button">👁</button>
+        </div>
+        <div id="pwBar" style="height:3px;border-radius:2px;margin-top:4px;background:var(--border);transition:all .3s"></div>
+        <div id="pwHint" style="font-size:10px;color:var(--text-2);margin-top:2px"></div>
+      </div>
+      <div class="form-group">
+        <label>Potvrdit nové heslo</label>
+        <div class="pw-wrap">
+          <input type="password" id="f_pw2" placeholder="Zopakujte heslo">
+          <button class="pw-eye" onclick="togglePw('f_pw2',this)" type="button">👁</button>
+        </div>
+      </div>
+    </div>
+    <button class="btn-save" id="btnSavePw" onclick="savePassword()">
+      <span id="btnSavePwTxt">Změnit heslo</span>
+    </button>
+  </div>
+
+  <!-- Nebezpečná zóna -->
+  <div class="card" style="border-color:#FECACA">
+    <div class="card-title" style="color:var(--rose)">Nebezpečná zóna</div>
+    <div class="card-sub">Tyto akce jsou nevratné.</div>
+    <button class="btn-out" onclick="smazatUcet()">🗑 Smazat účet</button>
+  </div>`;
+}
+
+// ── ULOŽENÍ PROFILU ───────────────────────────────────────────
+async function saveMain(){
+  const btn = document.getElementById('btnSaveMain');
+  const txt = document.getElementById('btnSaveMainTxt');
+  btn.disabled = true;
+  txt.innerHTML = '<span class="spin"></span> Ukládám…';
+
+  const jmeno = document.getElementById('f_jmeno').value.trim();
+  const prijmeni = document.getElementById('f_prijmeni').value.trim();
+  const fullName = [jmeno, prijmeni].filter(Boolean).join(' ');
+
+  const update = {
+    data:{
+      full_name: fullName || USER.user_metadata?.full_name || '',
+      phone: document.getElementById('f_telefon').value.trim(),
+      pozice: document.getElementById('f_pozice').value,
+      svj: document.getElementById('f_svj').value.trim(),
+      adresa_domu: document.getElementById('f_adresa_domu').value.trim(),
+      adresa_kontakt: document.getElementById('f_adresa_kontakt').value.trim(),
+      mesto: document.getElementById('f_mesto').value.trim(),
+      psc: document.getElementById('f_psc').value.trim(),
+    }
+  };
+
+  try{
+    const r = await fetch(SUPA_URL+'/auth/v1/user', {
+      method: 'PUT',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getToken(),'Content-Type':'application/json'},
+      body: JSON.stringify(update)
+    });
+    if(!r.ok){
+      const err = await r.json();
+      throw new Error(err.msg||err.message||'Chyba uložení');
+    }
+    USER = await r.json();
+    showToast('Profil byl úspěšně uložen!');
+    // Obnovit avatar
+    const meta = USER.user_metadata || {};
+    const name = meta.full_name || USER.email?.split('@')[0] || '—';
+    const initials = name.trim().split(' ').map(n=>n[0]||'').join('').toUpperCase().slice(0,2)||'?';
+    const av = document.querySelector('.avatar');
+    if(av) av.textContent = initials;
+    const ai = document.querySelector('.avatar-info h2');
+    if(ai) ai.textContent = name;
+  }catch(e){
+    showToast(e.message, true);
+  }finally{
+    btn.disabled = false;
+    txt.textContent = 'Uložit změny';
+  }
+}
+
+// ── ZMĚNA HESLA ───────────────────────────────────────────────
+async function savePassword(){
+  const pw = document.getElementById('f_pw').value;
+  const pw2 = document.getElementById('f_pw2').value;
+  if(!pw || pw.length < 8){ showToast('Heslo musí mít alespoň 8 znaků.', true); return; }
+  if(pw !== pw2){ showToast('Hesla se neshodují.', true); return; }
+  const btn = document.getElementById('btnSavePw');
+  const txt = document.getElementById('btnSavePwTxt');
+  btn.disabled = true; txt.innerHTML = '<span class="spin"></span> Měním heslo…';
+  try{
+    const r = await fetch(SUPA_URL+'/auth/v1/user', {
+      method: 'PUT',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getToken(),'Content-Type':'application/json'},
+      body: JSON.stringify({password: pw})
+    });
+    if(!r.ok) throw new Error('Chyba změny hesla');
+    showToast('Heslo bylo úspěšně změněno!');
+    document.getElementById('f_pw').value = '';
+    document.getElementById('f_pw2').value = '';
+    document.getElementById('pwBar').style.background = 'var(--border)';
+    document.getElementById('pwBar').style.width = '0';
+  }catch(e){
+    showToast(e.message, true);
+  }finally{
+    btn.disabled = false; txt.textContent = 'Změnit heslo';
+  }
+}
+
+// ── SMAZÁNÍ ÚČTU ──────────────────────────────────────────────
+function smazatUcet(){
+  if(!confirm('Opravdu chcete smazat svůj účet? Tato akce je nevratná a smažeme všechna vaše data.')) return;
+  showToast('Pro smazání účtu nás kontaktujte na info@svjenergie.cz', false);
+}
+
+// ── HELPERS ───────────────────────────────────────────────────
+function togglePw(id, btn){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.type = el.type==='password' ? 'text' : 'password';
+  btn.textContent = el.type==='password' ? '👁' : '🔒';
+}
+
+function checkPw(pw){
+  const bar = document.getElementById('pwBar');
+  const hint = document.getElementById('pwHint');
+  if(!bar) return;
+  const strong = pw.length>=10 && /[A-Z]/.test(pw) && /[0-9]/.test(pw);
+  const ok = pw.length >= 8;
+  bar.style.width = strong?'100%':ok?'66%':pw.length?'33%':'0';
+  bar.style.background = strong?'var(--green)':ok?'var(--amber)':pw.length?'var(--rose)':'var(--border)';
+  if(hint) hint.textContent = strong?'Silné heslo ✓':ok?'Přidejte číslo nebo velké písmeno':'Minimálně 8 znaků';
+}
+
+// Autocomplete adresy
+function acInput(inputId, listId){
+  clearTimeout(_acTimer);
+  const val = document.getElementById(inputId)?.value.trim();
+  const list = document.getElementById(listId);
+  if(!list) return;
+  if(!val || val.length < 3){ list.classList.remove('open'); return; }
+  _acTimer = setTimeout(async()=>{
+    try{
+      const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(val+', Česká republika')}&format=json&limit=5&countrycodes=cz`,
+        {headers:{'User-Agent':'SVJEnergie/1.0'}});
+      const data = await r.json();
+      if(!data.length){ list.classList.remove('open'); return; }
+      list.innerHTML = data.map(d=>
+        `<div class="ac-item" onclick="pickAddr('${inputId}','${listId}','${(d.display_name||'').replace(/'/g,"\\'")}')">📍 ${d.display_name}</div>`
+      ).join('');
+      list.classList.add('open');
+    }catch(e){}
+  }, 400);
+}
+
+function pickAddr(inputId, listId, name){
+  const el = document.getElementById(inputId);
+  const list = document.getElementById(listId);
+  if(el) el.value = name.split(',').slice(0,3).join(', ');
+  if(list) list.classList.remove('open');
+}
+
+document.addEventListener('click', e=>{
+  ['acListDomu','acListKontakt'].forEach(id=>{
+    const list = document.getElementById(id);
+    if(list && !list.contains(e.target)) list.classList.remove('open');
+  });
+});
+
+// ── START ─────────────────────────────────────────────────────
+initAuth();
 </script>
 </body>
 </html>
