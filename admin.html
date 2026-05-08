@@ -454,6 +454,51 @@ async function nacistSimulaceUzivatele(email){
   }catch(e){ console.warn('Chyba načtení simulací:', e); }
 }
 
+function exportLeadPdf(id){
+  var l = ALL_LEADS.find(function(x){return x.id===id;});
+  if(!l) return;
+  var p={};
+  try{var raw=l.params;p=typeof raw==='string'?JSON.parse(raw):raw||{};if(typeof p==='string')p=JSON.parse(p);}catch(e){p={};}
+  var bytu=p.bytu||l.bytu||1;
+  var inv=p.cena_invest||0;
+  var uver=Math.min(inv*0.8,5000000);
+  var splatnost=p.splatnost||15;
+  var nav=p.nav;
+  var kum25=p.kum25||0;
+  var uspora_rok=p.uspora_rok||0;
+  var uspora_byt_mes=uspora_rok?Math.round(uspora_rok/bytu/12):0;
+  var nzu_spl=Math.round(uver/splatnost/bytu/12);
+  var kc=function(v){return Math.round(v).toLocaleString('cs-CZ')+' Kč';};
+  var verdiktTxt=nav?(nav<=10?'✅ Vynikající investice — návratnost '+nav+' let':nav<=15?'✅ Dobrá investice — návratnost '+nav+' let':nav<=20?'⚠️ Přijatelná investice — návratnost '+nav+' let':'⚠️ Hraniční projekt'):'—';
+  var verdiktBg=nav&&nav<=15?'#E3F4E9':nav&&nav<=20?'#FEF3C7':'#fff';
+  var verdiktColor=nav&&nav<=15?'#1A5C32':nav&&nav<=20?'#7C5300':'#64748B';
+  var html='<!DOCTYPE html><html lang="cs"><head><meta charset="UTF-8"><title>SVJ Energie — Lead</title>'+
+'<style>@import url(\'https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap\');*{box-sizing:border-box;margin:0;padding:0}body{font-family:\'DM Sans\',Arial,sans-serif;font-size:13px;color:#1E293B;background:#fff;line-height:1.5}.page{max-width:210mm;margin:0 auto;padding:12mm 14mm}.hdr{background:#1E3A5F;color:#fff;padding:14px 18px;border-radius:8px;margin-bottom:10px;display:flex;justify-content:space-between}.hdr-t{font-size:17px;font-weight:700}.hdr-s{font-size:10px;color:#8BA8C4;margin-top:2px}.green-line{height:3px;background:#2E8B4A;border-radius:2px;margin-bottom:14px}.verdikt{padding:10px 14px;border-radius:8px;margin-bottom:12px}.kpi-row{display:flex;gap:8px;margin-bottom:12px}.kpi{flex:1;padding:10px 12px;border-radius:8px;border:1px solid #E2E8F0}.kpi-l{font-size:10px;color:#64748B;margin-bottom:2px}.kpi-v{font-size:16px;font-weight:700}.kpi.green{background:#E3F4E9}.kpi.green .kpi-v{color:#1A5C32}.kpi.blue{background:#E3F0FA}.kpi.blue .kpi-v{color:#1E3A5F}.kpi.amber{background:#FEF3C7}.kpi.amber .kpi-v{color:#78350F}table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:12px}th{background:#1E3A5F;color:#fff;padding:7px 10px;text-align:left;font-size:11px}td{padding:6px 10px;border-bottom:0.5px solid #E2E8F0}.nzu{background:#E3F4E9;border:1px solid #A3D8B8;border-radius:8px;padding:11px 14px;margin-bottom:12px}.print-btn{position:fixed;bottom:20px;right:20px;background:#2E8B4A;color:#fff;border:none;border-radius:10px;padding:12px 24px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;z-index:999}@media print{.print-btn{display:none!important}.hdr,.nzu,.kpi.green,.kpi.blue,.kpi.amber,.verdikt,th,tr{-webkit-print-color-adjust:exact;print-color-adjust:exact}}@page{size:A4;margin:10mm 12mm}</style></head><body>'+
+'<button class="print-btn" onclick="window.print()">🖨️ Uložit jako PDF</button>'+
+'<div class="page">'+
+'<div class="hdr"><div><div class="hdr-t">SVJ Energie — Analýza FVE</div><div class="hdr-s">www.svjenergie.cz · '+new Date().toLocaleDateString('cs-CZ')+'</div></div></div>'+
+'<div class="green-line"></div>'+
+'<h1 style="font-size:18px;font-weight:700;color:#1E3A5F;margin-bottom:4px">'+(p.lokace||l.svj||'Bytový dům')+'</h1>'+
+'<p style="color:#64748B;font-size:12px;margin-bottom:12px">'+bytu+' bytů · '+(p.kwp||l.kwp||'—')+' kWp · '+(p.dist||l.dist||'—')+'</p>'+
+(nav?'<div class="verdikt" style="background:'+verdiktBg+';border:1px solid '+verdiktColor+'40"><strong style="color:'+verdiktColor+';font-size:13px">'+verdiktTxt+'</strong><br><span style="color:'+verdiktColor+';font-size:11px">Za 25 let: <strong>'+kc(kum25)+'</strong> · <strong>'+kc(kum25/bytu)+'/byt</strong> · každý byt ušetří <strong>'+uspora_byt_mes+' Kč/měsíc</strong></span></div>':'')+
+(uspora_rok?'<div class="kpi-row"><div class="kpi green"><div class="kpi-l">Roční úspora</div><div class="kpi-v">'+kc(uspora_rok)+'</div><div style="font-size:10px;color:#2E6B40">'+uspora_byt_mes+' Kč/byt/měs</div></div><div class="kpi blue"><div class="kpi-l">Výkon FVE</div><div class="kpi-v">'+(p.kwp||'—')+' kWp</div><div style="font-size:10px;color:#4A7BA8">'+(p.vyroba_mwh||'—')+' MWh/rok</div></div><div class="kpi amber"><div class="kpi-l">Investice</div><div class="kpi-v">'+(inv?Math.round(inv/1000)+'k Kč':'—')+'</div><div style="font-size:10px;color:#92400E">NZÚ splátka '+nzu_spl+' Kč/byt/měs</div></div></div>':'')+
+'<h2 style="font-size:13px;font-weight:600;color:#1E3A5F;margin:14px 0 8px;padding-bottom:3px;border-bottom:2px solid #E2E8F0">Kontaktní informace</h2>'+
+'<table><tr><th>Pole</th><th style="text-align:right">Hodnota</th></tr>'+
+'<tr><td>Jméno</td><td style="text-align:right">'+(l.jmeno||'—')+'</td></tr>'+
+'<tr style="background:#F8FAFB"><td>E-mail</td><td style="text-align:right">'+(l.email||'—')+'</td></tr>'+
+'<tr><td>Telefon</td><td style="text-align:right">'+(l.telefon||'—')+'</td></tr>'+
+'<tr style="background:#F8FAFB"><td>SVJ / Pozice</td><td style="text-align:right">'+(l.svj||'—')+' / '+prelozPozici(l.pozice)+'</td></tr>'+
+'<tr><td>Adresa domu</td><td style="text-align:right">'+(p.lokace||'—')+'</td></tr>'+
+'<tr style="background:#F8FAFB"><td>Stav</td><td style="text-align:right">'+(l.stav||'nový')+'</td></tr>'+
+'</table>'+
+(nav&&inv?'<div class="nzu"><div style="font-weight:600;color:#1A5C32;margin-bottom:6px">🏛️ Státní podpora NZÚ 2026</div><div style="color:#2E6B40;font-size:12px;margin-bottom:3px">✓ Bezúročný úvěr: <strong>'+kc(uver)+'</strong> — splatnost '+splatnost+' let</div><div style="color:#2E6B40;font-size:12px">✓ Vlastní vklad SVJ: <strong>'+kc(inv-uver)+'</strong> ('+kc(Math.round((inv-uver)/bytu))+'/byt)</div></div>':'')+
+'<p style="font-size:10px;color:#94A3B8;margin-top:14px;text-align:center">Orientační výpočty · svjenergie.cz · '+new Date().toLocaleDateString('cs-CZ')+'</p>'+
+'</div></body></html>';
+  var win=window.open('','_blank');
+  win.document.write(html);
+  win.document.close();
+}
+
 async function changeStav(id, stav){
   await fetch('/api/admin-leads',{
     method:'PATCH',
@@ -512,6 +557,7 @@ function openDetail(id){
     '<div class="detail-actions">'+
       (l.telefon?'<a class="btn-action btn-call" href="tel:'+l.telefon+'">📞 Zavolat: '+l.telefon+'</a>':'')+
       '<a class="btn-action btn-email" href="mailto:'+l.email+'?subject=SVJ Energie — FVE kalkulačka&body=Dobrý den '+l.jmeno+',%0A%0A">✉️ Napsat e-mail</a>'+
+      '<button class="btn-action" onclick="exportLeadPdf(\''+l.id+'\')" style="background:var(--navy);color:#fff;border:none;cursor:pointer;font-family:inherit;border-radius:var(--rm);padding:8px 14px;font-size:12px;font-weight:600">📄 PDF report</button>'+
     '</div>'+
 
     // Základní info
