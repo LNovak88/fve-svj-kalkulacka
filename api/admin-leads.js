@@ -40,48 +40,67 @@ export default async function handler(req, res) {
         { headers: { 'apikey': SERVICE_KEY, 'Authorization': 'Bearer ' + SERVICE_KEY, 'Accept': 'application/json' } }
       );
       const sims = await sRes.json();
-      if (!Array.isArray(sims)) return res.status(200).json({ users: [] });
+      if (!Array.isArray(sims) || !sims.length) return res.status(200).json({ users: [] });
 
-      // Načíst uživatele přes admin API
-      const uRes = await fetch(
-        SUPA_URL + '/auth/v1/admin/users?per_page=500',
-        { headers: { 'apikey': SERVICE_KEY, 'Authorization': 'Bearer ' + SERVICE_KEY } }
-      );
-      const uData = await uRes.json();
-      const allUsers = uData.users || [];
-
-      // Načíst leady pro doplnění info (SVJ, pozice, adresa)
+      // Načíst leady pro info o uživatelích (jméno, email, SVJ, pozice)
       const lRes = await fetch(
-        SUPA_URL + '/rest/v1/leads?select=email,svj,pozice,jmeno&order=created_at.desc&limit=500',
+        SUPA_URL + '/rest/v1/leads?select=email,svj,pozice,jmeno,params&order=created_at.desc&limit=500',
         { headers: { 'apikey': SERVICE_KEY, 'Authorization': 'Bearer ' + SERVICE_KEY, 'Accept': 'application/json' } }
       );
       const leads = await lRes.json();
-      const leadMap = {};
-      if (Array.isArray(leads)) leads.forEach(l => { if(l.email) leadMap[l.email] = l; });
+      const leadByEmail = {};
+      if (Array.isArray(leads)) leads.forEach(l => { if(l.email && !leadByEmail[l.email]) leadByEmail[l.email] = l; });
 
       // Seskupit simulace dle user_id
       const userMap = {};
       sims.forEach(s => {
         if (!s.user_id) return;
-        if (!userMap[s.user_id]) userMap[s.user_id] = [];
-        userMap[s.user_id].push(s);
+        if (!userMap[s.user_id]) userMap[s.user_id] = { sims: [], email: null, name: null };
+        userMap[s.user_id].sims.push(s);
+        // Zkusit vytáhnout email z params simulace
+        if (!userMap[s.user_id].email) {
+          try {
+            const p = JSON.parse(s.params || '{}');
+            // email není v params, ale lokace ano
+          } catch(e) {}
+        }
       });
 
+      // Načíst emailu uživatelů přes auth admin - zkusit, ale nespoléhat
+      let authUsers = [];
+      try {
+        const uRes = await fetch(
+          SUPA_URL + '/auth/v1/admin/users?per_page=500',
+          { headers: { 'apikey': SERVICE_KEY, 'Authorization': 'Bearer ' + SERVICE_KEY } }
+        );
+        if (uRes.ok) {
+          const uData = await uRes.json();
+          authUsers = uData.users || [];
+        }
+      } catch(e) { /* admin API nedostupné - pokračujeme bez emailů */ }
+
       // Sestavit výsledek
-      const users = Object.entries(userMap).map(([uid, userSims]) => {
-        const authUser = allUsers.find(u => u.id === uid) || {};
+      const users = Object.entries(userMap).map(([uid, data]) => {
+        const authUser = authUsers.find(u => u.id === uid) || {};
         const email = authUser.email || '';
         const meta = authUser.user_metadata || {};
-        const lead = leadMap[email] || {};
+        const lead = leadByEmail[email] || {};
+        // Zkusit jméno z params nejnovější simulace
+        let nameFromSim = '';
+        try {
+          const p = JSON.parse(data.sims[0]?.params || '{}');
+          nameFromSim = p.lokace ? p.lokace.split(',')[0] : '';
+        } catch(e) {}
+
         return {
           user: {
             id: uid,
-            email,
-            full_name: meta.full_name || lead.jmeno || email.split('@')[0],
+            email: email || '—',
+            full_name: meta.full_name || lead.jmeno || email.split('@')[0] || ('Uživatel '+uid.slice(0,6)),
             svj: meta.svj || lead.svj || '',
             pozice: meta.pozice || lead.pozice || '',
           },
-          simulations: userSims.sort((a,b) => new Date(b.created_at) - new Date(a.created_at)).slice(0,10),
+          simulations: data.sims.sort((a,b) => new Date(b.created_at) - new Date(a.created_at)).slice(0,10),
         };
       }).sort((a,b) => new Date(b.simulations[0]?.created_at) - new Date(a.simulations[0]?.created_at));
 
