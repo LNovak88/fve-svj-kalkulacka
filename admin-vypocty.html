@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Výpočty uživatelů | SVJ Energie</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{--navy:#1E3A5F;--blue:#1B6CA8;--blue-l:#E3F0FA;--blue-ll:#F0F7FD;--green:#2E8B4A;--green-l:#E3F4E9;--amber:#F59E0B;--amber-l:#FEF3C7;--rose:#F43F5E;--text:#1E293B;--text-2:#64748B;--border:#E2E8F0;--bg:#F8FAFB;--white:#fff;--r:12px;--rm:8px;--shadow:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.04);--shadow-lg:0 8px 32px rgba(30,58,95,.12)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;min-height:100vh}
+
+/* Layout */
+.app{display:flex;flex-direction:column;min-height:100vh}
+.hdr{background:var(--navy);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;box-shadow:var(--shadow-lg)}
+.hdr-logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.logo-t{color:#fff;font-size:16px;font-weight:600}
+.logo-s{color:#8BA8C4;font-size:11px}
+.hdr-nav{display:flex;align-items:center;gap:8px}
+.btn-nav{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:var(--rm);padding:6px 14px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;text-decoration:none;transition:background .15s}
+.btn-nav:hover{background:rgba(255,255,255,.2)}
+.btn-nav.active{background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.4)}
+.main{flex:1;padding:24px;max-width:1400px;margin:0 auto;width:100%}
+
+/* Login */
+.login-wrap{display:flex;align-items:center;justify-content:center;min-height:80vh}
+.login-box{background:var(--white);border-radius:var(--r);padding:36px;max-width:400px;width:100%;box-shadow:var(--shadow-lg)}
+.login-title{font-family:'DM Serif Display',serif;font-size:22px;color:var(--navy);margin-bottom:20px}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:12px;font-weight:600;color:var(--text-2);margin-bottom:5px;letter-spacing:.4px;text-transform:uppercase}
+.form-group input{width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:var(--rm);font-size:14px;font-family:inherit;outline:none;transition:border-color .15s}
+.form-group input:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-l)}
+.btn-login{width:100%;padding:12px;background:var(--navy);color:#fff;border:none;border-radius:var(--rm);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:6px}
+.err{color:var(--rose);font-size:12px;margin-top:8px;display:none}
+
+/* Obsah adminu */
+.admin-wrap{display:none}
+.page-title{font-family:'DM Serif Display',serif;font-size:24px;color:var(--navy);margin-bottom:4px}
+.page-sub{font-size:13px;color:var(--text-2);margin-bottom:20px}
+
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.stat{background:var(--white);border:0.5px solid var(--border);border-radius:var(--rm);padding:14px 16px;box-shadow:var(--shadow)}
+.stat-l{font-size:11px;color:var(--text-2);margin-bottom:4px}
+.stat-v{font-size:22px;font-weight:600;color:var(--navy);line-height:1}
+.stat-s{font-size:11px;color:var(--text-2);margin-top:2px}
+.stat.green .stat-v{color:var(--green)}
+.stat.amber .stat-v{color:#92400E}
+
+/* Filtr + search */
+.toolbar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.search-wrap{flex:1;min-width:200px;position:relative}
+.search-wrap input{width:100%;padding:9px 13px 9px 36px;border:1px solid var(--border);border-radius:var(--rm);font-size:13px;font-family:inherit;outline:none;background:var(--white)}
+.search-wrap input:focus{border-color:var(--blue)}
+.search-ico{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-2);font-size:14px;pointer-events:none}
+.btn-sm{padding:8px 14px;border-radius:var(--rm);font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;border:1px solid var(--border);background:var(--white);color:var(--text-2);transition:all .15s;white-space:nowrap}
+.btn-sm:hover{border-color:var(--blue);color:var(--blue)}
+.btn-sm.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+
+/* Tabulka uživatelů */
+.table-wrap{background:var(--white);border:0.5px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:11px;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:.5px;padding:10px 14px;border-bottom:1.5px solid var(--border);background:var(--bg);white-space:nowrap}
+td{padding:11px 14px;border-bottom:0.5px solid var(--border);font-size:13px;color:var(--text);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr.user-row{cursor:pointer;transition:background .1s}
+tr.user-row:hover{background:var(--blue-ll)}
+tr.user-row.expanded{background:var(--blue-ll)}
+.expand-icon{color:var(--text-2);font-size:12px;transition:transform .2s}
+.user-row.expanded .expand-icon{transform:rotate(180deg)}
+
+/* Rozbalená sekce simulací */
+.sims-row{display:none}
+.sims-row.open{display:table-row}
+.sims-cell{padding:0!important;border-bottom:2px solid var(--blue)!important}
+.sims-inner{padding:16px 20px;background:linear-gradient(to bottom,var(--blue-ll),var(--white))}
+.sims-title{font-size:12px;font-weight:600;color:var(--navy);margin-bottom:12px;letter-spacing:.3px}
+.sim-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.sim-card{background:var(--white);border:0.5px solid var(--border);border-radius:var(--rm);padding:14px;box-shadow:var(--shadow);transition:box-shadow .15s}
+.sim-card:hover{box-shadow:var(--shadow-lg)}
+.sim-card-date{font-size:10px;color:var(--text-2);margin-bottom:4px}
+.sim-card-name{font-size:13px;font-weight:600;color:var(--navy);margin-bottom:8px;line-height:1.3}
+.sim-kpis{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+.sim-kpi{background:var(--bg);border-radius:6px;padding:7px 9px}
+.sim-kpi-l{font-size:10px;color:var(--text-2);margin-bottom:1px}
+.sim-kpi-v{font-size:13px;font-weight:600;color:var(--navy)}
+.sim-kpi.green .sim-kpi-v{color:var(--green)}
+.sim-actions{display:flex;gap:6px}
+.btn-sim{padding:6px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;border:none;transition:opacity .15s}
+.btn-sim:hover{opacity:.85}
+.btn-pdf-sim{background:var(--navy);color:#fff}
+.btn-open-sim{background:var(--blue-l);color:var(--blue)}
+.sim-loading{text-align:center;padding:20px;color:var(--text-2);font-size:13px}
+.spinner{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Badge */
+.badge{display:inline-flex;align-items:center;border-radius:20px;padding:2px 9px;font-size:10px;font-weight:600;white-space:nowrap}
+.b-green{background:var(--green-l);color:#1A5C32}
+.b-blue{background:var(--blue-l);color:#0C4A7C}
+.b-amber{background:var(--amber-l);color:#92400E}
+.b-gray{background:#F1F5F9;color:#475569}
+.b-pro{background:linear-gradient(135deg,#F59E0B,#D97706);color:#fff}
+
+/* Avatar */
+.avatar{width:30px;height:30px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
+
+/* Loading */
+.loading{text-align:center;padding:48px;color:var(--text-2)}
+
+/* Prázdný stav */
+.empty{text-align:center;padding:32px;color:var(--text-2);font-size:13px}
+
+@media(max-width:768px){.stats{grid-template-columns:1fr 1fr}.sim-cards{grid-template-columns:1fr}th.hide-mob,td.hide-mob{display:none}}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- Hlavička -->
+<header class="hdr">
+  <a href="/" class="hdr-logo">
+    <div style="width:36px;height:36px;background:var(--blue);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+      <svg width="28" height="28" viewBox="0 0 44 44" fill="none">
+        <circle cx="33" cy="11" r="5" fill="#F59E0B"/>
+        <rect x="4" y="22" width="11" height="18" rx="1.5" fill="none" stroke="white" stroke-width="1.8"/>
+        <rect x="17" y="16" width="13" height="24" rx="1.5" fill="none" stroke="white" stroke-width="1.8"/>
+        <rect x="32" y="19" width="9" height="21" rx="1.5" fill="none" stroke="white" stroke-width="1.8"/>
+        <polyline points="5,33 14,40 36,18" fill="none" stroke="#2E8B4A" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div><div class="logo-t">SVJ Energie — Admin</div><div class="logo-s">Výpočty uživatelů</div></div>
+  </a>
+  <div class="hdr-nav">
+    <a href="admin.html" class="btn-nav">📋 Leady</a>
+    <a href="admin-vypocty.html" class="btn-nav active">📊 Výpočty</a>
+    <button onclick="doLogout()" class="btn-nav" style="background:rgba(244,63,94,.15);border-color:rgba(244,63,94,.3)">↩ Odhlásit</button>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- Login -->
+  <div class="login-wrap" id="loginWrap">
+    <div class="login-box">
+      <div class="login-title">🔐 Admin přihlášení</div>
+      <div class="form-group"><label>E-mail</label><input type="email" id="loginEmail" placeholder="admin@svjenergie.cz" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <div class="form-group"><label>Heslo</label><input type="password" id="loginPw" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <button class="btn-login" onclick="doLogin()" id="loginBtn">Přihlásit se →</button>
+      <div class="err" id="loginErr"></div>
+    </div>
+  </div>
+
+  <!-- Admin obsah -->
+  <div class="admin-wrap" id="adminWrap">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
+      <div>
+        <div class="page-title">Výpočty uživatelů</div>
+        <div class="page-sub">Přehled všech simulací — klikněte na uživatele pro detail</div>
+      </div>
+      <button onclick="exportCsv()" class="btn-sm" style="background:var(--green);color:#fff;border-color:var(--green)">⬇ Export CSV</button>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats">
+      <div class="stat"><div class="stat-l">Uživatelů s výpočtem</div><div class="stat-v" id="statUzivatele">—</div><div class="stat-s">celkem</div></div>
+      <div class="stat green"><div class="stat-l">Celkem simulací</div><div class="stat-v" id="statSimulace">—</div><div class="stat-s">uložených</div></div>
+      <div class="stat amber"><div class="stat-l">Průměrná úspora/rok</div><div class="stat-v" id="statUspora" style="font-size:16px">—</div><div class="stat-s">z PRO výpočtů</div></div>
+      <div class="stat"><div class="stat-l">Průměrná návratnost</div><div class="stat-v" id="statNav">—</div><div class="stat-s">let</div></div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="search-wrap">
+        <span class="search-ico">🔍</span>
+        <input type="text" id="searchInput" placeholder="Hledat uživatele, adresu…" oninput="filterUsers()">
+      </div>
+      <button class="btn-sm active" id="btnVse" onclick="setFilter('vse')">Všichni</button>
+      <button class="btn-sm" id="btnPro" onclick="setFilter('pro')">Jen PRO výpočty</button>
+    </div>
+
+    <!-- Tabulka -->
+    <div class="table-wrap">
+      <table id="mainTable">
+        <thead>
+          <tr>
+            <th></th>
+            <th>Uživatel</th>
+            <th class="hide-mob">E-mail</th>
+            <th>Počet výpočtů</th>
+            <th class="hide-mob">Poslední výpočet</th>
+            <th>Nejlepší úspora</th>
+            <th>Adresa domu</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr><td colspan="8"><div class="loading"><div class="spinner"></div>Načítám data…</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+const SUPA_URL = 'https://aeypeepckmbejdcotdss.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFleXBlZXBja21iZWpkY290ZHNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTkyNjAsImV4cCI6MjA5Mjk3NTI2MH0.JjYiI3bcL1ds1vAkFq59Z0WhNCLAd8oekX6GF4Zq5bA';
+const ADMIN_EMAIL = 'lnovak88@seznam.cz';
+
+let TOKEN = null;
+let ALL_DATA = []; // pole {user, simulations}
+let activeFilter = 'vse';
+
+// ── AUTH ──────────────────────────────────────────────────────
+async function doLogin(){
+  const em = document.getElementById('loginEmail').value.trim();
+  const pw = document.getElementById('loginPw').value;
+  const err = document.getElementById('loginErr');
+  const btn = document.getElementById('loginBtn');
+  if(!em||!pw){err.textContent='Vyplňte e-mail a heslo.';err.style.display='block';return;}
+  btn.textContent='Přihlašuji…'; btn.disabled=true;
+  try{
+    const r = await fetch(SUPA_URL+'/auth/v1/token?grant_type=password',{
+      method:'POST',
+      headers:{'apikey':SUPA_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({email:em,password:pw})
+    });
+    const d = await r.json();
+    if(!r.ok) throw new Error('Nesprávné přihlašovací údaje');
+    if(em.toLowerCase()!==ADMIN_EMAIL.toLowerCase()) throw new Error('Nemáte oprávnění.');
+    TOKEN = d.access_token;
+    document.getElementById('loginWrap').style.display='none';
+    document.getElementById('adminWrap').style.display='block';
+    loadData();
+  }catch(e){
+    err.textContent=e.message; err.style.display='block';
+    btn.textContent='Přihlásit se →'; btn.disabled=false;
+  }
+}
+
+function doLogout(){
+  TOKEN=null; ALL_DATA=[];
+  document.getElementById('loginWrap').style.display='flex';
+  document.getElementById('adminWrap').style.display='none';
+}
+
+// ── NAČTENÍ DAT ───────────────────────────────────────────────
+async function loadData(){
+  document.getElementById('tableBody').innerHTML =
+    '<tr><td colspan="8"><div class="loading"><div class="spinner"></div>Načítám simulace…</div></td></tr>';
+  try{
+    // Načíst simulace přes admin API
+    const r = await fetch('/api/admin-leads?action=all_sims', {
+      headers:{'Authorization':'Bearer '+TOKEN}
+    });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const data = await r.json();
+    ALL_DATA = data.users || [];
+    updateStats();
+    renderTable(ALL_DATA);
+  }catch(e){
+    document.getElementById('tableBody').innerHTML =
+      '<tr><td colspan="8"><div class="empty">❌ Chyba načtení: '+e.message+'</div></td></tr>';
+  }
+}
+
+// ── STATS ─────────────────────────────────────────────────────
+function updateStats(){
+  const totalSims = ALL_DATA.reduce((s,u)=>s+u.simulations.length,0);
+  const uspory = ALL_DATA.flatMap(u=>u.simulations.map(s=>{
+    try{const r=JSON.parse(s.result||'{}');return r.uspora_rok||0;}catch(e){return 0;}
+  })).filter(v=>v>0);
+  const navs = ALL_DATA.flatMap(u=>u.simulations.map(s=>{
+    try{const r=JSON.parse(s.result||'{}');return r.nav||0;}catch(e){return 0;}
+  })).filter(v=>v>0);
+  const avgUspora = uspory.length ? Math.round(uspory.reduce((a,b)=>a+b,0)/uspory.length) : 0;
+  const avgNav = navs.length ? Math.round(navs.reduce((a,b)=>a+b,0)/navs.length*10)/10 : 0;
+  document.getElementById('statUzivatele').textContent = ALL_DATA.length;
+  document.getElementById('statSimulace').textContent = totalSims;
+  document.getElementById('statUspora').textContent = avgUspora ? avgUspora.toLocaleString('cs-CZ')+' Kč' : '—';
+  document.getElementById('statNav').textContent = avgNav || '—';
+}
+
+// ── FILTR ─────────────────────────────────────────────────────
+function setFilter(f){
+  activeFilter = f;
+  document.getElementById('btnVse').classList.toggle('active', f==='vse');
+  document.getElementById('btnPro').classList.toggle('active', f==='pro');
+  filterUsers();
+}
+
+function filterUsers(){
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  let data = ALL_DATA;
+  if(activeFilter==='pro') data = data.filter(u=>u.simulations.some(s=>{
+    try{const r=JSON.parse(s.result||'{}');return r.uspora_rok>0;}catch(e){return false;}
+  }));
+  if(q) data = data.filter(u=>
+    (u.user.email||'').toLowerCase().includes(q) ||
+    (u.user.full_name||'').toLowerCase().includes(q) ||
+    u.simulations.some(s=>(s.name||'').toLowerCase().includes(q))
+  );
+  renderTable(data);
+}
+
+// ── RENDER TABULKY ────────────────────────────────────────────
+function renderTable(data){
+  if(!data.length){
+    document.getElementById('tableBody').innerHTML =
+      '<tr><td colspan="8"><div class="empty">Žádní uživatelé nenalezeni.</div></td></tr>';
+    return;
+  }
+  const rows = data.map(u=>{
+    const sims = u.simulations || [];
+    const lastSim = sims[0];
+    const best = sims.reduce((best,s)=>{
+      try{const r=JSON.parse(s.result||'{}');return r.uspora_rok>best?r.uspora_rok:best;}catch(e){return best;}
+    },0);
+    const nav = sims.reduce((best,s)=>{
+      try{const r=JSON.parse(s.result||'{}');return r.nav&&r.nav<best?r.nav:best;}catch(e){return best;}
+    },99);
+    const adresa = sims.length ? (()=>{try{return JSON.parse(sims[0].params||'{}').lokace||'—';}catch(e){return '—';}})() : '—';
+    const name = u.user.full_name || u.user.email?.split('@')[0] || '—';
+    const initials = name.trim().split(' ').map(n=>n[0]||'').join('').toUpperCase().slice(0,2)||'?';
+    const hasPro = best > 0;
+    return `
+      <tr class="user-row" id="urow-${u.user.id}" onclick="toggleUser('${u.user.id}')">
+        <td><span class="expand-icon">▼</span></td>
+        <td>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="avatar">${initials}</div>
+            <div>
+              <div style="font-weight:600;color:var(--navy)">${name}</div>
+              <div style="font-size:11px;color:var(--text-2)">${u.user.pozice||''}</div>
+            </div>
+          </div>
+        </td>
+        <td class="hide-mob" style="color:var(--text-2);font-size:12px">${u.user.email||'—'}</td>
+        <td>
+          <span class="badge ${sims.length>0?'b-blue':'b-gray'}">${sims.length} výpočtů</span>
+          ${hasPro?'<span class="badge b-pro" style="margin-left:4px">PRO</span>':''}
+        </td>
+        <td class="hide-mob" style="font-size:12px;color:var(--text-2)">${lastSim?fmtDate(lastSim.created_at):'—'}</td>
+        <td style="font-weight:600;color:var(--green)">${best?best.toLocaleString('cs-CZ')+' Kč/rok':'—'}</td>
+        <td style="font-size:12px;color:var(--text-2);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${adresa}</td>
+        <td>
+          <button onclick="event.stopPropagation();exportUserPdf('${u.user.id}')" style="background:var(--navy);color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">📄 PDF</button>
+        </td>
+      </tr>
+      <tr class="sims-row" id="srow-${u.user.id}">
+        <td colspan="8" class="sims-cell">
+          <div class="sims-inner" id="sims-inner-${u.user.id}">
+            ${renderSimCards(sims, u.user)}
+          </div>
+        </td>
+      </tr>`;
+  }).join('');
+  document.getElementById('tableBody').innerHTML = rows;
+}
+
+// ── RENDER KARET SIMULACÍ ─────────────────────────────────────
+function renderSimCards(sims, user){
+  if(!sims.length) return '<div class="empty">Žádné výpočty</div>';
+  return '<div class="sims-title">📊 Výpočty uživatele ('+sims.length+') — klikněte na kartu pro detail</div>'+
+    '<div class="sim-cards">'+
+    sims.map((s,i)=>{
+      let res={}, params={};
+      try{res=JSON.parse(s.result||'{}');}catch(e){}
+      try{params=JSON.parse(s.params||'{}');}catch(e){}
+      const bytu = params.pocet_bytu||params.bytu||1;
+      const uspora_byt = res.uspora_rok ? Math.round(res.uspora_rok/bytu/12) : 0;
+      return `<div class="sim-card">
+        <div class="sim-card-date">${fmtDate(s.created_at)} ${i===0?'<span class="badge b-blue">Nejnovější</span>':''}</div>
+        <div class="sim-card-name">${s.name||'—'}</div>
+        <div class="sim-kpis">
+          <div class="sim-kpi green">
+            <div class="sim-kpi-l">Roční úspora</div>
+            <div class="sim-kpi-v">${res.uspora_rok?res.uspora_rok.toLocaleString('cs-CZ')+' Kč':'—'}</div>
+          </div>
+          <div class="sim-kpi">
+            <div class="sim-kpi-l">Úspora/byt/měs</div>
+            <div class="sim-kpi-v">${uspora_byt?uspora_byt+' Kč':'—'}</div>
+          </div>
+          <div class="sim-kpi">
+            <div class="sim-kpi-l">Návratnost</div>
+            <div class="sim-kpi-v">${res.nav?res.nav+' let':'—'}</div>
+          </div>
+          <div class="sim-kpi">
+            <div class="sim-kpi-l">Kumulativ 25 let</div>
+            <div class="sim-kpi-v">${res.kum25?Math.round(res.kum25/1000)+'k Kč':'—'}</div>
+          </div>
+          <div class="sim-kpi">
+            <div class="sim-kpi-l">Výkon FVE</div>
+            <div class="sim-kpi-v">${params.kwp||res.kwp||'—'} kWp</div>
+          </div>
+          <div class="sim-kpi">
+            <div class="sim-kpi-l">Investice</div>
+            <div class="sim-kpi-v">${res.investice?Math.round(res.investice/1000)+'k Kč':'—'}</div>
+          </div>
+        </div>
+        <div class="sim-actions">
+          <button class="btn-sim btn-pdf-sim" onclick="exportSimPdf('${s.id}','${user.email||''}')">📄 PDF report</button>
+          <span style="font-size:11px;color:var(--text-2);padding:6px 0">${params.dist||''} ${params.sazba||''}</span>
+        </div>
+      </div>`;
+    }).join('')+
+  '</div>';
+}
+
+// ── TOGGLE UŽIVATELE ──────────────────────────────────────────
+function toggleUser(userId){
+  const row = document.getElementById('urow-'+userId);
+  const simRow = document.getElementById('srow-'+userId);
+  const isOpen = simRow.classList.contains('open');
+  // Zavřít všechny ostatní
+  document.querySelectorAll('.sims-row.open').forEach(r=>r.classList.remove('open'));
+  document.querySelectorAll('.user-row.expanded').forEach(r=>r.classList.remove('expanded'));
+  if(!isOpen){
+    simRow.classList.add('open');
+    row.classList.add('expanded');
+  }
+}
+
+// ── PDF EXPORT UŽIVATELE ──────────────────────────────────────
+async function exportUserPdf(userId){
+  const userData = ALL_DATA.find(u=>u.user.id===userId);
+  if(!userData) return;
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const W=210, PL=15, PR=15, PW=W-PL-PR;
+  let y=0;
+  const user = userData.user;
+  const sims = userData.simulations;
+
+  // Hlavička
+  doc.setFillColor(30,58,95); doc.rect(0,0,W,30,'F');
+  doc.setFillColor(46,139,74); doc.rect(0,28,W,3,'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(16); doc.setFont('helvetica','bold');
+  doc.text('SVJ Energie — Přehled výpočtů uživatele', PL, 14);
+  doc.setFontSize(9); doc.setFont('helvetica','normal');
+  doc.text(`${user.full_name||user.email}  |  Vygenerováno: ${new Date().toLocaleDateString('cs-CZ')}`, PL, 22);
+  y=40;
+
+  // Info o uživateli
+  doc.setTextColor(30,58,95); doc.setFontSize(12); doc.setFont('helvetica','bold');
+  doc.text('Informace o uživateli', PL, y); y+=7;
+  const userInfo=[
+    ['Jméno',user.full_name||'—'],
+    ['E-mail',user.email||'—'],
+    ['SVJ',user.svj||'—'],
+    ['Pozice',user.pozice||'—'],
+    ['Počet výpočtů',sims.length],
+  ];
+  userInfo.forEach((r,i)=>{
+    if(i%2===0) doc.setFillColor(248,250,251); else doc.setFillColor(255,255,255);
+    doc.rect(PL,y-4,PW,7,'F');
+    doc.setTextColor(100,116,139); doc.setFontSize(9); doc.setFont('helvetica','normal');
+    doc.text(String(r[0]),PL+2,y);
+    doc.setTextColor(30,58,95); doc.setFont('helvetica','bold');
+    doc.text(String(r[1]),W-PR-2,y,{align:'right'});
+    y+=7;
+  });
+  y+=8;
+
+  // Každá simulace
+  sims.forEach((s,idx)=>{
+    if(y>250){doc.addPage();y=20;}
+    let res={}, params={};
+    try{res=JSON.parse(s.result||'{}');}catch(e){}
+    try{params=JSON.parse(s.params||'{}');}catch(e){}
+    const bytu=params.pocet_bytu||params.bytu||1;
+
+    doc.setFillColor(30,58,95); doc.rect(PL,y-4,PW,8,'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(10); doc.setFont('helvetica','bold');
+    doc.text(`Výpočet ${idx+1}: ${s.name||'—'}`, PL+3, y);
+    doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text(fmtDate(s.created_at), W-PR-2, y, {align:'right'});
+    y+=10;
+
+    const simData=[
+      ['Lokalita',params.lokace||'—'],
+      ['Distributor / Sazba',(params.dist||'—')+' / '+(params.sazba||'—')],
+      ['Výkon FVE / Baterie',(params.kwp||'—')+' kWp / '+(params.bat||0)+' kWh'],
+      ['Roční úspora',res.uspora_rok?res.uspora_rok.toLocaleString('cs-CZ')+' Kč':'—'],
+      ['Úspora/byt/měsíc',res.uspora_rok?Math.round(res.uspora_rok/bytu/12)+' Kč':'—'],
+      ['Návratnost',res.nav?res.nav+' let':'—'],
+      ['Kumulativ 25 let',res.kum25?Math.round(res.kum25).toLocaleString('cs-CZ')+' Kč':'—'],
+      ['Investice',res.investice?Math.round(res.investice).toLocaleString('cs-CZ')+' Kč':'—'],
+    ];
+    simData.forEach((r,i)=>{
+      if(y>275){doc.addPage();y=20;}
+      if(i%2===0) doc.setFillColor(248,250,251); else doc.setFillColor(255,255,255);
+      doc.rect(PL,y-4,PW,7,'F');
+      doc.setTextColor(100,116,139); doc.setFontSize(8); doc.setFont('helvetica','normal');
+      doc.text(String(r[0]),PL+2,y);
+      doc.setTextColor(30,58,95); doc.setFont('helvetica','bold');
+      doc.text(String(r[1]),W-PR-2,y,{align:'right'});
+      y+=7;
+    });
+    y+=10;
+  });
+
+  // Patička
+  doc.setFillColor(248,250,251); doc.rect(0,285,W,12,'F');
+  doc.setTextColor(100,116,139); doc.setFontSize(7); doc.setFont('helvetica','normal');
+  doc.text('SVJ Energie  |  www.svjenergie.cz  |  Orientační výpočty', W/2, 291, {align:'center'});
+
+  doc.save('SVJEnergie-'+( user.email||'uzivatel').split('@')[0]+'-vypocty.pdf');
+}
+
+// ── PDF JEDNÉ SIMULACE ────────────────────────────────────────
+async function exportSimPdf(simId, userEmail){
+  // Najít simulaci
+  let sim=null, userData=null;
+  for(const u of ALL_DATA){
+    const s = u.simulations.find(s=>s.id===simId);
+    if(s){sim=s;userData=u;break;}
+  }
+  if(!sim) return;
+  let res={}, params={};
+  try{res=JSON.parse(sim.result||'{}');}catch(e){}
+  try{params=JSON.parse(sim.params||'{}');}catch(e){}
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const W=210, PL=15, PR=15, PW=W-PL-PR;
+  let y=0;
+  const bytu=params.pocet_bytu||params.bytu||1;
+  const inv=res.investice||0;
+  const uver=Math.min(inv*0.8,5000000);
+  const splatnost=params.splatnost||15;
+
+  // Hlavička
+  doc.setFillColor(30,58,95); doc.rect(0,0,W,32,'F');
+  doc.setFillColor(46,139,74); doc.rect(0,30,W,3,'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(18); doc.setFont('helvetica','bold');
+  doc.text('SVJ Energie — Analýza FVE', PL, 13);
+  doc.setFontSize(10); doc.setFont('helvetica','normal');
+  doc.text(sim.name||'', PL, 22);
+  doc.setFontSize(8);
+  doc.text(new Date().toLocaleDateString('cs-CZ'), W-PR, 13, {align:'right'});
+  doc.text(userEmail, W-PR, 20, {align:'right'});
+  y=42;
+
+  // Verdikt
+  const nav=res.nav;
+  doc.setFillColor(nav&&nav<=15?227:254, nav&&nav<=15?244:243, nav&&nav<=15?233:199);
+  doc.roundedRect(PL,y,PW,16,3,3,'F');
+  doc.setTextColor(nav&&nav<=15?26:120, nav&&nav<=15?92:83, nav&&nav<=15?50:0);
+  doc.setFontSize(12); doc.setFont('helvetica','bold');
+  doc.text(nav?(nav<=10?`Vynikající investice — návratnost ${nav} let`:`Dobrá investice — návratnost ${nav} let`):'Projekt vyžaduje optimalizaci', PL+5, y+7);
+  doc.setFontSize(8); doc.setFont('helvetica','normal');
+  const uspora_byt_mes = res.uspora_rok?Math.round(res.uspora_rok/bytu/12):0;
+  doc.text(`Každý byt ušetří ${uspora_byt_mes} Kč/měsíc · Za 25 let celkem ${res.kum25?Math.round(res.kum25).toLocaleString('cs-CZ'):0} Kč`, PL+5, y+13);
+  y+=22;
+
+  // KPI
+  const kpiData=[
+    {l:'Roční úspora',v:res.uspora_rok?res.uspora_rok.toLocaleString('cs-CZ')+' Kč':'—',bg:[227,244,233]},
+    {l:'Výkon FVE',v:(params.kwp||'—')+' kWp',bg:[240,247,253]},
+    {l:'Investice',v:inv?Math.round(inv).toLocaleString('cs-CZ')+' Kč':'—',bg:[254,243,199]},
+  ];
+  const bw=(PW-8)/3;
+  kpiData.forEach((k,i)=>{
+    const bx=PL+i*(bw+4);
+    doc.setFillColor(...k.bg);
+    doc.roundedRect(bx,y,bw,18,2,2,'F');
+    doc.setTextColor(30,58,95); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text(k.l,bx+4,y+6);
+    doc.setFontSize(13); doc.setFont('helvetica','bold');
+    doc.text(k.v,bx+4,y+14);
+  });
+  y+=24;
+
+  // Parametry
+  doc.setTextColor(30,58,95); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text('Parametry výpočtu', PL, y); y+=7;
+  const paramData=[
+    ['Adresa',params.lokace||'—'],['Bytů / Pater',`${bytu} / ${params.pater||'—'}`],
+    ['Distributor / Sazba',(params.dist||'—')+' / '+(params.sazba||'—')],
+    ['Spotřeba bytů VT',`${params.sp_by_vt_mwh||'—'} MWh/byt/rok`],
+    ['Spotřeba SP',`${params.sp_sp_mwh?parseFloat(params.sp_sp_mwh).toFixed(1):0} MWh/rok`],
+    ['Model sdílení',params.model||'—'],['Výkon FVE / Baterie',`${params.kwp||'—'} kWp / ${params.bat||0} kWh`],
+    ['Vlastní spotřeba',res.mira_vs?res.mira_vs+' %':'—'],
+    ['Výroba FVE',res.vyroba_mwh?res.vyroba_mwh+' MWh/rok':'—'],
+  ];
+  paramData.forEach((r,i)=>{
+    if(i%2===0) doc.setFillColor(248,250,251); else doc.setFillColor(255,255,255);
+    doc.rect(PL,y-4,PW,7,'F');
+    doc.setTextColor(100,116,139); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text(r[0],PL+2,y);
+    doc.setTextColor(30,58,95); doc.setFont('helvetica','bold');
+    doc.text(String(r[1]),W-PR-2,y,{align:'right'});
+    y+=7;
+  });
+  y+=6;
+
+  // NZÚ
+  doc.setFillColor(227,244,233); doc.roundedRect(PL,y,PW,28,3,3,'F');
+  doc.setTextColor(26,92,50); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text('Státní podpora NZÚ 2026', PL+5, y+8);
+  doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.text(`Bezúročný úvěr: ${uver.toLocaleString('cs-CZ')} Kč · Splatnost: ${splatnost} let`, PL+5, y+15);
+  doc.text(`Splátka: ${Math.round(uver/splatnost/bytu/12).toLocaleString('cs-CZ')} Kč/byt/měsíc · Vlastní vklad: ${Math.round(inv-uver).toLocaleString('cs-CZ')} Kč`, PL+5, y+22);
+  y+=34;
+
+  // Patička
+  doc.setFillColor(248,250,251); doc.rect(0,285,W,12,'F');
+  doc.setTextColor(100,116,139); doc.setFontSize(7); doc.setFont('helvetica','normal');
+  doc.text('SVJ Energie  |  www.svjenergie.cz  |  Orientační výpočty dle PVGIS EU JRC a ceníků 2026', W/2, 291, {align:'center'});
+
+  doc.save('SVJEnergie-analýza-'+(sim.name||'vypocet').replace(/[^a-zA-Z0-9]/g,'-').slice(0,30)+'.pdf');
+}
+
+// ── CSV EXPORT ────────────────────────────────────────────────
+function exportCsv(){
+  const cols=['Uzivatel','Email','SVJ','Pozice','Datum','Nazev simulace','Adresa','kWp','Rocni uspora Kc','Uspora byt mes Kc','Navratnost let','Kumulativ 25 let','Investice','Distributor','Sazba','Model'];
+  const rows=[cols.join(';')];
+  ALL_DATA.forEach(u=>{
+    u.simulations.forEach(s=>{
+      let res={},params={};
+      try{res=JSON.parse(s.result||'{}');}catch(e){}
+      try{params=JSON.parse(s.params||'{}');}catch(e){}
+      const bytu=params.pocet_bytu||params.bytu||1;
+      rows.push([
+        u.user.full_name||'',u.user.email||'',u.user.svj||'',u.user.pozice||'',
+        fmtDate(s.created_at),s.name||'',params.lokace||'',
+        params.kwp||'',res.uspora_rok?Math.round(res.uspora_rok):'',
+        res.uspora_rok?Math.round(res.uspora_rok/bytu/12):'',
+        res.nav||'',res.kum25?Math.round(res.kum25):'',
+        res.investice?Math.round(res.investice):'',
+        params.dist||'',params.sazba||'',params.model||''
+      ].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(';'));
+    });
+  });
+  const blob=new Blob(['\uFEFF'+rows.join('\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='SVJEnergie-vypocty-'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+}
+
+// ── HELPERS ───────────────────────────────────────────────────
+function fmtDate(d){
+  if(!d) return '—';
+  const dt=new Date(d);
+  return dt.toLocaleDateString('cs-CZ',{day:'2-digit',month:'2-digit',year:'numeric'})+' '+dt.toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit'});
+}
+</script>
+</body>
+</html>
