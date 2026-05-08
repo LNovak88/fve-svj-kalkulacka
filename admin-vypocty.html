@@ -8,7 +8,7 @@
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
 <style>
 :root{--navy:#1E3A5F;--blue:#1B6CA8;--blue-l:#E3F0FA;--blue-ll:#F0F7FD;--green:#2E8B4A;--green-l:#E3F4E9;--amber:#F59E0B;--amber-l:#FEF3C7;--rose:#F43F5E;--text:#1E293B;--text-2:#64748B;--border:#E2E8F0;--bg:#F8FAFB;--white:#fff;--r:12px;--rm:8px;--shadow:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.04);--shadow-lg:0 8px 32px rgba(30,58,95,.12)}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -274,18 +274,31 @@ async function loadData(){
   document.getElementById('tableBody').innerHTML =
     '<tr><td colspan="8"><div class="loading"><div class="spinner"></div>Načítám simulace…</div></td></tr>';
   try{
-    // Načíst simulace přes admin API
     const r = await fetch('/api/admin-leads?action=all_sims', {
       headers:{'Authorization':'Bearer '+TOKEN}
     });
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    const data = await r.json();
+    const text = await r.text();
+    console.log('API status:', r.status, 'response:', text.slice(0,500));
+    if(!r.ok) throw new Error('HTTP '+r.status+': '+text.slice(0,200));
+    const data = JSON.parse(text);
+    // Debug info
+    if(data.debug){
+      document.getElementById('tableBody').innerHTML =
+        '<tr><td colspan="8"><div class="empty" style="text-align:left">🔍 <strong>Debug info:</strong><pre style="font-size:11px;margin-top:8px;background:#f8f9fa;padding:12px;border-radius:8px;overflow:auto">'+JSON.stringify(data.debug,null,2)+'</pre></div></td></tr>';
+      return;
+    }
     ALL_DATA = data.users || [];
+    if(!ALL_DATA.length){
+      document.getElementById('tableBody').innerHTML =
+        '<tr><td colspan="8"><div class="empty">Žádní uživatelé — zkontrolujte konzoli (F12)</div></td></tr>';
+      return;
+    }
     updateStats();
     renderTable(ALL_DATA);
   }catch(e){
     document.getElementById('tableBody').innerHTML =
-      '<tr><td colspan="8"><div class="empty">❌ Chyba načtení: '+e.message+'</div></td></tr>';
+      '<tr><td colspan="8"><div class="empty">❌ Chyba: '+e.message+'</div></td></tr>';
+    console.error('loadData error:', e);
   }
 }
 
@@ -446,97 +459,163 @@ function toggleUser(userId){
   }
 }
 
-// ── PDF EXPORT UŽIVATELE ──────────────────────────────────────
+// ── HTML TISK PDF ─────────────────────────────────────────────
+function otevritPdfReport(nazev, params, result, userInfo){
+  const bytu = params.pocet_bytu||params.bytu||1;
+  const inv = result.investice||0;
+  const uver = Math.min(inv*0.8, 5000000);
+  const splatnost = params.splatnost||15;
+  const uspora_byt_mes = result.uspora_rok ? Math.round(result.uspora_rok/bytu/12) : 0;
+  const nzu_spl_byt = Math.round(uver/splatnost/bytu/12);
+  const nav = result.nav;
+  const kum25 = result.kum25||0;
+  const kc = v => Math.round(v).toLocaleString('cs-CZ')+' Kč';
+  const verdiktTxt = nav ?
+    (nav<=10?`✅ Vynikající investice — návratnost ${nav} let`:
+     nav<=15?`✅ Dobrá investice — návratnost ${nav} let`:
+     nav<=20?`⚠️ Přijatelná investice — návratnost ${nav} let`:
+     `⚠️ Hraniční projekt — návratnost ${nav} let`) :
+    '❌ Projekt se za 25 let nevrátí';
+  const verdiktBg = nav&&nav<=15?'#E3F4E9':nav&&nav<=20?'#FEF3C7':'#FEE2E2';
+  const verdiktColor = nav&&nav<=15?'#1A5C32':nav&&nav<=20?'#7C5300':'#991B1B';
+
+  const html = `<!DOCTYPE html>
+<html lang="cs"><head><meta charset="UTF-8"><title>SVJ Energie — ${nazev}</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',Arial,sans-serif;font-size:13px;color:#1E293B;background:#fff;line-height:1.5}
+.page{max-width:210mm;margin:0 auto;padding:12mm 14mm}
+h2{font-size:13px;font-weight:600;color:#1E3A5F;margin:14px 0 7px;padding-bottom:3px;border-bottom:2px solid #E2E8F0}
+.hdr{background:#1E3A5F;color:#fff;padding:14px 18px;border-radius:8px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+.hdr-t{font-size:17px;font-weight:700}.hdr-s{font-size:10px;color:#8BA8C4;margin-top:2px}
+.green-line{height:3px;background:#2E8B4A;border-radius:2px;margin-bottom:12px}
+.verdikt{padding:10px 14px;border-radius:8px;margin-bottom:12px}
+.kpi-row{display:flex;gap:8px;margin-bottom:12px}
+.kpi{flex:1;padding:10px 12px;border-radius:8px;border:1px solid #E2E8F0}
+.kpi-l{font-size:10px;color:#64748B;margin-bottom:2px}.kpi-v{font-size:18px;font-weight:700;line-height:1}.kpi-u{font-size:10px;margin-top:2px}
+.kpi.green{background:#E3F4E9}.kpi.green .kpi-v,.kpi.green .kpi-u{color:#1A5C32}.kpi.green .kpi-l{color:#2E6B40}
+.kpi.blue{background:#E3F0FA}.kpi.blue .kpi-v{color:#1E3A5F}
+.kpi.amber{background:#FEF3C7}.kpi.amber .kpi-v,.kpi.amber .kpi-u{color:#78350F}.kpi.amber .kpi-l{color:#92400E}
+table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:12px}
+th{background:#1E3A5F;color:#fff;padding:7px 10px;text-align:left;font-size:11px;font-weight:600}
+td{padding:6px 10px;border-bottom:0.5px solid #E2E8F0}
+.nzu{background:#E3F4E9;border:1px solid #A3D8B8;border-radius:8px;padding:11px 14px;margin-bottom:12px}
+.footer-box{background:#1E3A5F;color:#fff;padding:12px 16px;border-radius:8px;margin-top:12px}
+.print-btn{position:fixed;bottom:20px;right:20px;background:#2E8B4A;color:#fff;border:none;border-radius:10px;padding:12px 24px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 4px 20px rgba(46,139,74,.4);font-family:inherit;z-index:999}
+@media print{.print-btn{display:none!important}.page{padding:8mm 10mm}
+.hdr,.nzu,.footer-box,.kpi.green,.kpi.blue,.kpi.amber,.verdikt,th,tr{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+@page{size:A4;margin:10mm 12mm}
+</style></head><body>
+<button class="print-btn" onclick="window.print()">🖨️ Uložit jako PDF</button>
+<div class="page">
+  <div class="hdr">
+    <div><div class="hdr-t">SVJ Energie — Analýza FVE</div><div class="hdr-s">www.svjenergie.cz · Orientační výpočet</div></div>
+    <div style="font-size:11px;color:#8BA8C4;text-align:right">${new Date().toLocaleDateString('cs-CZ',{day:'2-digit',month:'long',year:'numeric'})}${userInfo?'<br>'+userInfo:''}</div>
+  </div>
+  <div class="green-line"></div>
+  <h1 style="font-family:'DM Serif Display',Georgia,serif;font-size:20px;color:#1E3A5F;margin-bottom:4px">${params.lokace||nazev}</h1>
+  <p style="color:#64748B;margin-bottom:12px;font-size:12px">${bytu} bytů · ${params.kwp||'—'} kWp · ${params.dist||'—'} · ${params.sazba||'—'} · model ${params.model||'edc'}</p>
+  <div class="verdikt" style="background:${verdiktBg};border:1px solid ${verdiktColor}40">
+    <strong style="color:${verdiktColor};font-size:13px">${verdiktTxt}</strong><br>
+    <span style="color:${verdiktColor};font-size:11px">Za 25 let dům ušetří <strong>${kc(kum25)}</strong> — <strong>${kc(kum25/bytu)}</strong> na byt. Každý byt ušetří <strong>${uspora_byt_mes.toLocaleString('cs-CZ')} Kč/měsíc</strong> od prvního roku.</span>
+  </div>
+  <div class="kpi-row">
+    <div class="kpi green"><div class="kpi-l">Roční úspora</div><div class="kpi-v">${result.uspora_rok?kc(result.uspora_rok):'—'}</div><div class="kpi-u">${uspora_byt_mes} Kč/byt/měsíc</div></div>
+    <div class="kpi blue"><div class="kpi-l">Výkon FVE · Výroba</div><div class="kpi-v">${params.kwp||'—'} kWp</div><div class="kpi-u">${result.vyroba_mwh||'—'} MWh/rok</div></div>
+    <div class="kpi amber"><div class="kpi-l">Investice · NZÚ splátka</div><div class="kpi-v">${inv?Math.round(inv/1000).toLocaleString('cs-CZ')+' tis.':'—'}</div><div class="kpi-u">${nzu_spl_byt} Kč/byt/měsíc</div></div>
+  </div>
+  <h2>Parametry výpočtu</h2>
+  <table>
+    <tr><th>Parametr</th><th style="text-align:right">Hodnota</th></tr>
+    <tr><td>Adresa</td><td style="text-align:right">${params.lokace||'—'}</td></tr>
+    <tr style="background:#F8FAFB"><td>Bytů / pater</td><td style="text-align:right">${bytu} / ${params.pater||'—'}</td></tr>
+    <tr><td>Distributor / sazba</td><td style="text-align:right">${params.dist||'—'} / ${params.sazba||'—'}</td></tr>
+    <tr style="background:#F8FAFB"><td>Výkon FVE / baterie</td><td style="text-align:right">${params.kwp||'—'} kWp / ${params.bat||0} kWh</td></tr>
+    <tr><td>Model sdílení</td><td style="text-align:right">${params.model==='edc'?'EDC — komunitní sdílení':params.model==='jom'?'JOM — jeden elektroměr':'Jen spol. prostory'}</td></tr>
+    <tr style="background:#F8FAFB"><td>Investice / Návratnost</td><td style="text-align:right">${inv?kc(inv):'—'} / ${nav?nav+' let':'—'}</td></tr>
+    <tr><td>Kumulativ 25 let / Míra vlastní spotřeby</td><td style="text-align:right">${kum25?kc(kum25):'—'} / ${result.mira_vs||'—'} %</td></tr>
+  </table>
+  <div class="nzu">
+    <div style="font-weight:600;color:#1A5C32;margin-bottom:6px">🏛️ Státní podpora — Nová zelená úsporám 2026</div>
+    <div style="color:#2E6B40;margin-bottom:3px;font-size:12px">✓ Bezúročný úvěr: <strong>${kc(uver)}</strong> (80 %) — splatnost ${splatnost} let</div>
+    <div style="color:#2E6B40;margin-bottom:3px;font-size:12px">✓ Splátka: <strong>${kc(Math.round(uver/splatnost))}/rok</strong> = ${nzu_spl_byt} Kč/byt/měsíc</div>
+    <div style="color:#2E6B40;font-size:12px">✓ Vlastní vklad SVJ: <strong>${kc(inv-uver)}</strong> (${kc(Math.round((inv-uver)/bytu))}/byt)</div>
+  </div>
+  <div class="footer-box">
+    <div style="font-weight:600;font-size:12px;margin-bottom:5px">Připraveno pro schůzi SVJ</div>
+    <div style="color:#CBD5E1;font-size:11px">Kontaktujte nás na svjenergie.cz — bezplatné měření střechy a nezávazná cenová nabídka na míru.</div>
+  </div>
+  <p style="font-size:10px;color:#94A3B8;margin-top:10px;text-align:center">Orientační výpočty · PVGIS EU JRC · Ceníky ČEZ/EGD/PRE 1.1.2026 (s DPH) · svjenergie.cz</p>
+</div></body></html>`;
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+}
+
 async function exportUserPdf(userId){
   const userData = ALL_DATA.find(u=>u.user.id===userId);
   if(!userData) return;
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-  const W=210, PL=15, PR=15, PW=W-PL-PR;
-  let y=0;
   const user = userData.user;
   const sims = userData.simulations;
 
-  // Hlavička
-  doc.setFillColor(30,58,95); doc.rect(0,0,W,30,'F');
-  doc.setFillColor(46,139,74); doc.rect(0,28,W,3,'F');
-  doc.setTextColor(255,255,255);
-  doc.setFontSize(16); doc.setFont('helvetica','bold');
-  doc.text('SVJ Energie — Přehled výpočtů uživatele', PL, 14);
-  doc.setFontSize(9); doc.setFont('helvetica','normal');
-  doc.text(`${user.full_name||user.email}  |  Vygenerováno: ${new Date().toLocaleDateString('cs-CZ')}`, PL, 22);
-  y=40;
-
-  // Info o uživateli
-  doc.setTextColor(30,58,95); doc.setFontSize(12); doc.setFont('helvetica','bold');
-  doc.text('Informace o uživateli', PL, y); y+=7;
-  const userInfo=[
-    ['Jméno',user.full_name||'—'],
-    ['E-mail',user.email||'—'],
-    ['SVJ',user.svj||'—'],
-    ['Pozice',user.pozice||'—'],
-    ['Počet výpočtů',sims.length],
-  ];
-  userInfo.forEach((r,i)=>{
-    if(i%2===0) doc.setFillColor(248,250,251); else doc.setFillColor(255,255,255);
-    doc.rect(PL,y-4,PW,7,'F');
-    doc.setTextColor(100,116,139); doc.setFontSize(9); doc.setFont('helvetica','normal');
-    doc.text(String(r[0]),PL+2,y);
-    doc.setTextColor(30,58,95); doc.setFont('helvetica','bold');
-    doc.text(String(r[1]),W-PR-2,y,{align:'right'});
-    y+=7;
-  });
-  y+=8;
-
-  // Každá simulace
-  sims.forEach((s,idx)=>{
-    if(y>250){doc.addPage();y=20;}
+  // Sestavit HTML se všemi simulacemi uživatele
+  const kc = v => Math.round(v).toLocaleString('cs-CZ')+' Kč';
+  const simCards = sims.map((s,i)=>{
     let res={}, params={};
     try{res=JSON.parse(s.result||'{}');}catch(e){}
     try{params=JSON.parse(s.params||'{}');}catch(e){}
     const bytu=params.pocet_bytu||params.bytu||1;
+    const nav=res.nav;
+    const uspora_byt_mes=res.uspora_rok?Math.round(res.uspora_rok/bytu/12):0;
+    const bg=nav&&nav<=15?'#E3F4E9':nav&&nav<=20?'#FEF3C7':'#FEE2E2';
+    const color=nav&&nav<=15?'#1A5C32':nav&&nav<=20?'#7C5300':'#991B1B';
+    return `<div style="border:1px solid #E2E8F0;border-radius:8px;padding:14px;margin-bottom:10px;${i===0?'border-color:#1B6CA8;':''}">
+      <div style="font-size:10px;color:#64748B;margin-bottom:4px">${fmtDate(s.created_at)}${i===0?' · <strong>Nejnovější</strong>':''}</div>
+      <div style="font-size:14px;font-weight:600;color:#1E3A5F;margin-bottom:8px">${s.name||'—'}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <span style="background:${bg};color:${color};border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600">${nav?nav+' let návratnost':'>25 let'}</span>
+        ${res.uspora_rok?`<span style="background:#E3F4E9;color:#1A5C32;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600">${kc(res.uspora_rok)}/rok</span>`:''}
+        ${uspora_byt_mes?`<span style="background:#F8FAFB;color:#1E3A5F;border-radius:20px;padding:3px 10px;font-size:11px">${uspora_byt_mes} Kč/byt/měs</span>`:''}
+        ${res.kum25?`<span style="background:#F8FAFB;color:#1E3A5F;border-radius:20px;padding:3px 10px;font-size:11px">${Math.round(res.kum25/1000)} tis. Kč za 25 let</span>`:''}
+        ${params.kwp?`<span style="background:#F8FAFB;color:#1E3A5F;border-radius:20px;padding:3px 10px;font-size:11px">${params.kwp} kWp</span>`:''}
+      </div>
+    </div>`;
+  }).join('');
 
-    doc.setFillColor(30,58,95); doc.rect(PL,y-4,PW,8,'F');
-    doc.setTextColor(255,255,255); doc.setFontSize(10); doc.setFont('helvetica','bold');
-    doc.text(`Výpočet ${idx+1}: ${s.name||'—'}`, PL+3, y);
-    doc.setFontSize(8); doc.setFont('helvetica','normal');
-    doc.text(fmtDate(s.created_at), W-PR-2, y, {align:'right'});
-    y+=10;
-
-    const simData=[
-      ['Lokalita',params.lokace||'—'],
-      ['Distributor / Sazba',(params.dist||'—')+' / '+(params.sazba||'—')],
-      ['Výkon FVE / Baterie',(params.kwp||'—')+' kWp / '+(params.bat||0)+' kWh'],
-      ['Roční úspora',res.uspora_rok?res.uspora_rok.toLocaleString('cs-CZ')+' Kč':'—'],
-      ['Úspora/byt/měsíc',res.uspora_rok?Math.round(res.uspora_rok/bytu/12)+' Kč':'—'],
-      ['Návratnost',res.nav?res.nav+' let':'—'],
-      ['Kumulativ 25 let',res.kum25?Math.round(res.kum25).toLocaleString('cs-CZ')+' Kč':'—'],
-      ['Investice',res.investice?Math.round(res.investice).toLocaleString('cs-CZ')+' Kč':'—'],
-    ];
-    simData.forEach((r,i)=>{
-      if(y>275){doc.addPage();y=20;}
-      if(i%2===0) doc.setFillColor(248,250,251); else doc.setFillColor(255,255,255);
-      doc.rect(PL,y-4,PW,7,'F');
-      doc.setTextColor(100,116,139); doc.setFontSize(8); doc.setFont('helvetica','normal');
-      doc.text(String(r[0]),PL+2,y);
-      doc.setTextColor(30,58,95); doc.setFont('helvetica','bold');
-      doc.text(String(r[1]),W-PR-2,y,{align:'right'});
-      y+=7;
-    });
-    y+=10;
-  });
-
-  // Patička
-  doc.setFillColor(248,250,251); doc.rect(0,285,W,12,'F');
-  doc.setTextColor(100,116,139); doc.setFontSize(7); doc.setFont('helvetica','normal');
-  doc.text('SVJ Energie  |  www.svjenergie.cz  |  Orientační výpočty', W/2, 291, {align:'center'});
-
-  doc.save('SVJEnergie-'+( user.email||'uzivatel').split('@')[0]+'-vypocty.pdf');
+  const html = `<!DOCTYPE html>
+<html lang="cs"><head><meta charset="UTF-8"><title>SVJ Energie — Výpočty uživatele</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',Arial,sans-serif;font-size:13px;color:#1E293B;background:#fff;line-height:1.5}
+.page{max-width:210mm;margin:0 auto;padding:12mm 14mm}
+.hdr{background:#1E3A5F;color:#fff;padding:14px 18px;border-radius:8px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}
+.hdr-t{font-size:17px;font-weight:700}.hdr-s{font-size:10px;color:#8BA8C4;margin-top:2px}
+.green-line{height:3px;background:#2E8B4A;border-radius:2px;margin-bottom:16px}
+.print-btn{position:fixed;bottom:20px;right:20px;background:#2E8B4A;color:#fff;border:none;border-radius:10px;padding:12px 24px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;z-index:999}
+@media print{.print-btn{display:none!important}.hdr{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+@page{size:A4;margin:10mm 12mm}
+</style></head><body>
+<button class="print-btn" onclick="window.print()">🖨️ Uložit jako PDF</button>
+<div class="page">
+  <div class="hdr">
+    <div><div class="hdr-t">SVJ Energie — Přehled výpočtů</div><div class="hdr-s">www.svjenergie.cz</div></div>
+    <div style="font-size:11px;color:#8BA8C4">${new Date().toLocaleDateString('cs-CZ',{day:'2-digit',month:'long',year:'numeric'})}</div>
+  </div>
+  <div class="green-line"></div>
+  <h1 style="font-family:'DM Serif Display',Georgia,serif;font-size:18px;color:#1E3A5F;margin-bottom:4px">${user.full_name||'—'}</h1>
+  <p style="color:#64748B;margin-bottom:4px;font-size:12px">${user.email} · ${user.svj||'—'} · ${user.pozice||'—'}</p>
+  <p style="color:#64748B;margin-bottom:16px;font-size:12px">Celkem výpočtů: <strong>${sims.length}</strong></p>
+  ${simCards}
+  <p style="font-size:10px;color:#94A3B8;margin-top:14px;text-align:center">Orientační výpočty · svjenergie.cz</p>
+</div></body></html>`;
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
 }
 
-// ── PDF JEDNÉ SIMULACE ────────────────────────────────────────
-async function exportSimPdf(simId, userEmail){
-  // Najít simulaci
+function exportSimPdf(simId, userEmail){
   let sim=null, userData=null;
   for(const u of ALL_DATA){
     const s = u.simulations.find(s=>s.id===simId);
@@ -546,96 +625,7 @@ async function exportSimPdf(simId, userEmail){
   let res={}, params={};
   try{res=JSON.parse(sim.result||'{}');}catch(e){}
   try{params=JSON.parse(sim.params||'{}');}catch(e){}
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-  const W=210, PL=15, PR=15, PW=W-PL-PR;
-  let y=0;
-  const bytu=params.pocet_bytu||params.bytu||1;
-  const inv=res.investice||0;
-  const uver=Math.min(inv*0.8,5000000);
-  const splatnost=params.splatnost||15;
-
-  // Hlavička
-  doc.setFillColor(30,58,95); doc.rect(0,0,W,32,'F');
-  doc.setFillColor(46,139,74); doc.rect(0,30,W,3,'F');
-  doc.setTextColor(255,255,255);
-  doc.setFontSize(18); doc.setFont('helvetica','bold');
-  doc.text('SVJ Energie — Analýza FVE', PL, 13);
-  doc.setFontSize(10); doc.setFont('helvetica','normal');
-  doc.text(sim.name||'', PL, 22);
-  doc.setFontSize(8);
-  doc.text(new Date().toLocaleDateString('cs-CZ'), W-PR, 13, {align:'right'});
-  doc.text(userEmail, W-PR, 20, {align:'right'});
-  y=42;
-
-  // Verdikt
-  const nav=res.nav;
-  doc.setFillColor(nav&&nav<=15?227:254, nav&&nav<=15?244:243, nav&&nav<=15?233:199);
-  doc.roundedRect(PL,y,PW,16,3,3,'F');
-  doc.setTextColor(nav&&nav<=15?26:120, nav&&nav<=15?92:83, nav&&nav<=15?50:0);
-  doc.setFontSize(12); doc.setFont('helvetica','bold');
-  doc.text(nav?(nav<=10?`Vynikající investice — návratnost ${nav} let`:`Dobrá investice — návratnost ${nav} let`):'Projekt vyžaduje optimalizaci', PL+5, y+7);
-  doc.setFontSize(8); doc.setFont('helvetica','normal');
-  const uspora_byt_mes = res.uspora_rok?Math.round(res.uspora_rok/bytu/12):0;
-  doc.text(`Každý byt ušetří ${uspora_byt_mes} Kč/měsíc · Za 25 let celkem ${res.kum25?Math.round(res.kum25).toLocaleString('cs-CZ'):0} Kč`, PL+5, y+13);
-  y+=22;
-
-  // KPI
-  const kpiData=[
-    {l:'Roční úspora',v:res.uspora_rok?res.uspora_rok.toLocaleString('cs-CZ')+' Kč':'—',bg:[227,244,233]},
-    {l:'Výkon FVE',v:(params.kwp||'—')+' kWp',bg:[240,247,253]},
-    {l:'Investice',v:inv?Math.round(inv).toLocaleString('cs-CZ')+' Kč':'—',bg:[254,243,199]},
-  ];
-  const bw=(PW-8)/3;
-  kpiData.forEach((k,i)=>{
-    const bx=PL+i*(bw+4);
-    doc.setFillColor(...k.bg);
-    doc.roundedRect(bx,y,bw,18,2,2,'F');
-    doc.setTextColor(30,58,95); doc.setFontSize(8); doc.setFont('helvetica','normal');
-    doc.text(k.l,bx+4,y+6);
-    doc.setFontSize(13); doc.setFont('helvetica','bold');
-    doc.text(k.v,bx+4,y+14);
-  });
-  y+=24;
-
-  // Parametry
-  doc.setTextColor(30,58,95); doc.setFontSize(11); doc.setFont('helvetica','bold');
-  doc.text('Parametry výpočtu', PL, y); y+=7;
-  const paramData=[
-    ['Adresa',params.lokace||'—'],['Bytů / Pater',`${bytu} / ${params.pater||'—'}`],
-    ['Distributor / Sazba',(params.dist||'—')+' / '+(params.sazba||'—')],
-    ['Spotřeba bytů VT',`${params.sp_by_vt_mwh||'—'} MWh/byt/rok`],
-    ['Spotřeba SP',`${params.sp_sp_mwh?parseFloat(params.sp_sp_mwh).toFixed(1):0} MWh/rok`],
-    ['Model sdílení',params.model||'—'],['Výkon FVE / Baterie',`${params.kwp||'—'} kWp / ${params.bat||0} kWh`],
-    ['Vlastní spotřeba',res.mira_vs?res.mira_vs+' %':'—'],
-    ['Výroba FVE',res.vyroba_mwh?res.vyroba_mwh+' MWh/rok':'—'],
-  ];
-  paramData.forEach((r,i)=>{
-    if(i%2===0) doc.setFillColor(248,250,251); else doc.setFillColor(255,255,255);
-    doc.rect(PL,y-4,PW,7,'F');
-    doc.setTextColor(100,116,139); doc.setFontSize(8); doc.setFont('helvetica','normal');
-    doc.text(r[0],PL+2,y);
-    doc.setTextColor(30,58,95); doc.setFont('helvetica','bold');
-    doc.text(String(r[1]),W-PR-2,y,{align:'right'});
-    y+=7;
-  });
-  y+=6;
-
-  // NZÚ
-  doc.setFillColor(227,244,233); doc.roundedRect(PL,y,PW,28,3,3,'F');
-  doc.setTextColor(26,92,50); doc.setFontSize(11); doc.setFont('helvetica','bold');
-  doc.text('Státní podpora NZÚ 2026', PL+5, y+8);
-  doc.setFontSize(8); doc.setFont('helvetica','normal');
-  doc.text(`Bezúročný úvěr: ${uver.toLocaleString('cs-CZ')} Kč · Splatnost: ${splatnost} let`, PL+5, y+15);
-  doc.text(`Splátka: ${Math.round(uver/splatnost/bytu/12).toLocaleString('cs-CZ')} Kč/byt/měsíc · Vlastní vklad: ${Math.round(inv-uver).toLocaleString('cs-CZ')} Kč`, PL+5, y+22);
-  y+=34;
-
-  // Patička
-  doc.setFillColor(248,250,251); doc.rect(0,285,W,12,'F');
-  doc.setTextColor(100,116,139); doc.setFontSize(7); doc.setFont('helvetica','normal');
-  doc.text('SVJ Energie  |  www.svjenergie.cz  |  Orientační výpočty dle PVGIS EU JRC a ceníků 2026', W/2, 291, {align:'center'});
-
-  doc.save('SVJEnergie-analýza-'+(sim.name||'vypocet').replace(/[^a-zA-Z0-9]/g,'-').slice(0,30)+'.pdf');
+  otevritPdfReport(sim.name||'Výpočet', params, res, userEmail);
 }
 
 // ── CSV EXPORT ────────────────────────────────────────────────
