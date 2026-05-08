@@ -34,73 +34,79 @@ export default async function handler(req, res) {
   if (req.method === 'GET') {
     // Všechny simulace všech uživatelů (pro admin-vypocty.html)
     if (req.query.action === 'all_sims') {
-      // Načíst všechny simulace
+      // Načíst všechny simulace přes service key
       const sRes = await fetch(
-        SUPA_URL + '/rest/v1/simulations?order=created_at.desc&limit=500&select=*',
-        { headers: { 'apikey': SERVICE_KEY, 'Authorization': 'Bearer ' + SERVICE_KEY, 'Accept': 'application/json' } }
+        SUPA_URL + '/rest/v1/simulations?order=created_at.desc&limit=500&select=id,user_id,name,params,result,created_at',
+        {
+          headers: {
+            'apikey': SERVICE_KEY,
+            'Authorization': 'Bearer ' + SERVICE_KEY,
+            'Accept': 'application/json',
+            'Prefer': 'return=representation',
+          }
+        }
       );
-      const sims = await sRes.json();
-      if (!Array.isArray(sims) || !sims.length) return res.status(200).json({ users: [] });
+      const simsText = await sRes.text();
+      let sims = [];
+      try { sims = JSON.parse(simsText); } catch(e) {}
 
-      // Načíst leady pro info o uživatelích (jméno, email, SVJ, pozice)
+      // Debug — vrátit info pokud data nejsou pole
+      if (!Array.isArray(sims)) {
+        return res.status(200).json({
+          users: [],
+          debug: { status: sRes.status, body: simsText.slice(0, 300) }
+        });
+      }
+      if (!sims.length) return res.status(200).json({ users: [], debug: { message: 'Žádné simulace' } });
+
+      // Načíst leady pro info o uživatelích
       const lRes = await fetch(
-        SUPA_URL + '/rest/v1/leads?select=email,svj,pozice,jmeno,params&order=created_at.desc&limit=500',
+        SUPA_URL + '/rest/v1/leads?select=email,svj,pozice,jmeno&order=created_at.desc&limit=500',
         { headers: { 'apikey': SERVICE_KEY, 'Authorization': 'Bearer ' + SERVICE_KEY, 'Accept': 'application/json' } }
       );
       const leads = await lRes.json();
       const leadByEmail = {};
       if (Array.isArray(leads)) leads.forEach(l => { if(l.email && !leadByEmail[l.email]) leadByEmail[l.email] = l; });
 
-      // Seskupit simulace dle user_id
-      const userMap = {};
-      sims.forEach(s => {
-        if (!s.user_id) return;
-        if (!userMap[s.user_id]) userMap[s.user_id] = { sims: [], email: null, name: null };
-        userMap[s.user_id].sims.push(s);
-        // Zkusit vytáhnout email z params simulace
-        if (!userMap[s.user_id].email) {
-          try {
-            const p = JSON.parse(s.params || '{}');
-            // email není v params, ale lokace ano
-          } catch(e) {}
-        }
-      });
-
-      // Načíst emailu uživatelů přes auth admin - zkusit, ale nespoléhat
+      // Zkusit auth admin API pro emaily
       let authUsers = [];
       try {
         const uRes = await fetch(
           SUPA_URL + '/auth/v1/admin/users?per_page=500',
           { headers: { 'apikey': SERVICE_KEY, 'Authorization': 'Bearer ' + SERVICE_KEY } }
         );
-        if (uRes.ok) {
-          const uData = await uRes.json();
-          authUsers = uData.users || [];
-        }
-      } catch(e) { /* admin API nedostupné - pokračujeme bez emailů */ }
+        if (uRes.ok) { const uData = await uRes.json(); authUsers = uData.users || []; }
+      } catch(e) {}
+
+      // Seskupit simulace dle user_id
+      const userMap = {};
+      sims.forEach(s => {
+        if (!s.user_id) return;
+        if (!userMap[s.user_id]) userMap[s.user_id] = [];
+        userMap[s.user_id].push(s);
+      });
 
       // Sestavit výsledek
-      const users = Object.entries(userMap).map(([uid, data]) => {
+      const users = Object.entries(userMap).map(([uid, userSims]) => {
         const authUser = authUsers.find(u => u.id === uid) || {};
         const email = authUser.email || '';
         const meta = authUser.user_metadata || {};
         const lead = leadByEmail[email] || {};
-        // Zkusit jméno z params nejnovější simulace
-        let nameFromSim = '';
+        // Zkusit jméno z params simulace
+        let nameFromSim = 'Uživatel ' + uid.slice(0,6);
         try {
-          const p = JSON.parse(data.sims[0]?.params || '{}');
-          nameFromSim = p.lokace ? p.lokace.split(',')[0] : '';
+          const p = JSON.parse(userSims[0]?.params || '{}');
+          if(p.lokace) nameFromSim = p.lokace.split(',')[0];
         } catch(e) {}
-
         return {
           user: {
             id: uid,
-            email: email || '—',
-            full_name: meta.full_name || lead.jmeno || email.split('@')[0] || ('Uživatel '+uid.slice(0,6)),
+            email: email || lead.email || '—',
+            full_name: meta.full_name || lead.jmeno || email.split('@')[0] || nameFromSim,
             svj: meta.svj || lead.svj || '',
             pozice: meta.pozice || lead.pozice || '',
           },
-          simulations: data.sims.sort((a,b) => new Date(b.created_at) - new Date(a.created_at)).slice(0,10),
+          simulations: userSims.sort((a,b) => new Date(b.created_at) - new Date(a.created_at)).slice(0,10),
         };
       }).sort((a,b) => new Date(b.simulations[0]?.created_at) - new Date(a.simulations[0]?.created_at));
 
