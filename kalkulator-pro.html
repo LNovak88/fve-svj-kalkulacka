@@ -1582,14 +1582,23 @@ function exportPdf(){
   @media print{
     .print-btn{display:none!important}
     .page{padding:8mm 10mm}
-    body{font-size:11px}
+    body{font-size:11px;orphans:3;widows:3}
     .hdr{-webkit-print-color-adjust:exact;print-color-adjust:exact}
     th{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-    .kpi.green,.kpi.blue,.kpi.amber,.verdikt,.nzu,.footer-box{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .kpi.green,.kpi.blue,.kpi.amber,.verdikt,.nzu,.footer-box,.scenare{-webkit-print-color-adjust:exact;print-color-adjust:exact}
     tr{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-    h2{page-break-after:avoid}
+    /* Zalomení stránek */
+    h2{page-break-after:avoid;page-break-inside:avoid}
     table{page-break-inside:auto}
-    tr{page-break-inside:avoid}
+    tr{page-break-inside:avoid;page-break-after:auto}
+    .kpi-row{page-break-inside:avoid}
+    .verdikt{page-break-inside:avoid}
+    .nzu{page-break-inside:avoid}
+    .footer-box{page-break-inside:avoid}
+    .scenare{page-break-inside:avoid}
+    ul{page-break-inside:avoid}
+    /* Cashflow tabulka — nová stránka */
+    .page-break-before{page-break-before:always}
   }
   @page{size:A4;margin:10mm 12mm}
 </style>
@@ -1690,7 +1699,7 @@ function exportPdf(){
   </div>
 
   <!-- Cashflow -->
-  <h2>Cashflow ${cf.length} let</h2>
+  <h2 class="page-break-before">Cashflow ${cf.length} let</h2>
   <table>
     <tr>
       <th style="text-align:center">Rok</th>
