@@ -131,6 +131,8 @@ a.email-link:hover{color:var(--blue)}
       SVJ Energie &mdash; Admin
     </div>
     <div class="topbar-right">
+      <a href="admin.html" style="background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:500;text-decoration:none">📋 Leady</a>
+      <a href="admin-vypocty.html" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:500;text-decoration:none">📊 Výpočty</a>
       <span class="topbar-user" id="adminUserEmail"></span>
       <button class="btn-logout" onclick="doLogout()">Odhlásit</button>
     </div>
@@ -236,6 +238,8 @@ async function doLogin(){
     if(!r.ok) throw new Error('Nesprávné přihlašovací údaje');
     if(em.toLowerCase()!==ADMIN_EMAIL.toLowerCase()) throw new Error('Nemáte oprávnění pro přístup do administrace.');
     TOKEN=d.access_token;
+    localStorage.setItem('admin_token', TOKEN);
+    localStorage.setItem('admin_email', em);
     document.getElementById('adminUserEmail').textContent=em;
     document.getElementById('loginWrap').style.display='none';
     document.getElementById('adminWrap').style.display='flex';
@@ -248,9 +252,27 @@ async function doLogin(){
 
 function doLogout(){
   TOKEN=null;ALL_LEADS=[];
+  localStorage.removeItem('admin_token');
+  localStorage.removeItem('admin_email');
   document.getElementById('loginWrap').style.display='flex';
   document.getElementById('adminWrap').style.display='none';
 }
+
+// Auto-přihlášení z localStorage
+(function autoLogin(){
+  var savedToken = localStorage.getItem('admin_token');
+  var savedEmail = localStorage.getItem('admin_email');
+  if(!savedToken || !savedEmail) return;
+  if(savedEmail.toLowerCase() !== ADMIN_EMAIL.toLowerCase()){
+    localStorage.removeItem('admin_token'); return;
+  }
+  TOKEN = savedToken;
+  var emailEl = document.getElementById('adminUserEmail');
+  if(emailEl) emailEl.textContent = savedEmail;
+  document.getElementById('loginWrap').style.display='none';
+  document.getElementById('adminWrap').style.display='flex';
+  loadLeads();
+})();
 
 async function loadLeads(){
   document.getElementById('tableContent').innerHTML='<div class="loading"><div class="spinner"></div>Načítám leady&hellip;</div>';
