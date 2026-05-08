@@ -120,13 +120,56 @@ async function init(){
 }
 
 function renderSims(sims){
-  SIMS = sims; // uložit globálně pro PDF
-  var count=sims.length;
-  var limitEl=document.getElementById('limitBox');
-  if(count>=MAX_FREE){
-    limitEl.innerHTML='<div class="limit-box"><span style="font-size:20px">⚠️</span><div><strong>Dosáhli jste limitu 5 výpočtů.</strong><br><span style="font-size:12px">Příští výpočet bude možný za 12 hodin od nejstaršího, nebo přejděte na placený plán.</span></div></div>';
+  SIMS = sims;
+  var count = sims.length;
+  var limitEl = document.getElementById('limitBox');
+
+  if(count >= MAX_FREE){
+    // Zjistit kdy se obnoví — nejstarší výpočet + 12 hodin
+    var nejstarsi = sims.reduce(function(min,s){
+      return new Date(s.created_at) < new Date(min.created_at) ? s : min;
+    }, sims[0]);
+    var obnovi = new Date(new Date(nejstarsi.created_at).getTime() + 12*3600*1000);
+    var ted = new Date();
+    var diff = obnovi - ted;
+
+    var casText = '';
+    if(diff > 0){
+      var hod = Math.floor(diff/3600000);
+      var min = Math.floor((diff%3600000)/60000);
+      var dnes = obnovi.toDateString() === ted.toDateString();
+      var zitra = new Date(ted.getTime()+86400000).toDateString() === obnovi.toDateString();
+      var casStr = obnovi.toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit'});
+      if(hod < 1){
+        casText = 'za <strong>'+min+' minut</strong> (v '+casStr+')';
+      } else if(dnes){
+        casText = 'dnes v <strong>'+casStr+'</strong> (za '+hod+'h '+min+'min)';
+      } else if(zitra){
+        casText = 'zítra v <strong>'+casStr+'</strong>';
+      } else {
+        casText = obnovi.toLocaleDateString('cs-CZ',{weekday:'long',hour:'2-digit',minute:'2-digit'});
+      }
+    }
+
+    limitEl.innerHTML = '<div class="limit-box">'+
+      '<span style="font-size:20px">⏳</span>'+
+      '<div>'+
+        '<strong>Dosáhli jste limitu 5 výpočtů za 12 hodin.</strong><br>'+
+        '<span style="font-size:12px">Další výpočet bude možný '+casText+'. Zbývá: <strong id="odpocetText"></strong></span>'+
+      '</div>'+
+    '</div>';
+
+    // Spustit odpočítávání
+    if(diff > 0) spustOdpocet(obnovi);
+
   } else {
-    limitEl.innerHTML='<div class="limit-box ok"><span style="font-size:20px">✅</span><div><strong>'+count+' z '+MAX_FREE+' výpočtů použito</strong><br><span style="font-size:12px">Zbývá '+(MAX_FREE-count)+' výpočtů zdarma.</span></div></div>';
+    limitEl.innerHTML = '<div class="limit-box ok">'+
+      '<span style="font-size:20px">✅</span>'+
+      '<div>'+
+        '<strong>'+count+' z '+MAX_FREE+' výpočtů použito za posledních 12 hodin</strong><br>'+
+        '<span style="font-size:12px">Zbývají <strong>'+(MAX_FREE-count)+'</strong> výpočty zdarma.</span>'+
+      '</div>'+
+    '</div>';
   }
 
   if(!sims.length){
@@ -257,8 +300,11 @@ td{padding:6px 10px;border-bottom:0.5px solid #E2E8F0}
 .nzu-r{color:#2E6B40;margin-bottom:3px;font-size:12px}
 .footer-box{background:#1E3A5F;color:#fff;padding:12px 16px;border-radius:8px;margin-top:14px}
 .print-btn{position:fixed;bottom:20px;right:20px;background:#2E8B4A;color:#fff;border:none;border-radius:10px;padding:12px 24px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 4px 20px rgba(46,139,74,.4);font-family:inherit;z-index:999}
-@media print{.print-btn{display:none!important}.page{padding:8mm 10mm}
-.hdr,.nzu,.footer-box,.kpi.green,.kpi.blue,.kpi.amber,.verdikt,th,tr{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+@media print{.print-btn{display:none!important}.page{padding:8mm 10mm}body{orphans:3;widows:3}
+.hdr,.nzu,.footer-box,.kpi.green,.kpi.blue,.kpi.amber,.verdikt,th,tr{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+h2{page-break-after:avoid;page-break-inside:avoid}
+table{page-break-inside:auto}tr{page-break-inside:avoid;page-break-after:auto}
+.kpi-row,.verdikt,.nzu,.footer-box{page-break-inside:avoid}}
 @page{size:A4;margin:10mm 12mm}
 </style></head><body>
 <button class="print-btn" onclick="window.print()">🖨️ Uložit jako PDF</button>
@@ -315,6 +361,56 @@ td{padding:6px 10px;border-bottom:0.5px solid #E2E8F0}
   win.document.close();
 }
 
+
+async function smazatVypocet(id){
+  if(!confirm('Smazat tento výpočet? Limit výpočtů za 12 hodin se tím neobnoví.')) return;
+  try{
+    const r = await fetch(SUPA_URL+'/rest/v1/simulations?id=eq.'+id,{
+      method:'DELETE',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+TOKEN,'Prefer':'return=minimal'}
+    });
+    if(r.ok){
+      SIMS = SIMS.filter(s=>s.id!==id);
+      renderSims(SIMS);
+      updateLimitBox(SIMS.length);
+    } else {
+      alert('Chyba při mazání. Zkuste to znovu.');
+    }
+  }catch(e){ alert('Chyba: '+e.message); }
+}
+
+var _odpocetInterval = null;
+
+function spustOdpocet(obnovi){
+  if(_odpocetInterval) clearInterval(_odpocetInterval);
+  _odpocetInterval = setInterval(function(){
+    var diff = obnovi - new Date();
+    if(diff <= 0){
+      clearInterval(_odpocetInterval);
+      // Obnovit stránku — limit se obnovil
+      window.location.reload();
+      return;
+    }
+    var hod = Math.floor(diff/3600000);
+    var min = Math.floor((diff%3600000)/60000);
+    var sec = Math.floor((diff%60000)/1000);
+    var el = document.getElementById('odpocetText');
+    if(el){
+      if(hod > 0){
+        el.textContent = hod+'h '+min+'min '+sec+'s';
+      } else if(min > 0){
+        el.textContent = min+'min '+sec+'s';
+      } else {
+        el.textContent = sec+'s';
+      }
+    }
+  }, 1000);
+}
+
+function updateLimitBox(count){
+  // Přepočítat limit box po smazání
+  renderSims(SIMS);
+}
 
 function odhlasit(){
   localStorage.removeItem('supa_access_token');
