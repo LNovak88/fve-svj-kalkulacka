@@ -902,13 +902,32 @@ function s3(){
 // KROK 4 — Domácnosti (PRO: vše editovatelné)
 // ================================================================
 function s4(){
-  // Výchozí hodnoty — ze serverRec pokud dostupné, jinak z D
-  const sazba = D.sazba_byt || 'D02d';
-  const sp_sp = D.sp_sp_mwh || 3.5;
-  const sp_by_vt = D.sp_by_vt_mwh || 1.2;
-  const sp_by_nt = D.sp_by_nt_mwh || 0.0;
+  const sp_sp    = D.sp_sp_mwh    !== undefined ? D.sp_sp_mwh    : 3.5;
+  const sp_by_vt = D.sp_by_vt_mwh !== undefined ? D.sp_by_vt_mwh : 1.2;
+  const sp_by_nt = D.sp_by_nt_mwh !== undefined ? D.sp_by_nt_mwh : 0.0;
   const sazba_sp = D.sazba_sp || 'D02d';
-  const lbl = getHhLabel(D.hhSlider);
+  const lbl      = getHhLabel(D.hhSlider);
+
+  // Info o jističích ze serverRec (čistý JS — ne uvnitř template literalu)
+  let recHtml = '';
+  if(serverRec){
+    const popis = (serverRec.sp_popis && serverRec.sp_popis.length)
+      ? '<div style="font-size:12px;color:var(--text-2);margin:6px 0 0;padding:6px 10px;background:var(--bg);border-radius:6px;line-height:1.6">' + serverRec.sp_popis.map(p=>'• '+p).join('<br>') + '</div>'
+      : '';
+    recHtml = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px">'
+      + '<div style="background:#F0F7FD;border:1px solid #C8DFF2;border-radius:var(--rm);padding:10px 14px">'
+      + '<div style="font-size:11px;color:var(--text-2);margin-bottom:2px">Sazba bytů — odhad dle vybavení</div>'
+      + '<div style="font-size:15px;font-weight:700;color:var(--navy)">' + serverRec.sazba_byt + '</div>'
+      + '<div style="font-size:11px;color:var(--text-2);margin-top:3px">Jistič bytu: ' + serverRec.jistic_byt + ' · ' + serverRec.cena_jistic_byt_mes + ' Kč/měs</div>'
+      + '</div>'
+      + '<div style="background:#F0F7FD;border:1px solid #C8DFF2;border-radius:var(--rm);padding:10px 14px">'
+      + '<div style="font-size:11px;color:var(--text-2);margin-bottom:2px">Sazba spol. prostor — odhad dle vybavení</div>'
+      + '<div style="font-size:15px;font-weight:700;color:var(--navy)">' + serverRec.sazba_sp + '</div>'
+      + '<div style="font-size:11px;color:var(--text-2);margin-top:3px">Jistič SP: ' + serverRec.jistic_sp + ' &nbsp;·&nbsp; Jistič domu: ' + serverRec.jistic_dum + '</div>'
+      + '</div>'
+      + '</div>'
+      + popis;
+  }
 
   return `<div class="card">
   <h2 class="ctitle">Domácnosti <span class="badge b-pro">PRO: vše editovatelné</span></h2>
@@ -930,36 +949,19 @@ function s4(){
     <div class="chart-hours"><span>0:00</span><span>6:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>
   </div>
 
-  <!-- Serverové doporučení sazby a jističe -->
-  \${serverRec ? \`
-  <div class="slabel">Doporučení serveru — sazba a jistič</div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
-    <div style="background:#F0F7FD;border:1px solid #C8DFF2;border-radius:var(--rm);padding:10px 14px">
-      <div style="font-size:11px;color:var(--text-2);margin-bottom:3px">Sazba bytů</div>
-      <div style="font-size:16px;font-weight:600;color:var(--navy)">\${serverRec.sazba_byt}</div>
-      <div style="font-size:11px;color:var(--text-2);margin-top:2px">Jistič bytu: \${serverRec.jistic_byt} · \${serverRec.cena_jistic_byt_mes} Kč/měs</div>
-    </div>
-    <div style="background:#F0F7FD;border:1px solid #C8DFF2;border-radius:var(--rm);padding:10px 14px">
-      <div style="font-size:11px;color:var(--text-2);margin-bottom:3px">Sazba spol. prostor</div>
-      <div style="font-size:16px;font-weight:600;color:var(--navy)">\${serverRec.sazba_sp}</div>
-      <div style="font-size:11px;color:var(--text-2);margin-top:2px">Jistič SP: \${serverRec.jistic_sp} · Jistič domu: \${serverRec.jistic_dum}</div>
-    </div>
-  </div>
-  \${serverRec.sp_popis && serverRec.sp_popis.length ? \`<div style="font-size:12px;color:var(--text-2);margin-bottom:12px;padding:8px 12px;background:var(--bg);border-radius:var(--rm)">\${serverRec.sp_popis.map(p=>'• '+p).join('<br>')}</div>\` : ''}
-  \` : ''}
-
-  <!-- PRO: editovatelné hodnoty spotřeby -->
+  <!-- Editovatelné hodnoty spotřeby, sazby a jističe -->
   <div class="expert-section">
-    <div class="expert-section-title">✏️ Upravit spotřebu a tarifly — zadejte hodnoty ze skutečných složenek</div>
-    <div class="g2" style="gap:10px;margin-bottom:10px">
+    <div class="expert-section-title">✏️ Upravit spotřebu a tarifly — odhad dle vybavení, zadejte ze složenky pro přesnost</div>
+    ${recHtml}
+    <div class="g2" style="gap:10px;margin-top:10px;margin-bottom:10px">
       <div><label>Spotřeba bytu VT (MWh/byt/rok)</label>
-        <div class="pro-input-wrap"><input type="number" id="sv_sp_by_vt" value="${D.sp_by_vt_mwh}" min="0.1" max="20" step="0.1" oninput="D.sp_by_vt_mwh=+this.value;this.dataset.manual=1"><div class="pro-edit-ico">✏️</div></div></div>
+        <div class="pro-input-wrap"><input type="number" id="sv_sp_by_vt" value="${sp_by_vt}" min="0.1" max="20" step="0.1" oninput="D.sp_by_vt_mwh=+this.value"><div class="pro-edit-ico">✏️</div></div></div>
       <div><label>Spotřeba bytu NT (MWh/byt/rok)</label>
-        <div class="pro-input-wrap"><input type="number" id="sv_sp_by_nt" value="${D.sp_by_nt_mwh}" min="0" max="20" step="0.1" oninput="D.sp_by_nt_mwh=+this.value;this.dataset.manual=1"><div class="pro-edit-ico">✏️</div></div></div>
+        <div class="pro-input-wrap"><input type="number" id="sv_sp_by_nt" value="${sp_by_nt}" min="0" max="20" step="0.1" oninput="D.sp_by_nt_mwh=+this.value"><div class="pro-edit-ico">✏️</div></div></div>
     </div>
     <div class="g2" style="gap:10px;margin-bottom:10px">
       <div><label>Spotřeba spol. prostor (MWh/rok)</label>
-        <div class="pro-input-wrap"><input type="number" id="sv_sp_sp_mwh" value="${sp_sp.toFixed(1)}" min="0" max="200" step="0.1" oninput="D.sp_sp_mwh=+this.value;this.dataset.manual=1"><div class="pro-edit-ico">✏️</div></div></div>
+        <div class="pro-input-wrap"><input type="number" id="sv_sp_sp_mwh" value="${sp_sp.toFixed(1)}" min="0" max="200" step="0.1" oninput="D.sp_sp_mwh=+this.value"><div class="pro-edit-ico">✏️</div></div></div>
       <div><label>Distributor</label>
         <select onchange="D.dist=this.value">${DISTRIBUTORI.map(d=>`<option${D.dist===d?' selected':''}>${d}</option>`).join('')}</select></div>
     </div>
@@ -971,7 +973,7 @@ function s4(){
     </div>
   </div>
 
-  <div class="tip">💡 Hodnoty spotřeby najdete na ročním vyúčtování nebo faktuře od dodavatele elektřiny. Přesné zadání zlepší přesnost výpočtu na ±5 %.</div>
+  <div class="tip">💡 Sazbu a spotřebu ověřte na faktuře od dodavatele elektřiny — přesné zadání zlepší výsledek na ±5 %.</div>
 
   <!-- Zranitelné domácnosti — NZÚ bonus -->
   <div class="slabel">Zranitelné domácnosti — bonus NZÚ</div>
@@ -989,16 +991,14 @@ function s4(){
       <label>Odhadovaný bonus NZÚ na byt (Kč)</label>
       <div class="pro-input-wrap">
         <input type="number" id="sv_bonus_byt" value="${D.bonus_byt}" min="0" max="150000" step="5000"
-          oninput="D.bonus_byt=+this.value;D.bonus_nzu=D.pocet_nizko*D.bonus_byt">
+          oninput="D.bonus_byt=+this.value;D.bonus_nzu=D.pocet_nizko*D.bonus_byt;_updateNzuInfo()">
         <div class="pro-edit-ico">✏️</div>
       </div>
     </div>
   </div>
-  <div id="nzu_bonus_info" style="font-size:12px;color:var(--green);margin-bottom:4px">
-    ${D.pocet_nizko > 0 ? '✅ Celkový bonus: <strong>' + (D.pocet_nizko * D.bonus_byt).toLocaleString('cs-CZ') + ' Kč</strong> (' + D.pocet_nizko + ' byt${D.pocet_nizko > 4 ? \ů\ : D.pocet_nizko > 1 ? \y\ : \} × ' + D.bonus_byt.toLocaleString('cs-CZ') + ' Kč)' : '<span style="color:var(--text-2)">Zadejte počet bytů pro výpočet bonusu.</span>'}
+  <div id="nzu_bonus_info" style="font-size:12px;color:var(--green);margin-bottom:12px">
+    <span style="color:var(--text-2)">Zadejte počet bytů pro výpočet bonusu.</span>
   </div>
-
-  <div class="tip">💡 Hodnoty spotřeby najdete na ročním vyúčtování nebo faktuře od dodavatele elektřiny. Přesné zadání zlepší přesnost výpočtu na ±5 %.</div>
   </div>
   <div class="nav"><button class="btn-out" onclick="goBack()">← Zpět</button><button class="btn-prim" onclick="goNext()">Pokračovat →</button></div>`;
 }
@@ -1011,18 +1011,23 @@ function s5(){
   const inv  = D.cena_invest || Math.round(kwp * 30000);
   const bat  = D.bat || 0;
 
-  // Info box se serverovým doporučením
-  const recInfo = serverRec ? `
-  <div style="background:#EFF8FF;border:1px solid #A8D4F5;border-radius:var(--rm);padding:12px 16px;margin-bottom:14px;font-size:13px;color:#1B5C8A">
-    <div style="font-weight:600;margin-bottom:6px">🤖 Doporučení serveru pro váš dům (${D.bytu} bytů)</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px">
-      <span>⚡ Výkon FVE: <strong>${D.kwp} kWp</strong></span>
-      <span>🔋 Baterie: <strong>${serverRec.bat > 0 ? serverRec.bat + ' kWh' : 'bez baterie'}</strong></span>
-      <span>💰 FVE cena: <strong>${serverRec.cena_fve ? serverRec.cena_fve.toLocaleString('cs-CZ') + ' Kč' : '—'}</strong></span>
-      <span>🔌 Jistič domu: <strong>${serverRec.jistic_dum || '—'}</strong></span>
-    </div>
-    <div style="font-size:11px;color:#2E6B8A;margin-top:6px">Hodnoty jsou předvyplněné — upravte dle skutečné nabídky instalatéra.</div>
-  </div>` : '';
+  // Info box se odhadem FVE — čistý JS string
+  let recInfo = '';
+  if(serverRec){
+    const batTxt  = serverRec.bat > 0 ? serverRec.bat + ' kWh' : 'bez baterie';
+    const fveCena = serverRec.cena_fve ? serverRec.cena_fve.toLocaleString('cs-CZ') + ' Kč' : '—';
+    const jDum    = serverRec.jistic_dum || '—';
+    recInfo = '<div style="background:#EFF8FF;border:1px solid #A8D4F5;border-radius:var(--rm);padding:12px 16px;margin-bottom:14px;font-size:13px;color:#1B5C8A">'
+      + '<div style="font-weight:600;margin-bottom:6px">📐 Odhad FVE pro váš dům (' + D.bytu + ' bytů) — upravte dle nabídky</div>'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px">'
+      + '<span>⚡ Výkon FVE: <strong>' + D.kwp + ' kWp</strong></span>'
+      + '<span>🔋 Baterie: <strong>' + batTxt + '</strong></span>'
+      + '<span>💰 Cena FVE: <strong>' + fveCena + '</strong></span>'
+      + '<span>🔌 Jistič domu: <strong>' + jDum + '</strong></span>'
+      + '</div>'
+      + '<div style="font-size:11px;color:#2E6B8A;margin-top:6px">Odhad dle spotřeby a využívání el. energie — upravte dle skutečné nabídky instalatéra.</div>'
+      + '</div>';
+  }
 
   const roofs=[
     {v:'sedelova',n:'Sedlová',sklon:35,ic:'<svg width="44" height="32" viewBox="0 0 44 32" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"><polygon points="22,3 41,27 3,27"/><line x1="3" y1="27" x2="41" y2="27" stroke-width="2"/></svg>'},
