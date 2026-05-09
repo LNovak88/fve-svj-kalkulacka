@@ -333,7 +333,7 @@ def doporuc_kwp_bat(
     sp_total_vt = sp_vt_celkem_kwh + sp_sp_mwh * 1000.0
 
     # 75 % pokrytí VT spotřeby
-    kwp_min = max(5.0, sp_total_vt / 1.05 * 0.75)
+    kwp_min = max(5.0, sp_total_vt * 0.75 / 1050)
     kwp = round(kwp_min / 5) * 5
     kwp = max(5.0, kwp)
 
