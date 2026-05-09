@@ -4,9 +4,8 @@
 # Autoritativní hodnoty: ceníky 2026 (zdroj: TZB-info, ERÚ výměr 14/2025,
 # ceníky ČEZ/EGD/PRE k 1.1.2026)
 #
-# Verze 2.0 — přidány funkce pro /recommend endpoint:
-#   doporuc_sazbu(), doporuc_jistic(), sp_sp_vypocet(),
-#   sp_z_zarizeni(), doporuc_kwp_bat(), cena_kwp()
+# Verze 2.1 — přidány funkce pro PM (podružné měření):
+#   jistic_dum_ampery_pm(), vypocet_pm(), JISTIC_SP_OPTS
 
 import datetime
 import functools
@@ -19,7 +18,6 @@ import numpy as np
 # ================================================================
 
 CENY_VT = {
-    # Kč/MWh s DPH — VT (vysoký tarif)
     "ČEZ Distribuce": {"D01d": 7320, "D02d": 6610, "D25d": 6920, "D26d": 5650, "D27d": 6920,
                        "D35d": 5410, "D45d": 5410, "D56d": 5410, "D57d": 5410, "D61d": 8050},
     "EG.D (E.ON)":    {"D01d": 7050, "D02d": 6550, "D25d": 6650, "D26d": 5430, "D27d": 6650,
@@ -29,7 +27,6 @@ CENY_VT = {
 }
 
 CENY_NT = {
-    # Kč/MWh s DPH — NT (nízký tarif)
     "ČEZ Distribuce": {"D25d": 4070, "D26d": 4070, "D27d": 4020, "D35d": 4390,
                        "D45d": 4390, "D56d": 4390, "D57d": 4390, "D61d": 4200},
     "EG.D (E.ON)":    {"D25d": 3830, "D26d": 3830, "D27d": 3830, "D35d": 3830,
@@ -38,17 +35,14 @@ CENY_NT = {
                        "D45d": 3590, "D56d": 3590, "D57d": 3590, "D61d": 3590},
 }
 
-# Stálý plat za odběrné místo (Kč/měs s DPH)
 STAY_PLAT = {"ČEZ Distribuce": 179, "EG.D (E.ON)": 160, "PREdistribuce": 157}
 
-# Jistič na byt (individuální ODM) — Kč/měs s DPH 2026
 JISTIC_BYT = {
     "ČEZ Distribuce": {"1×25A": 132, "3×16A": 190, "3×20A": 238, "3×25A": 298, "3×32A": 381},
     "EG.D (E.ON)":    {"1×25A": 121, "3×16A": 193, "3×20A": 242, "3×25A": 303, "3×32A": 387},
     "PREdistribuce":  {"1×25A": 132, "3×16A": 190, "3×20A": 230, "3×25A": 287, "3×32A": 360},
 }
 
-# Jistič domu — D tarif (domácnost) — Kč/měs s DPH 2026
 JISTIC_DUM = {
     "ČEZ Distribuce": {10: 121, 16: 191, 20: 240, 25: 309, 32: 383,
                        40: 479, 50: 600, 63: 751, 80: 869, 100: 989},
@@ -59,8 +53,6 @@ JISTIC_DUM = {
 }
 JISTIC_DUM_A = {"ČEZ Distribuce": 5.99, "EG.D (E.ON)": 5.81, "PREdistribuce": 5.30}
 
-# Jistič JOM/SVJ jako podnikatel — C tarif — Kč/měs s DPH 2026
-# POZOR: C tarif je výrazně dražší než D tarif (ČEZ +46–52 %)
 JISTIC_DUM_C = {
     "ČEZ Distribuce": {16: 286,  20: 358,  25: 450,  32: 572,
                        40: 715,  50: 894,  63: 1145, 80: 1265, 100: 1384, 125: 1549, 160: 1788},
@@ -71,7 +63,6 @@ JISTIC_DUM_C = {
 }
 JISTIC_DUM_C_A = {"ČEZ Distribuce": 14.88, "EG.D (E.ON)": 5.81, "PREdistribuce": 14.37}
 
-# Cena jističe 3×25A dle sazby — pro výpočet úspory PM
 JISTIC_3x25 = {
     "ČEZ Distribuce": {"D01d": 132, "D02d": 298, "D25d": 287, "D26d": 422, "D27d": 272,
                        "D35d": 517, "D45d": 567, "D56d": 567, "D57d": 568, "D61d": 238},
@@ -88,7 +79,6 @@ PODIL_NT = {
     "D45d": 0.70, "D56d": 0.75, "D57d": 0.75, "D61d": 0.40,
 }
 
-# NT hodiny dle sazby
 NT_HODINY = {
     "D25d": set(list(range(22, 24)) + list(range(0, 6))),
     "D26d": set(list(range(22, 24)) + list(range(0, 6))),
@@ -100,7 +90,6 @@ NT_HODINY = {
     "D61d": set(list(range(22, 24)) + list(range(0, 8))),
 }
 
-# Spotřeba VT a NT na byt/rok pro každé zařízení (kWh)
 SP_ZAR = {
     "zaklad":   {"vt": 1200, "nt": 0},
     "sporak":   {"vt": 400,  "nt": 0},
@@ -113,7 +102,7 @@ SP_ZAR = {
 }
 
 # ================================================================
-# TDD PROFILY — OTE ČR, normalizované na průměr = 1.0/hodinu
+# TDD PROFILY
 # ================================================================
 
 _TDD4 = {
@@ -149,18 +138,14 @@ for _k in _UPRAVY:
     _UPRAVY[_k] = _UPRAVY[_k] / _UPRAVY[_k].mean()
 
 _MESICE = ["Led", "Úno", "Bře", "Dub", "Kvě", "Čvn", "Čvc", "Srp", "Zář", "Říj", "Lis", "Pro"]
-_CD = 365 * 96  # počet 15min intervalů za rok
+_CD = 365 * 96
 
 
 # ================================================================
 # DOPORUČENÍ — SAZBA, JISTIČ, SP, kWp, BATERIE
-# (portováno z app.py — autoritativní logika)
 # ================================================================
 
 def doporuc_sazbu(zarizeni: list) -> str:
-    """Doporučí distribuční sazbu bytů dle vybraných zařízení.
-    Priorita: TČ > přímotopy > akumulační kamna > EV > bojler > standard.
-    """
     if "tc"       in zarizeni: return "D57d"
     if "primotop" in zarizeni: return "D45d"
     if "akum"     in zarizeni: return "D26d"
@@ -170,7 +155,6 @@ def doporuc_sazbu(zarizeni: list) -> str:
 
 
 def doporuc_jistic_byt(zarizeni: list) -> str:
-    """Doporučí typ jističe bytu dle vybavení."""
     if "tc" in zarizeni or "primotop" in zarizeni or "akum" in zarizeni:
         return "3×32A"
     if "sporak" in zarizeni:
@@ -179,10 +163,6 @@ def doporuc_jistic_byt(zarizeni: list) -> str:
 
 
 def doporuc_jistic_dum(pocet_bytu: int, zarizeni: list) -> tuple:
-    """Doporučí hlavní jistič domu (SVJ/EDC) dle počtu bytů a vybavení.
-    Vrátí (string_popis, ampery_int).
-    Dle empirické tabulky z praxe distributorů (app.py).
-    """
     pb = int(pocet_bytu)
     has_tc     = "tc"       in zarizeni
     has_primo  = "primotop" in zarizeni
@@ -212,7 +192,6 @@ def doporuc_jistic_dum(pocet_bytu: int, zarizeni: list) -> tuple:
         elif pb <= 24: return "3×40A", 40
         else:          return "3×50A", 50
 
-    # Základní — svícení, spotřebiče, plyn/dálkové teplo
     if pb <= 10:   return "3×25A", 25
     elif pb <= 20: return "3×32A", 32
     elif pb <= 40: return "3×40A", 40
@@ -229,41 +208,25 @@ def sp_sp_vypocet(
     pocet_ev_nabijec: int,
     pocet_cerpadel: int = 0,
 ) -> dict:
-    """Vypočítá roční spotřebu a parametry společných prostor (SP).
-
-    Vzorce (z app.py — autoritativní):
-      Osvětlení:    patra×200 + byty×2 + 100 kWh/rok
-      Výtah:        3 000 kWh/výtah × (1 + patra/20)
-      Čerpadla:     536 kWh/čerpadlo × (1 + patra/30)  [67 % topné sezóny]
-      Centrální TUV: 800 kWh/byt/rok (NT)
-      TČ domu:      3 000 kWh/byt/rok (NT)
-      EV nabíječky: 1 500 kWh/nabíječka/rok (NT)
-
-    Jistič SP: dle součtu instalovaných příkonů zařízení.
-    """
     pb = int(pocet_bytu)
     pp = int(pocet_pater)
     pv = int(pocet_vytahu)
     pc = int(pocet_cerpadel)
 
-    # VT spotřeba SP
     sp_osvetleni = pp * 200 + pb * 2 + 100
     sp_vytah     = 3000 * pv * (1 + pp / 20.0) if pv > 0 else 0.0
     sp_cerpadla  = 536  * pc * (1 + pp / 30.0) if pc > 0 else 0.0
     sp_vt = sp_osvetleni + sp_vytah + sp_cerpadla
 
-    # NT spotřeba SP
     sp_tuv = 800  * pb if ma_tuv_central    else 0.0
     sp_tc  = 3000 * pb if ma_tc_dum         else 0.0
     sp_ev  = 1500 * int(pocet_ev_nabijec)
     sp_nt  = sp_tuv + sp_tc + sp_ev
 
-    # Sazba SP
     if ma_tc_dum:        sazba_sp = "D57d"
     elif ma_tuv_central: sazba_sp = "D25d"
     else:                sazba_sp = "D02d"
 
-    # Jistič SP — dle příkonu
     P_sp_kw = (pv * 7.5) + pc * 0.25 + 1.0
     if ma_tc_dum:              P_sp_kw += pb * 3.0
     elif ma_tuv_central:       P_sp_kw += pb * 0.5
@@ -272,13 +235,12 @@ def sp_sp_vypocet(
     _std = [25, 32, 40, 50, 63, 80, 100]
     jistic_sp_a = next((j for j in _std if j >= I_sp), 100)
 
-    # Popis položek pro frontend
     popis = [f"Osvětlení chodeb: {sp_osvetleni:.0f} kWh/rok"]
-    if pv > 0:              popis.append(f"Výtah ({pv}×): {sp_vytah:.0f} kWh/rok")
-    if pc > 0:              popis.append(f"Čerpadla ({pc}×): {sp_cerpadla:.0f} kWh/rok")
-    if ma_tuv_central:      popis.append(f"Centrální TUV: {sp_tuv:.0f} kWh/rok (NT)")
-    if ma_tc_dum:           popis.append(f"TČ domu: {sp_tc:.0f} kWh/rok (NT)")
-    if pocet_ev_nabijec > 0:popis.append(f"EV nabíječky ({pocet_ev_nabijec}×): {sp_ev:.0f} kWh/rok (NT)")
+    if pv > 0:               popis.append(f"Výtah ({pv}×): {sp_vytah:.0f} kWh/rok")
+    if pc > 0:               popis.append(f"Čerpadla ({pc}×): {sp_cerpadla:.0f} kWh/rok")
+    if ma_tuv_central:       popis.append(f"Centrální TUV: {sp_tuv:.0f} kWh/rok (NT)")
+    if ma_tc_dum:            popis.append(f"TČ domu: {sp_tc:.0f} kWh/rok (NT)")
+    if pocet_ev_nabijec > 0: popis.append(f"EV nabíječky ({pocet_ev_nabijec}×): {sp_ev:.0f} kWh/rok (NT)")
 
     return {
         "sp_mwh":      round((sp_vt + sp_nt) / 1000.0, 3),
@@ -294,18 +256,12 @@ def sp_sp_vypocet(
 
 
 def sp_z_zarizeni(zarizeni: list, pocet_bytu: int) -> tuple:
-    """Vypočítá celkovou VT a NT spotřebu bytů dle výběru zařízení.
-    Vrátí (vt_mwh, nt_mwh) na jeden byt (ne celý dům).
-    """
     vt = sum(SP_ZAR[z]["vt"] for z in zarizeni if z in SP_ZAR)
     nt = sum(SP_ZAR[z]["nt"] for z in zarizeni if z in SP_ZAR)
-    return vt / 1000.0, nt / 1000.0  # MWh/byt/rok
+    return vt / 1000.0, nt / 1000.0
 
 
 def cena_kwp(kwp: float) -> int:
-    """Cena FVE dle výkonu — množstevní sleva (Kč/kWp s DPH).
-    Dle app.py — praxe instalačních firem 2026.
-    """
     if kwp < 10:   return 38000
     elif kwp < 20: return 33000
     elif kwp < 40: return 28000
@@ -320,24 +276,13 @@ def doporuc_kwp_bat(
     zarizeni: list,
     pocet_vchodu: int = 1,
 ) -> dict:
-    """Doporučí výkon FVE a kapacitu baterie.
-
-    Algoritmus (z app.py):
-      1. kWp = 75 % VT spotřeby / 1.05 (průměrný výnos ČR), zaokrouhleno na 5 kWp
-      2. Baterie = kWp × 1.4, zaokrouhleno na 5 kWh
-      3. Navýšení dle TČ (+15 %) a EV (+10 %)
-      4. Min 5 kWp
-
-    Vrátí dict s kwp, bat, cena_fve, cena_bat, cena_celkem.
-    """
     sp_total_vt = sp_vt_celkem_kwh + sp_sp_mwh * 1000.0
 
-    # 75 % pokrytí VT spotřeby
+    # OPRAVA: byl zde chybný vzorec /1.05 místo /1050
     kwp_min = max(5.0, sp_total_vt * 0.75 / 1050)
     kwp = round(kwp_min / 5) * 5
     kwp = max(5.0, kwp)
 
-    # Navýšení dle vybavení
     if "tc" in zarizeni:
         kwp = round(kwp * 1.15 / 5) * 5
     if "ev" in zarizeni:
@@ -345,14 +290,11 @@ def doporuc_kwp_bat(
 
     kwp = max(5.0, kwp)
 
-    # Baterie: 1.4× kWp, zaokrouhleno na 5 kWh
     bat = round(kwp * 1.4 / 5) * 5
 
-    # Ceny
     c_kwp = cena_kwp(kwp)
     cena_fve = round(kwp * c_kwp)
     cena_bat = round(bat * 15000)
-    # Extra náklady pro více vchodů (instalace v dalších vchodech)
     extra_vchod = max(0, int(pocet_vchodu) - 1) * 30000
     cena_celkem = cena_fve + cena_bat + extra_vchod
 
@@ -367,10 +309,6 @@ def doporuc_kwp_bat(
 
 
 def cena_jistice_dum(dist: str, ampery: int, c_tarif: bool = False) -> int:
-    """Vrátí měsíční cenu jističe domu (Kč/měs s DPH).
-    c_tarif=False → D tarif (EDC/běžné SVJ)
-    c_tarif=True  → C tarif (PM — SVJ jako podnikatel, dražší)
-    """
     if c_tarif:
         tab   = JISTIC_DUM_C.get(dist, JISTIC_DUM_C["ČEZ Distribuce"])
         amp_a = JISTIC_DUM_C_A.get(dist, 14.88)
@@ -383,6 +321,118 @@ def cena_jistice_dum(dist: str, ampery: int, c_tarif: bool = False) -> int:
             return tab[k]
     max_k = klice[-1]
     return round(tab[max_k] + (ampery - max_k) * amp_a)
+
+
+# ================================================================
+# PM (PODRUŽNÉ MĚŘENÍ) — výpočet úspory a nákladů
+# Portováno z app.py — autoritativní logika
+# ================================================================
+
+# Seznam standardních jističů SP pro select ve wizardu
+JISTIC_SP_OPTS = [25, 32, 40, 50, 63, 80, 100]
+
+
+def jistic_dum_ampery_pm(pocet_bytu: int, zarizeni: list) -> int:
+    """Odhadne velikost hlavního jističe PM (patka domu, C tarif) v ampérech.
+
+    Empirická tabulka dle praxe distributorů (z app.py — autoritativní).
+    PM = celý dům jako jedno ODM → větší jistič než pro SP.
+
+    Byty  | Základní | Sporák | Bojler | TČ     | Elektrokotel/akum
+    ------+----------+--------+--------+--------+------------------
+    ≤10   |  3×32A   | 3×40A  | 3×40A  | 3×63A  | 3×80A
+    ≤20   |  3×40A   | 3×50A  | 3×63A  | 3×80A  | 3×100A
+    ≤30   |  3×50A   | 3×63A  | 3×80A  | 3×100A | 3×125A
+    ≤50   |  3×63A   | 3×80A  | 3×100A | 3×125A | 3×160A
+    ≤100  |  3×80A   | 3×100A | 3×125A | 3×160A | 3×200A
+    ≤150  |  3×100A  | 3×125A | 3×160A | 3×200A | 3×250A
+    ≤200  |  3×125A  | 3×160A | 3×200A | 3×250A | 3×315A
+    >200  |  3×160A  | 3×200A | 3×250A | 3×315A | 3×400A
+    """
+    pb = int(pocet_bytu)
+    has_ek  = "primotop" in zarizeni or "akum" in zarizeni
+    has_tc  = "tc"       in zarizeni
+    has_boj = "bojler"   in zarizeni
+    has_sp  = "sporak"   in zarizeni
+
+    _TAB = [
+        ( 10,  32,  40,  40,  63,  80),
+        ( 20,  40,  50,  63,  80, 100),
+        ( 30,  50,  63,  80, 100, 125),
+        ( 50,  63,  80, 100, 125, 160),
+        (100,  80, 100, 125, 160, 200),
+        (150, 100, 125, 160, 200, 250),
+        (200, 125, 160, 200, 250, 315),
+        (999, 160, 200, 250, 315, 400),
+    ]
+    for max_b, z, sp, boj, tc, ek in _TAB:
+        if pb <= max_b:
+            if has_ek:  return ek
+            if has_tc:  return tc
+            if has_boj: return boj
+            if has_sp:  return sp
+            return z
+    return 160
+
+
+def vypocet_pm(
+    pocet_bytu: int,
+    pocet_vchodu: int,
+    zarizeni: list,
+    dist: str,
+    jistic_byt: str,
+    jistic_sp_a: int,
+) -> dict:
+    """Vypočítá úsporu a náklady při přechodu na PM (podružné měření).
+
+    Logika z app.py (řádky 1155-1171) — autoritativní:
+
+    Stávající stav (bez PM):
+      (N+1) × stálý plat  [N bytů + 1 ODM SP]
+      N × cena_jistic_byt [D tarif, individuální ODM]
+      cena_jistic_SP      [D tarif, SP jako samostatné ODM]
+
+    PM stav:
+      1 × stálý plat      [jeden ODM pro celý dům]
+      cena_jistic_PM      [C tarif — SVJ jako podnikatel, dražší!]
+
+    Úspora/rok = (stávající_mes - PM_mes) × 12
+
+    Náklady PM (z app.py):
+      N × 10 000 Kč       [podružné měřiče na byty]
+      75 000 Kč           [projekt elektro + přepojení]
+      (vchody-1) × 30 000 [každý další vchod = extra rozvaděč]
+    """
+    pb   = int(pocet_bytu)
+    stay = float(STAY_PLAT.get(dist, 179))
+
+    jbyt_tab  = JISTIC_BYT.get(dist, JISTIC_BYT["ČEZ Distribuce"])
+    jbyt_cena = float(jbyt_tab.get(jistic_byt, 298))
+
+    jsp_cena = float(cena_jistice_dum(dist, jistic_sp_a, c_tarif=False))
+
+    jpm_a    = jistic_dum_ampery_pm(pb, zarizeni)
+    jpm_cena = float(cena_jistice_dum(dist, jpm_a, c_tarif=True))
+
+    platby_ted_mes = (pb + 1) * stay + pb * jbyt_cena + jsp_cena
+    platby_pm_mes  = stay + jpm_cena
+
+    uspora_mes = platby_ted_mes - platby_pm_mes
+    uspora_rok = round(uspora_mes * 12.0)
+
+    cena_mericu = pb * 10000 + 75000 + max(0, int(pocet_vchodu) - 1) * 30000
+
+    return {
+        "jistic_pm_a":        jpm_a,
+        "jistic_pm_str":      f"3×{jpm_a}A",
+        "jistic_pm_cena_mes": round(jpm_cena),
+        "platby_ted_mes":     round(platby_ted_mes),
+        "platby_pm_mes":      round(platby_pm_mes),
+        "uspora_pm_mes":      round(uspora_mes),
+        "uspora_pm_rok":      uspora_rok,
+        "cena_mericu_pm":     cena_mericu,
+        "jistic_sp_opts":     JISTIC_SP_OPTS,
+    }
 
 
 # ================================================================
@@ -406,7 +456,6 @@ def _tdd4_klic(sezona: str, vikend: bool) -> str:
 
 
 def _smiseny_profil(pct_pracujici: float, pct_seniori: float, pct_rodiny: float) -> np.ndarray:
-    """Vážený průměr tří profilů spotřeby (hodnoty 0–100)."""
     total = pct_pracujici + pct_seniori + pct_rodiny
     if total <= 0:
         return _UPRAVY["mix"].copy()
@@ -417,7 +466,6 @@ def _smiseny_profil(pct_pracujici: float, pct_seniori: float, pct_rodiny: float)
 
 
 def _gen_profil_vt(kwh: float, tdd: dict, uprava: np.ndarray = None) -> np.ndarray:
-    """Generuje 15min profil VT spotřeby za rok (pole délky _CD)."""
     vals = []
     den = datetime.date(2026, 1, 1)
     for _ in range(365):
@@ -439,7 +487,6 @@ def _gen_profil_vt(kwh: float, tdd: dict, uprava: np.ndarray = None) -> np.ndarr
 
 
 def _gen_profil_nt(kwh: float, sazba: str) -> np.ndarray:
-    """Generuje 15min profil NT spotřeby — jen v NT hodinách."""
     nt_h = NT_HODINY.get(sazba, set())
     if not nt_h or kwh <= 0:
         return np.zeros(_CD, dtype=float)
@@ -455,16 +502,12 @@ def _gen_profil_nt(kwh: float, sazba: str) -> np.ndarray:
 
 
 def _interpoluj(hod) -> np.ndarray:
-    """Převede hodinová data (8760) na 15minutová (35040).
-    Každou hodinovou hodnotu rozdělí na 4 stejné díly — zachovává energii přesně.
-    """
     h = np.array(hod, dtype=float)
     res = np.repeat(h, 4) / 4.0
     return res[:_CD]
 
 
 def _gen_vyroba_fallback(kwp: float, sklon: int = 35, azimut: int = 0) -> np.ndarray:
-    """Záložní výpočet výroby bez PVGIS (orientační)."""
     vh = np.zeros(8760, dtype=float)
     for h in range(8760):
         dr = h // 24
@@ -496,19 +539,6 @@ def simuluj(
     model: str = "edc",
     edc_ztrata: float = 0.0,
 ) -> dict:
-    """Přesná 15min simulace FVE s oddělenou VT a NT spotřebou.
-
-    Baterie (4 kroky — dle app.py):
-      1. FVE → VT spotřeba přímo
-      2. Přebytek FVE → nabít baterii (eta=0.92)
-      3. Zbylá VT spotřeba → vybít baterii (VT = dražší, priorita!)
-      4. NT spotřeba → vybít zbylou baterii
-
-    Model:
-      'spolecne' — jen společné prostory, NT = 0
-      'edc'      — sdílení přes EDC (aplikuje ztrátu sdílení)
-      'jom'      — celý dům jako jedno ODM
-    """
     v   = np.array(vyroba_15, dtype=float)
     svt = np.array(sp_vt15,   dtype=float)
     snt = np.array(sp_nt15,   dtype=float)
@@ -534,22 +564,18 @@ def simuluj(
         svti = float(svt[i])
         snti = float(snt[i])
 
-        # 1. FVE → VT přímo
         prime = min(vi, svti)
         vl_vt[i] = prime
         zbyla_v   = vi   - prime
         zbyla_svt = svti - prime
 
-        # 2. Přebytek → baterie
         if zbyla_v > 0.0 and bat > 0.0:
             nab = min(zbyla_v * eta, bmax - bkwh)
             bkwh += nab
             zbyla_v -= nab / eta
 
-        # 3. Přetoky
         pr[i] = zbyla_v
 
-        # 4. Zbylá VT → baterie (priorita před NT — VT je dražší)
         if zbyla_svt > 0.0 and bat > 0.0:
             dos = (bkwh - bmin) * eta
             vyb = min(zbyla_svt, dos)
@@ -557,10 +583,8 @@ def simuluj(
             zbyla_svt -= vyb
             vl_vt[i] += vyb
 
-        # 5. Zbylá VT → ze sítě
         od_vt[i] = zbyla_svt
 
-        # 6. NT → baterie
         if snti > 0.0 and bat > 0.0:
             dos = (bkwh - bmin) * eta
             vyb = min(snti, dos)
@@ -568,7 +592,6 @@ def simuluj(
             snti -= vyb
             vl_nt[i] = vyb
 
-        # 7. Zbylá NT → ze sítě
         od_nt[i] = snti
 
     tv  = float(v.sum())
@@ -626,7 +649,6 @@ def cashflow(
     rust: float = 3.0, deg: float = 0.5, leta: int = 25,
     jist: float = 0.0, bonus: float = 0.0, deg_bat: float = 2.0,
 ) -> list:
-    """Cashflow FVE investice na 'leta' let. Jeden záznam = jeden rok."""
     res = []
     kum = -(float(vlast) + float(uver) - float(bonus))
     for rok in range(1, int(leta) + 1):
@@ -661,15 +683,11 @@ def cashflow(
 
 
 # ================================================================
-# PVGIS — SOLÁRNÍ DATA (EU JRC API)
+# PVGIS — SOLÁRNÍ DATA
 # ================================================================
 
 @functools.lru_cache(maxsize=256)
 def pvgis(lat: float, lon: float, kwp: float, sklon: int, azimut: int) -> tuple:
-    """Stáhne hodinová TMY data výroby FVE z PVGIS API.
-    Speciální hodnoty azimut: 999=V+Z, 998=JZ+JV.
-    Vrátí (np.ndarray[8760], error_str|None).
-    """
     def _jedno(latt, lonn, kwpp, sklonn, az):
         r = requests.get(
             "https://re.jrc.ec.europa.eu/api/v5_2/seriescalc",
@@ -722,7 +740,6 @@ _GEOCODE_FB = {
 
 
 def geocode(dotaz: str) -> tuple:
-    """Vrátí (lat, lon, nazev, error). Nominatim + fallback."""
     try:
         r = requests.get(
             "https://nominatim.openstreetmap.org/search",
@@ -748,7 +765,6 @@ def geocode(dotaz: str) -> tuple:
 
 
 def geocode_search(dotaz: str) -> list:
-    """Autocomplete — vrátí seznam návrhů (max 5)."""
     try:
         r = requests.get(
             "https://nominatim.openstreetmap.org/search",
