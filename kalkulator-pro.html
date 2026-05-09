@@ -976,17 +976,6 @@ function s4(){
     + '<div style="' + popisStyle + 'color:#1B5C8A">' + spPopis
     + '<br><span style="margin-top:6px;display:block;font-weight:600;color:#1B5C8A">🏠 Jistič domu (EDC): ' + jistic_dum_val + (jistic_dum_cena_val ? ' · ' + jistic_dum_cena_val : '') + '</span>'
     + '</div>'
-    // PM info box — klíčové info pro rozhodnutí o modelu sdílení
-    + (serverRec && serverRec.uspora_pm_rok ? (
-        '<div style="margin-top:8px;background:#FEF9C3;border:1px solid #FDE047;border-radius:6px;padding:8px 10px;font-size:11px;color:#713F12">'
-      + '<div style="font-weight:700;margin-bottom:4px">⚡ PM — podružné měření (info pro krok 5)</div>'
-      + '<div>Jistič domu C-tarif: <strong>' + serverRec.jistic_pm_str + '</strong> · ' + (serverRec.jistic_pm_cena_mes||0).toLocaleString("cs-CZ") + ' Kč/měs</div>'
-      + '<div>Stávající platby distribuce: <strong>' + (serverRec.platby_ted_mes||0).toLocaleString("cs-CZ") + ' Kč/měs</strong></div>'
-      + '<div>Po přechodu na PM: <strong>' + (serverRec.platby_pm_mes||0).toLocaleString("cs-CZ") + ' Kč/měs</strong></div>'
-      + '<div style="color:#166534;font-weight:700;margin-top:2px">✅ Roční úspora: ' + (serverRec.uspora_pm_rok||0).toLocaleString("cs-CZ") + ' Kč/rok (' + (serverRec.uspora_pm_mes||0).toLocaleString("cs-CZ") + ' Kč/měs)</div>'
-      + '<div>Náklady měřiče: ' + (serverRec.cena_mericu_pm||0).toLocaleString("cs-CZ") + ' Kč (zahrnuto do investice v kroku Střecha)</div>'
-      + '</div>'
-    ) : '')
     + '</div>'
 
     + '</div>';
@@ -1068,6 +1057,33 @@ function s5(){
   const bat  = D.bat || 0;
 
   // Info box se odhadem FVE — čistý JS string
+  // PM info box — čistý JS string, zobrazí se jen při modelu PM
+  let pmInfoHtml = '';
+  if(D.model === 'jom' && serverRec && serverRec.uspora_pm_rok){
+    const uMes = (serverRec.uspora_pm_mes||0).toLocaleString('cs-CZ');
+    const uRok = (serverRec.uspora_pm_rok||0).toLocaleString('cs-CZ');
+    const mer  = (serverRec.cena_mericu_pm||0).toLocaleString('cs-CZ');
+    const jpm  = serverRec.jistic_pm_str || '—';
+    const jpmC = (serverRec.jistic_pm_cena_mes||0).toLocaleString('cs-CZ');
+    const tedM = (serverRec.platby_ted_mes||0).toLocaleString('cs-CZ');
+    const pmM  = (serverRec.platby_pm_mes||0).toLocaleString('cs-CZ');
+    pmInfoHtml = '<div style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:var(--rm);padding:12px 14px;margin-bottom:12px;font-size:13px">'
+      + '<div style="font-weight:600;color:#92400E;margin-bottom:8px">⚡ PM — podružné měření: co to znamená pro váš dům</div>'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px 16px;font-size:12px;color:#78350F">'
+      + '<span>🔌 Nový jistič domu: <strong>' + jpm + '</strong> (C tarif)</span>'
+      + '<span>💰 Cena jističe: <strong>' + jpmC + ' Kč/měs</strong></span>'
+      + '<span>📊 Stávající platby: <strong>' + tedM + ' Kč/měs</strong></span>'
+      + '<span>📊 Po přechodu PM: <strong>' + pmM + ' Kč/měs</strong></span>'
+      + '<span style="color:#166534;font-weight:700">✅ Úspora/měs: <strong>' + uMes + ' Kč</strong></span>'
+      + '<span style="color:#166534;font-weight:700">✅ Úspora/rok: <strong>' + uRok + ' Kč</strong></span>'
+      + '</div>'
+      + '<div style="font-size:12px;color:#92400E;margin-top:8px;padding-top:6px;border-top:1px solid #FDE68A">'
+      + '🔧 Náklady měřiče: <strong>' + mer + ' Kč</strong> — zahrnuto v Celkové investici'
+      + ' &nbsp;·&nbsp; ⚠️ C tarif = SVJ se stává podnikatelem'
+      + '</div>'
+      + '</div>';
+  }
+
   let recInfo = '';
   if(serverRec){
     const batTxt  = serverRec.bat > 0 ? serverRec.bat + ' kWh' : 'bez baterie';
@@ -1123,26 +1139,8 @@ function s5(){
     </div>
   </div>
 
-  <!-- PM info box — zobrazí se při výběru PM modelu -->
-  \${D.model === 'jom' && serverRec ? (() => {
-    const uMes = serverRec.uspora_pm_mes || 0;
-    const uRok = serverRec.uspora_pm_rok || 0;
-    const mer  = serverRec.cena_mericu_pm || 0;
-    const jpm  = serverRec.jistic_pm_str || '—';
-    const jpmC = serverRec.jistic_pm_cena_mes || 0;
-    return '<div style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:var(--rm);padding:12px 14px;margin-bottom:12px;font-size:13px">'
-      + '<div style="font-weight:600;color:#92400E;margin-bottom:6px">⚡ PM — podružné měření: co to znamená pro váš dům</div>'
-      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px;color:#78350F">'
-      + '<span>🔌 Nový jistič domu: <strong>' + jpm + '</strong> (C tarif)</span>'
-      + '<span>💰 Cena jističe: <strong>' + jpmC.toLocaleString("cs-CZ") + ' Kč/měs</strong></span>'
-      + '<span>✅ Úspora na distribuci: <strong>' + uMes.toLocaleString("cs-CZ") + ' Kč/měs</strong></span>'
-      + '<span>📅 Roční úspora: <strong>' + uRok.toLocaleString("cs-CZ") + ' Kč/rok</strong></span>'
-      + '<span>🔧 Investice měřiče: <strong>' + mer.toLocaleString("cs-CZ") + ' Kč</strong></span>'
-      + '<span>⚠️ C tarif = SVJ jako podnikatel</span>'
-      + '</div>'
-      + '<div style="font-size:11px;color:#92400E;margin-top:6px">Investice je navýšena o náklady na podružné měřiče. Úspora distribuce je zahrnuta ve výpočtu.</div>'
-      + '</div>';
-  })() : ''}
+  <!-- PM info box se vloží přes pmInfoHtml proměnnou -->
+  \${pmInfoHtml}
 
   <!-- PRO: Ekonomické parametry -->
   <div class="expert-section">
