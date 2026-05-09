@@ -448,6 +448,62 @@ const UPRAVY = {
 for(const k in UPRAVY){const m=UPRAVY[k].reduce((a,b)=>a+b)/24;UPRAVY[k]=UPRAVY[k].map(v=>v/m);}
 
 // ================================================================
+// GRAF PROFILU DOMÁCNOSTÍ (krok 4 — canvas profCanvas)
+// ================================================================
+function drawProfile(){
+  const canvas = document.getElementById('profCanvas');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.offsetWidth || 300;
+  canvas.width = w; canvas.height = 80;
+
+  // Smíchej profily podle slideru
+  const sl = D.hhSlider || 50;
+  const pPrac = Math.max(0, 50 - sl) / 50;  // 0–1 pracující
+  const pSen  = Math.max(0, sl - 50) / 50;  // 0–1 senioři
+  const pMix  = 1 - pPrac - pSen;
+
+  const profil = Array(24).fill(0).map((_,h) =>
+    UPRAVY.pracujici[h] * pPrac +
+    UPRAVY.seniori[h]   * pSen  +
+    UPRAVY.mix[h]       * Math.max(0, pMix)
+  );
+  const maxV = Math.max(...profil);
+
+  ctx.clearRect(0, 0, w, 80);
+
+  // Plocha
+  ctx.beginPath();
+  profil.forEach((v, h) => {
+    const x = (h / 23) * (w - 4) + 2;
+    const y = 76 - (v / maxV) * 68;
+    h === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.lineTo(w - 2, 76); ctx.lineTo(2, 76); ctx.closePath();
+  ctx.fillStyle = 'rgba(27,108,168,0.12)';
+  ctx.fill();
+
+  // Čára
+  ctx.beginPath();
+  profil.forEach((v, h) => {
+    const x = (h / 23) * (w - 4) + 2;
+    const y = 76 - (v / maxV) * 68;
+    h === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = '#1B6CA8';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // NT hodiny — šedé sloupce pod grafem
+  const ntHodiny = [22,23,0,1,2,3,4,5,6,7]; // D25d jako příklad
+  ctx.fillStyle = 'rgba(245,158,11,0.18)';
+  ntHodiny.forEach(h => {
+    const x = (h / 23) * (w - 4) + 2;
+    ctx.fillRect(x - 1, 0, Math.max(2, (w-4)/23), 80);
+  });
+}
+
+// ================================================================
 // SUPABASE HELPERS
 // ================================================================
 function getToken(){ return localStorage.getItem('supa_access_token'); }
@@ -553,7 +609,7 @@ async function updateLimitBar(){
   // Admin — zobrazit speciální info bez limitu
   if(IS_ADMIN){
     const bar = document.getElementById('limitBar');
-    if(bar){ bar.style.display='flex'; document.getElementById('limitDots').innerHTML=''; document.getElementById('limitTxt').innerHTML='👑 <strong>Admin účet</strong> — neomezený počet výpočtů'; }
+    if(bar){ bar.style.display='flex'; document.getElementById('limitDots').innerHTML=''; document.getElementById('limitTxt').innerHTML='👑 <strong>Admin účet</strong> — neomezený počet výpočtů &nbsp;<button onclick="resetLS()" style="font-size:11px;padding:2px 8px;border:1px solid #CBD5E1;border-radius:6px;background:#fff;cursor:pointer;color:#64748B">🗑 Reset cache</button>'; }
     return true;
   }
   const sims = await getVypoctyDnes();
@@ -2409,6 +2465,18 @@ function ulozParamyDoLS(){
     };
     localStorage.setItem(LS_KEY, JSON.stringify(save));
   }catch(e){}
+}
+
+function resetLS(){
+  try{
+    localStorage.removeItem('svj_pro_params');
+    // Reset D na výchozí hodnoty (jen ty co se ukládaly)
+    D.kwp=15; D.bat=0; D.cena_invest=0;
+    D.sazba_byt='D02d'; D.sazba_sp='D02d';
+    D.sp_by_vt_mwh=1.2; D.sp_by_nt_mwh=0; D.sp_sp_mwh=3.5;
+    serverRec=null;
+    alert('✅ Cache vymazána. Při příštím průchodu wizardem se hodnoty načtou čerstvě ze serveru.');
+  }catch(e){ alert('Chyba: '+e.message); }
 }
 
 function nacistParamyZLS(){
