@@ -477,7 +477,28 @@ async function getUser(){
 // ================================================================
 // AUTH — kontrola při načtení
 // ================================================================
+// ================================================================
+// DEV BYPASS — automaticky na localhost, bez registrace
+// ================================================================
+const IS_DEV = window.location.hostname === 'localhost' ||
+               window.location.hostname === '127.0.0.1';
+
 async function initAuth(){
+  // DEV MODE — přeskočit přihlášení
+  if(IS_DEV){
+    USER = {
+      id: 'dev-user-local',
+      email: 'dev@localhost.cz',
+      user_metadata: { full_name: 'Dev Uživatel', pozice: 'predseda' }
+    };
+    document.getElementById('userAvatar').textContent = 'DU';
+    document.getElementById('userBtnName').textContent = 'Dev';
+    document.getElementById('ddName').textContent = 'Dev Uživatel';
+    document.getElementById('ddEmail').textContent = 'dev@localhost.cz';
+    const bar = document.getElementById('limitBar');
+    if(bar){ bar.style.display='flex'; document.getElementById('limitDots').innerHTML=''; document.getElementById('limitTxt').innerHTML='🛠️ <strong>Dev režim</strong> — limit vypnut, ukládání přeskočeno'; }
+    return true;
+  }
   const user = await getUser();
   if(!user || !user.id){
     document.getElementById('authOverlay').classList.add('open');
@@ -513,6 +534,7 @@ async function getVypoctyDnes(){
 }
 
 async function checkLimit(){
+  if(IS_DEV) return true; // DEV — vždy povolí výpočet
   // Počítáme kolik výpočtů bylo VYTVOŘENO za posledních 12h
   // Mazání simulací limit NEOBNOVÍ
   const sims = await getVypoctyDnes();
@@ -1021,7 +1043,7 @@ async function spustVypocet(){
 // ULOŽENÍ SIMULACE DO SUPABASE
 // ================================================================
 async function ulozSimulaci(res, payload){
-  if(!USER) return;
+  if(IS_DEV){ console.log('DEV: ukládání přeskočeno'); return; } // DEV bypass
 
   // Vypočítat klíčové výsledky
   const sim = res.sim || {};
