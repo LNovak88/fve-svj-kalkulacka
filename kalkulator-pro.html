@@ -909,7 +909,7 @@ function s5(){
   <div style="background:#EFF8FF;border:1px solid #A8D4F5;border-radius:var(--rm);padding:12px 16px;margin-bottom:14px;font-size:13px;color:#1B5C8A">
     <div style="font-weight:600;margin-bottom:6px">🤖 Doporučení serveru pro váš dům (${D.bytu} bytů)</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px">
-      <span>⚡ Výkon FVE: <strong>${serverRec.kwp} kWp</strong></span>
+      <span>⚡ Výkon FVE: <strong>${D.kwp} kWp</strong></span>
       <span>🔋 Baterie: <strong>${serverRec.bat > 0 ? serverRec.bat + ' kWh' : 'bez baterie'}</strong></span>
       <span>💰 FVE cena: <strong>${serverRec.cena_fve ? serverRec.cena_fve.toLocaleString('cs-CZ') + ' Kč' : '—'}</strong></span>
       <span>🔌 Jistič domu: <strong>${serverRec.jistic_dum || '—'}</strong></span>
@@ -2389,18 +2389,23 @@ const LS_KEY = 'svj_pro_params';
 function ulozParamyDoLS(){
   try{
     const save = {
+      // Lokalita a dům — ukládáme pro pohodlí uživatele
       lokace:D.lokace, lat:D.lat, lon:D.lon,
       bytu:D.bytu, vchodu:D.vchodu, pater:D.pater,
       vytahu:D.vytahu, cerpadla:D.cerpadla,
       tuv:D.tuv, zatepleno:D.zatepleno, okna:D.okna, topeni:D.topeni,
       tc:D.tc, ev:D.ev, zarizeni:D.zarizeni, hhSlider:D.hhSlider,
-      dist:D.dist, sazba_byt:D.sazba_byt, sazba_sp:D.sazba_sp,
-      sp_by_vt_mwh:D.sp_by_vt_mwh, sp_by_nt_mwh:D.sp_by_nt_mwh, sp_sp_mwh:D.sp_sp_mwh,
-      kwp:D.kwp, sklon:D.sklon, azimut:D.azimut, strTyp:D.strTyp, bat:D.bat,
+      dist:D.dist,
+      // Ekonomické preference
       model:D.model, edc_ztrata:D.edc_ztrata,
-      cena_invest:D.cena_invest, vlastni_pct:D.vlastni_pct,
-      splatnost:D.splatnost, rust_cen:D.rust_cen, deg_pan:D.deg_pan,
-      cena_pretoky:D.cena_pretoky, bonus_nzu:D.bonus_nzu,
+      vlastni_pct:D.vlastni_pct, splatnost:D.splatnost,
+      rust_cen:D.rust_cen, deg_pan:D.deg_pan,
+      cena_pretoky:D.cena_pretoky,
+      pocet_nizko:D.pocet_nizko, bonus_byt:D.bonus_byt,
+      // Střecha — sklon a orientace (ne výkon — ten přijde ze serveru)
+      sklon:D.sklon, azimut:D.azimut, strTyp:D.strTyp,
+      // POZOR: kwp, bat, cena_invest, sazba_byt, sazba_sp, sp_* se NEUKLÁDAJÍ
+      // — vždy se načtou čerstvě z /recommend aby nedošlo k zastaralým hodnotám
     };
     localStorage.setItem(LS_KEY, JSON.stringify(save));
   }catch(e){}
@@ -2411,7 +2416,20 @@ function nacistParamyZLS(){
     const raw = localStorage.getItem(LS_KEY);
     if(!raw) return;
     const p = JSON.parse(raw);
-    Object.keys(p).forEach(k=>{ if(p[k]!==null && p[k]!==undefined) D[k]=p[k]; });
+    // Načítáme pouze bezpečné klíče — kwp, bat, cena_invest, sazby a spotřeby
+    // se NENAČÍTAJÍ, vždy přijdou čerstvě ze serveru /recommend
+    const BEZPECNE = [
+      'lokace','lat','lon',
+      'bytu','vchodu','pater','vytahu','cerpadla',
+      'tuv','zatepleno','okna','topeni',
+      'tc','ev','zarizeni','hhSlider',
+      'dist',
+      'model','edc_ztrata',
+      'vlastni_pct','splatnost','rust_cen','deg_pan','cena_pretoky',
+      'pocet_nizko','bonus_byt',
+      'sklon','azimut','strTyp',
+    ];
+    BEZPECNE.forEach(k=>{ if(p[k]!==null && p[k]!==undefined) D[k]=p[k]; });
   }catch(e){}
 }
 
@@ -2440,8 +2458,9 @@ async function nacistUlozenouSimulaci(){
     if(p.lon) D.lon=p.lon;
     if(p.dist) D.dist=p.dist;
     if(p.sazba) D.sazba_byt=p.sazba;
-    if(p.kwp) D.kwp=p.kwp;
-    if(p.bat!==undefined) D.bat=p.bat;
+    // kwp a bat zaokrouhlujeme při načtení — mohou být uloženy jako desetinná čísla
+    if(p.kwp) D.kwp = Math.round(parseFloat(p.kwp) * 2) / 2;
+    if(p.bat!==undefined) D.bat = Math.round(parseFloat(p.bat));
     if(p.sklon) D.sklon=p.sklon;
     if(p.azimut!==undefined) D.azimut=p.azimut;
     if(p.model) D.model=p.model;
@@ -2487,11 +2506,8 @@ function nacistAdresuZProfilu(){
   nacistParamyZLS();
   // 2. Předvyplnit adresu z profilu pokud LS nemá adresu
   nacistAdresuZProfilu();
-  // 3. Automatická baterie pokud není
-  if(!D.bat || D.bat === 0){
-    const kwp = D.kwp || 15;
-    D.bat = autoBaterie(kwp);
-  }
+  // 3. Baterie přijde ze serveru /recommend — zde jen reset na 0 pokud není
+  if(D.bat === undefined) D.bat = 0;
   // 4. Zkusit načíst uloženou simulaci (z moje-vypocty)
   const loadedSim = await nacistUlozenouSimulaci();
   render();
