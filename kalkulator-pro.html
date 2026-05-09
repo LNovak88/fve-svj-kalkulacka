@@ -908,42 +908,70 @@ function s4(){
   const sazba_sp = D.sazba_sp || 'D02d';
   const lbl      = getHhLabel(D.hhSlider);
 
-  // Info o jističích ze serverRec (čistý JS)
-  let recHtml = '';
-  if(serverRec){
-    const popis = (serverRec.sp_popis && serverRec.sp_popis.length)
-      ? '<div style="font-size:11px;color:#2E6B40;margin-top:8px;line-height:1.7">' + serverRec.sp_popis.map(p=>'• '+p).join('<br>') + '</div>'
-      : '';
-    recHtml = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;margin-top:10px">'
+  // Boxy sazba + jistič + popis — čistý JS
+  const SEL_STYLE   = 'width:100%;padding:6px 10px;border-radius:6px;font-size:13px;font-weight:600;color:var(--navy);background:#fff;margin-bottom:8px;margin-top:3px;outline:none';
+  const LABEL_STYLE = 'display:block;font-size:11px;font-weight:500;margin-bottom:2px';
+  const JISTIC_BYT_OPTS = ['1×25A','3×16A','3×20A','3×25A','3×32A'];
 
-      // Levý box — byty (zelenkavý)
-      + '<div style="background:#F0FAF4;border:1px solid #A3D8B8;border-radius:var(--rm);padding:12px 14px">'
-      + '<div style="font-size:11px;font-weight:600;color:#2E6B40;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">🏠 Byty — odhad dle vybavení</div>'
-      + '<label style="font-size:11px;color:#2E6B40;font-weight:500">Sazba bytů</label>'
-      + '<select onchange="D.sazba_byt=this.value" style="width:100%;padding:6px 10px;border:1px solid #A3D8B8;border-radius:6px;font-size:13px;font-weight:600;color:var(--navy);background:#fff;margin-bottom:8px;margin-top:3px">'
-      + SAZBY_VT.map(s => '<option' + (D.sazba_byt===s?' selected':'') + '>' + s + '</option>').join('')
-      + '</select>'
-      + '<div style="font-size:12px;color:#2E6B40;padding:6px 8px;background:rgba(255,255,255,0.6);border-radius:6px">'
-      + '🔌 Jistič bytu: <strong>' + serverRec.jistic_byt + '</strong> · ' + serverRec.cena_jistic_byt_mes + ' Kč/měs'
-      + '</div>'
-      + popis
-      + '</div>'
+  // Popis spotřebičů bytů dle výběru
+  const ZAR_POPIS = {
+    zaklad:  'Domácí spotřebiče (pračka, TV, lednice…)',
+    sporak:  'El. sporák / indukce',
+    bojler:  'Bojler / ohřev TUV',
+    klima:   'Klimatizace',
+    akum:    'Akumulační kamna',
+    tc:      'Tepelné čerpadlo',
+    ev:      'EV nabíjecí stanice',
+  };
+  const zarPopis = ['zaklad','sporak','bojler','klima','akum','tc','ev']
+    .filter(k => D.zarizeni.includes(k) || k==='zaklad')
+    .map(k => '• ' + ZAR_POPIS[k])
+    .join('<br>');
 
-      // Pravý box — SP (modrý)
-      + '<div style="background:#EFF8FF;border:1px solid #A8D4F5;border-radius:var(--rm);padding:12px 14px">'
-      + '<div style="font-size:11px;font-weight:600;color:#1B5C8A;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">🏢 Spol. prostory — odhad dle vybavení</div>'
-      + '<label style="font-size:11px;color:#1B5C8A;font-weight:500">Sazba spol. prostor</label>'
-      + '<select onchange="D.sazba_sp=this.value" style="width:100%;padding:6px 10px;border:1px solid #A8D4F5;border-radius:6px;font-size:13px;font-weight:600;color:var(--navy);background:#fff;margin-bottom:8px;margin-top:3px">'
-      + SAZBY_VT.map(s => '<option' + (D.sazba_sp===s?' selected':'') + '>' + s + '</option>').join('')
-      + '</select>'
-      + '<div style="font-size:12px;color:#1B5C8A;padding:6px 8px;background:rgba(255,255,255,0.6);border-radius:6px">'
-      + '🔌 Jistič SP: <strong>' + serverRec.jistic_sp + '</strong>'
-      + '<br>🏠 Jistič domu: <strong>' + serverRec.jistic_dum + '</strong> · ' + serverRec.jistic_dum_cena + ' Kč/měs'
-      + '</div>'
-      + '</div>'
+  // Popis SP ze serverRec nebo základní
+  const spPopis = (serverRec && serverRec.sp_popis && serverRec.sp_popis.length)
+    ? serverRec.sp_popis.map(p=>'• '+p).join('<br>')
+    : '• Osvětlení společných prostor';
 
-      + '</div>';
-  }
+  const sazba_byt_val = D.sazba_byt || 'D02d';
+  const sazba_sp_val  = D.sazba_sp  || 'D02d';
+  const jistic_byt_val = (serverRec && serverRec.jistic_byt) || '3×25A';
+  const jistic_sp_val  = (serverRec && serverRec.jistic_sp)  || '3×32A';
+  const jistic_dum_val = (serverRec && serverRec.jistic_dum) || '—';
+  const jistic_dum_cena_val = (serverRec && serverRec.jistic_dum_cena) ? serverRec.jistic_dum_cena + ' Kč/měs' : '';
+
+  const mkSelect = (val, opts, onchange, borderColor) =>
+    '<select onchange="' + onchange + '" style="' + SEL_STYLE + ';border:1px solid ' + borderColor + '">'
+    + opts.map(o=>'<option'+(val===o?' selected':'')+'>'+o+'</option>').join('')
+    + '</select>';
+
+  const popisStyle = 'font-size:11px;line-height:1.7;margin-top:4px;padding:6px 8px;border-radius:6px;background:rgba(255,255,255,0.55)';
+
+  const recHtml = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0 12px">'
+
+    // Levý box — byty (zelený)
+    + '<div style="background:#F0FAF4;border:1px solid #A3D8B8;border-radius:var(--rm);padding:12px 14px">'
+    + '<div style="font-size:11px;font-weight:700;color:#2E6B40;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">🏠 Byty</div>'
+    + '<label style="' + LABEL_STYLE + 'color:#2E6B40">Sazba bytů</label>'
+    + mkSelect(sazba_byt_val, SAZBY_VT, 'D.sazba_byt=this.value', '#A3D8B8')
+    + '<label style="' + LABEL_STYLE + 'color:#2E6B40">Jistič bytu</label>'
+    + mkSelect(jistic_byt_val, JISTIC_BYT_OPTS, 'D.jistic_byt=this.value', '#A3D8B8')
+    + '<div style="' + popisStyle + 'color:#2E6B40">' + zarPopis + '</div>'
+    + '</div>'
+
+    // Pravý box — SP (modrý)
+    + '<div style="background:#EFF8FF;border:1px solid #A8D4F5;border-radius:var(--rm);padding:12px 14px">'
+    + '<div style="font-size:11px;font-weight:700;color:#1B5C8A;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">🏢 Spol. prostory</div>'
+    + '<label style="' + LABEL_STYLE + 'color:#1B5C8A">Sazba spol. prostor</label>'
+    + mkSelect(sazba_sp_val, SAZBY_VT, 'D.sazba_sp=this.value', '#A8D4F5')
+    + '<label style="' + LABEL_STYLE + 'color:#1B5C8A">Jistič spol. prostor</label>'
+    + '<div style="font-size:13px;font-weight:600;color:var(--navy);padding:6px 10px;border:1px solid #A8D4F5;border-radius:6px;background:#fff;margin-bottom:8px">' + jistic_sp_val + '</div>'
+    + '<div style="' + popisStyle + 'color:#1B5C8A">' + spPopis
+    + '<br><span style="margin-top:4px;display:block;font-weight:600">Jistič domu: ' + jistic_dum_val + ' ' + jistic_dum_cena_val + '</span>'
+    + '</div>'
+    + '</div>'
+
+    + '</div>';
 
   return `<div class="card">
   <h2 class="ctitle">Domácnosti <span class="badge b-pro">PRO: vše editovatelné</span></h2>
