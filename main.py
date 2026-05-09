@@ -1,15 +1,14 @@
 # main.py — FastAPI backend pro FVE SVJ kalkulačku
 # Deploy: Render (free tier) + UptimeRobot keep-alive
-# Docs: GET /docs
 #
 # Endpointy:
-#   GET  /health          — health check
-#   GET  /geocode         — GPS z adresy
-#   GET  /geocode/search  — autocomplete adres
-#   GET  /pvgis           — solární data
-#   POST /recommend       — doporučení (sazba, jistič, SP, kWp, baterie)
-#   POST /simulate        — přesná 15min simulace + cashflow
-#   GET  /ceniky          — ceníky pro frontend
+#   GET  /health
+#   GET  /geocode
+#   GET  /geocode/search
+#   GET  /pvgis
+#   POST /recommend  — doporučení + PM výpočet
+#   POST /simulate   — přesná 15min simulace + cashflow
+#   GET  /ceniky
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -21,8 +20,8 @@ import engine as e
 
 app = FastAPI(
     title="FVE SVJ Kalkulačka API",
-    description="Simulace ekonomiky fotovoltaické elektrárny pro bytové domy (SVJ).",
-    version="2.0.0",
+    description="Simulace ekonomiky FVE pro bytové domy (SVJ).",
+    version="2.1.0",
 )
 
 app.add_middleware(
@@ -47,8 +46,7 @@ def health():
 # ================================================================
 
 @app.get("/geocode", tags=["lokace"])
-def geocode(q: str = Query(..., description="Adresa nebo město v ČR")):
-    """Převede adresu na GPS souřadnice."""
+def geocode(q: str = Query(...)):
     lat, lon, nazev, err = e.geocode(q)
     if err:
         raise HTTPException(status_code=404, detail=err)
@@ -57,12 +55,11 @@ def geocode(q: str = Query(..., description="Adresa nebo město v ČR")):
 
 @app.get("/geocode/search", tags=["lokace"])
 def geocode_search(q: str = Query(..., min_length=2)):
-    """Autocomplete — vrátí až 5 návrhů lokalit."""
     return e.geocode_search(q)
 
 
 # ================================================================
-# PVGIS — SOLÁRNÍ DATA
+# PVGIS
 # ================================================================
 
 @app.get("/pvgis", tags=["solar"])
@@ -73,7 +70,6 @@ def pvgis(
     sklon:  int   = Query(35, ge=0, le=90),
     azimut: int   = Query(0),
 ):
-    """Stáhne hodinová TMY data výroby z PVGIS API (EU JRC)."""
     vyroba_hod, err = e.pvgis(lat, lon, kwp, sklon, azimut)
     if err:
         vyroba_hod = e._gen_vyroba_fallback(kwp, sklon, azimut if azimut < 900 else 0)
@@ -91,92 +87,85 @@ def pvgis(
 
 
 # ================================================================
-# RECOMMEND — doporučení pro HTML wizard (krok 2 → krok 5)
+# RECOMMEND
 # ================================================================
 
 class RecommendVstup(BaseModel):
-    # Budova
-    pocet_bytu:       int   = Field(..., gt=0, le=500, description="Počet bytů")
-    pocet_vchodu:     int   = Field(1,   ge=1, le=20)
-    pocet_pater:      int   = Field(4,   ge=1, le=30)
-    pocet_vytahu:     int   = Field(0,   ge=0, le=10)
-    pocet_cerpadel:   int   = Field(1,   ge=0, le=20, description="Oběhová čerpadla")
-
-    # Vybavení společných prostor
-    ma_tuv_central:   bool  = Field(False, description="Centrální ohřev TUV")
-    ma_tc_dum:        bool  = Field(False, description="TČ pro celý dům")
-    pocet_ev_nabijec: int   = Field(0,    ge=0, le=50, description="EV nabíječky v SP")
-
-    # Vybavení bytů (seznam: zaklad, sporak, bojler, klima, akum, primotop, tc, ev)
-    zarizeni:         List[str] = Field(["zaklad"], description="Zařízení v bytech")
-
-    # Distributor (pro výpočet cen jističů)
-    dist: str = Field("ČEZ Distribuce", description="Distributor elektřiny")
+    pocet_bytu:       int        = Field(..., gt=0, le=500)
+    pocet_vchodu:     int        = Field(1,   ge=1, le=20)
+    pocet_pater:      int        = Field(4,   ge=1, le=30)
+    pocet_vytahu:     int        = Field(0,   ge=0, le=10)
+    pocet_cerpadel:   int        = Field(1,   ge=0, le=20)
+    ma_tuv_central:   bool       = Field(False)
+    ma_tc_dum:        bool       = Field(False)
+    pocet_ev_nabijec: int        = Field(0,   ge=0, le=50)
+    zarizeni:         List[str]  = Field(["zaklad"])
+    dist:             str        = Field("ČEZ Distribuce")
 
 
 class RecommendVystup(BaseModel):
     # Bytová spotřeba
-    sp_by_vt_mwh:   float   # VT spotřeba na byt (MWh/rok)
-    sp_by_nt_mwh:   float   # NT spotřeba na byt (MWh/rok)
-    sazba_byt:      str     # Doporučená distribuční sazba bytů
-    jistic_byt:     str     # Doporučený jistič bytu (např. "3×25A")
+    sp_by_vt_mwh:   float
+    sp_by_nt_mwh:   float
+    sazba_byt:      str
+    jistic_byt:     str
 
     # Společné prostory
-    sp_sp_vt_mwh:   float   # VT spotřeba SP (MWh/rok)
-    sp_sp_nt_mwh:   float   # NT spotřeba SP (MWh/rok)
-    sp_sp_mwh:      float   # Celková spotřeba SP (MWh/rok)
-    sazba_sp:       str     # Sazba SP
-    jistic_sp:      str     # Jistič SP (např. "3×40A")
-    jistic_sp_a:    int     # Ampéry jističe SP
-    sp_popis:       list    # Popis položek SP pro zobrazení
+    sp_sp_vt_mwh:   float
+    sp_sp_nt_mwh:   float
+    sp_sp_mwh:      float
+    sazba_sp:       str
+    jistic_sp:      str
+    jistic_sp_a:    int
+    sp_popis:       list
 
-    # Jistič domu (pro EDC/celý dům)
-    jistic_dum:     str     # Doporučený jistič domu (např. "3×63A")
-    jistic_dum_a:   int     # Ampéry jističe domu
-    jistic_dum_cena: int    # Měsíční cena jističe domu D tarif (Kč/měs)
+    # Jistič domu (EDC)
+    jistic_dum:      str
+    jistic_dum_a:    int
+    jistic_dum_cena: int
 
-    # Doporučená FVE
-    kwp:            float   # Doporučený výkon FVE (kWp)
-    bat:            float   # Doporučená kapacita baterie (kWh)
-    cena_kwp:       int     # Cena FVE za kWp (Kč/kWp)
-    cena_fve:       int     # Celková cena FVE (Kč)
-    cena_bat:       int     # Cena baterie (Kč)
-    cena_celkem:    int     # Celková investice FVE + baterie (Kč)
+    # FVE doporučení
+    kwp:            float
+    bat:            float
+    cena_kwp:       int
+    cena_fve:       int
+    cena_bat:       int
+    cena_celkem:    int
 
-    # Finanční srovnání jističů (pro PM info box)
-    cena_jistic_byt_mes:  int   # Cena jističe bytu (Kč/měs)
-    cena_stay_mes:        int   # Stálý plat za ODM (Kč/měs)
-    platby_nyni_mes:      int   # Celkové platby jističe + stálé NYNÍ (Kč/měs)
+    # Finanční srovnání — stávající stav
+    cena_jistic_byt_mes:  int
+    cena_stay_mes:        int
+    platby_nyni_mes:      int
+
+    # PM (podružné měření)
+    jistic_pm_str:      str
+    jistic_pm_a:        int
+    jistic_pm_cena_mes: int
+    platby_ted_mes:     int
+    platby_pm_mes:      int
+    uspora_pm_mes:      int
+    uspora_pm_rok:      int
+    cena_mericu_pm:     int
+    jistic_sp_opts:     list
 
 
 @app.post("/recommend", response_model=RecommendVystup, tags=["kalkulace"])
 def recommend(vstup: RecommendVstup):
-    """
-    Doporučení konfigurace FVE na základě parametrů budovy.
-
-    Vrátí:
-    - doporučenou sazbu a jistič bytů dle vybavení
-    - spotřebu a jistič společných prostor
-    - doporučený výkon FVE a baterie
-    - ceny pro zobrazení v kalkulačce
-
-    Logika portována z app.py (autoritativní zdroj).
-    """
-    pb = int(vstup.pocet_bytu)
+    """Doporučení konfigurace FVE + výpočet PM úspory."""
+    pb       = int(vstup.pocet_bytu)
     zarizeni = [z.lower().strip() for z in vstup.zarizeni]
-    dist = vstup.dist
+    dist     = vstup.dist
 
-    # 1. Sazba a spotřeba bytů dle vybavení
-    sazba_byt = e.doporuc_sazbu(zarizeni)
-    sp_by_vt_mwh, sp_by_nt_mwh = e.sp_z_zarizeni(zarizeni, 1)  # na 1 byt
-    # Zajistit min. základní spotřebu
+    # 1. Sazba a spotřeba bytů
+    sazba_byt    = e.doporuc_sazbu(zarizeni)
+    sp_by_vt_mwh, sp_by_nt_mwh = e.sp_z_zarizeni(zarizeni, 1)
     if sp_by_vt_mwh < 0.5:
-        sp_by_vt_mwh = 1.2  # minimum — osvětlení, spotřebiče
+        sp_by_vt_mwh = 1.2
 
-    # 2. Jistič bytu dle vybavení
+    # 2. Jistič bytu
     jistic_byt = e.doporuc_jistic_byt(zarizeni)
 
-    # 3. Společné prostory — spotřeba a jistič
+    # 3. Společné prostory
     sp = e.sp_sp_vypocet(
         pocet_bytu       = pb,
         pocet_pater      = vstup.pocet_pater,
@@ -187,12 +176,12 @@ def recommend(vstup: RecommendVstup):
         pocet_cerpadel   = vstup.pocet_cerpadel,
     )
 
-    # 4. Jistič domu (pro EDC — celý dům jako jeden bod)
+    # 4. Jistič domu (EDC)
     jistic_dum_str, jistic_dum_a = e.doporuc_jistic_dum(pb, zarizeni)
     jistic_dum_cena = e.cena_jistice_dum(dist, jistic_dum_a, c_tarif=False)
 
     # 5. Doporučené kWp a baterie
-    sp_by_vt_celkem = sp_by_vt_mwh * pb * 1000  # kWh/rok celkem byty
+    sp_by_vt_celkem = sp_by_vt_mwh * pb * 1000
     fve = e.doporuc_kwp_bat(
         sp_vt_celkem_kwh = sp_by_vt_celkem,
         sp_nt_celkem_kwh = sp_by_nt_mwh * pb * 1000,
@@ -201,13 +190,22 @@ def recommend(vstup: RecommendVstup):
         pocet_vchodu     = vstup.pocet_vchodu,
     )
 
-    # 6. Finanční srovnání jističů — pro PM info box
+    # 6. Finanční srovnání — stávající stav
     jistic_byt_tabulka = e.JISTIC_BYT.get(dist, e.JISTIC_BYT["ČEZ Distribuce"])
-    cena_jistic_byt = jistic_byt_tabulka.get(jistic_byt, 298)
-    cena_stay = e.STAY_PLAT.get(dist, 163)
-    # Nyní: (byty + SP) × (jistič + stálý plat)
-    platby_nyni = (pb * (cena_jistic_byt + cena_stay)
-                   + (e.cena_jistice_dum(dist, sp["jistic_sp_a"], c_tarif=False) + cena_stay))
+    cena_jistic_byt    = jistic_byt_tabulka.get(jistic_byt, 298)
+    cena_stay          = e.STAY_PLAT.get(dist, 163)
+    platby_nyni        = (pb * (cena_jistic_byt + cena_stay)
+                          + (e.cena_jistice_dum(dist, sp["jistic_sp_a"], c_tarif=False) + cena_stay))
+
+    # 7. PM výpočet — úspora a náklady podružného měření
+    pm = e.vypocet_pm(
+        pocet_bytu   = pb,
+        pocet_vchodu = vstup.pocet_vchodu,
+        zarizeni     = zarizeni,
+        dist         = dist,
+        jistic_byt   = jistic_byt,
+        jistic_sp_a  = sp["jistic_sp_a"],
+    )
 
     return {
         # Bytová spotřeba
@@ -225,7 +223,7 @@ def recommend(vstup: RecommendVstup):
         "jistic_sp_a":   sp["jistic_sp_a"],
         "sp_popis":      sp["popis"],
 
-        # Jistič domu
+        # Jistič domu (EDC)
         "jistic_dum":      jistic_dum_str,
         "jistic_dum_a":    jistic_dum_a,
         "jistic_dum_cena": jistic_dum_cena,
@@ -238,23 +236,34 @@ def recommend(vstup: RecommendVstup):
         "cena_bat":     fve["cena_bat"],
         "cena_celkem":  fve["cena_celkem"],
 
-        # Jistič srovnání
+        # Stávající platby
         "cena_jistic_byt_mes": cena_jistic_byt,
         "cena_stay_mes":       cena_stay,
         "platby_nyni_mes":     platby_nyni,
+
+        # PM data
+        "jistic_pm_str":      pm["jistic_pm_str"],
+        "jistic_pm_a":        pm["jistic_pm_a"],
+        "jistic_pm_cena_mes": pm["jistic_pm_cena_mes"],
+        "platby_ted_mes":     pm["platby_ted_mes"],
+        "platby_pm_mes":      pm["platby_pm_mes"],
+        "uspora_pm_mes":      pm["uspora_pm_mes"],
+        "uspora_pm_rok":      pm["uspora_pm_rok"],
+        "cena_mericu_pm":     pm["cena_mericu_pm"],
+        "jistic_sp_opts":     pm["jistic_sp_opts"],
     }
 
 
 # ================================================================
-# SIMULATE — hlavní simulační endpoint (beze změny)
+# SIMULATE
 # ================================================================
 
 class SimulaceVstup(BaseModel):
-    lat:    float = Field(..., description="GPS šířka")
-    lon:    float = Field(..., description="GPS délka")
-    kwp:    float = Field(..., gt=0, description="Výkon FVE (kWp)")
+    lat:    float = Field(...)
+    lon:    float = Field(...)
+    kwp:    float = Field(..., gt=0)
     sklon:  int   = Field(35,  ge=0, le=90)
-    azimut: int   = Field(0,   description="0=Jih, 999=V+Z, 998=JZ+JV")
+    azimut: int   = Field(0)
     bat:    float = Field(0.0, ge=0)
 
     pocet_bytu:    int   = Field(..., gt=0, le=500)
@@ -277,7 +286,7 @@ class SimulaceVstup(BaseModel):
     splatnost:    int   = Field(20,   ge=1, le=30)
     rust_cen:     float = Field(3.0,  ge=0, le=15)
     deg_pan:      float = Field(0.5,  ge=0, le=2)
-    cena_pretoky: float = Field(1.5,  ge=0)
+    cena_pretoky: float = Field(0.95, ge=0)
     bonus_nzu:    float = Field(0.0,  ge=0)
     uspora_jistic: float = Field(0.0, ge=0)
 
@@ -285,7 +294,6 @@ class SimulaceVstup(BaseModel):
 @app.post("/simulate", tags=["kalkulace"])
 def simulate(vstup: SimulaceVstup):
     """Hlavní simulační endpoint — přesná 15min simulace + cashflow 25 let."""
-    # 1. Výroba z PVGIS (nebo fallback)
     vyroba_hod, err = e.pvgis(vstup.lat, vstup.lon, vstup.kwp, vstup.sklon, vstup.azimut)
     if err:
         vyroba_hod = e._gen_vyroba_fallback(
@@ -293,7 +301,6 @@ def simulate(vstup: SimulaceVstup):
         )
     vyroba_15 = e._interpoluj(vyroba_hod)
 
-    # 2. Profil spotřeby
     uprava = e._smiseny_profil(vstup.pct_pracujici, vstup.pct_seniori, vstup.pct_rodiny)
 
     sp_by_vt  = vstup.sp_by_vt_mwh * 1000 * vstup.pocet_bytu
@@ -303,16 +310,13 @@ def simulate(vstup: SimulaceVstup):
     sp_vt15 = e._gen_profil_vt(sp_by_vt + sp_sp, e._TDD4, uprava)
     sp_nt15 = e._gen_profil_nt(sp_by_nt, vstup.sazba)
 
-    # 3. Simulace
     sim = e.simuluj(vyroba_15, sp_vt15, sp_nt15,
                     bat=vstup.bat, model=vstup.model, edc_ztrata=vstup.edc_ztrata)
 
-    # 4. Ceny energie
     cvt = e.CENY_VT.get(vstup.dist, e.CENY_VT["ČEZ Distribuce"]).get(vstup.sazba, 6610) / 1000
     cnt_sazby = e.CENY_NT.get(vstup.dist, e.CENY_NT["ČEZ Distribuce"])
     cnt = cnt_sazby.get(vstup.sazba, cvt * 0.6) / 1000
 
-    # 5. Cashflow
     vlastni  = vstup.cena_invest * vstup.vlastni_pct / 100
     uver     = vstup.cena_invest - vlastni
     splatka  = uver / vstup.splatnost if uver > 0 else 0.0
@@ -341,12 +345,11 @@ def simulate(vstup: SimulaceVstup):
 
 
 # ================================================================
-# CENÍKY — pro frontend
+# CENÍKY
 # ================================================================
 
 @app.get("/ceniky", tags=["data"])
 def ceniky():
-    """Vrátí aktuální ceníky 2026 pro frontend."""
     return {
         "distributori": list(e.CENY_VT.keys()),
         "ceny_vt":      e.CENY_VT,
