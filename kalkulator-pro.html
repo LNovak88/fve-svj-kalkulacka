@@ -749,6 +749,7 @@ async function nactiDoporuceni(){
     if(serverRec.sp_by_nt_mwh != null) D.sp_by_nt_mwh = Math.round(parseFloat(serverRec.sp_by_nt_mwh) * 10) / 10;
     // kWp — server vrací kWp (např. 30.0), zaokrouhlíme na 0.5
     if(serverRec.kwp != null)  { D.kwp = Math.round(parseFloat(serverRec.kwp) * 2) / 2; D._kwp_user_edited = false; }
+    if(serverRec.jistic_sp_a != null) D.jistic_sp_a = serverRec.jistic_sp_a;
     // Baterie — server vrací kWh (např. 40), zaokrouhlíme na celé
     if(serverRec.bat != null)  { D.bat = Math.round(parseFloat(serverRec.bat));           D._bat_user_edited = false; }
     // Investice — server vrací Kč (celá čísla), zaokrouhlíme na 1000
@@ -939,6 +940,12 @@ function s4(){
   const jistic_sp_val  = (serverRec && serverRec.jistic_sp)  || '3×32A';
   const jistic_dum_val = (serverRec && serverRec.jistic_dum) || '—';
   const jistic_dum_cena_val = (serverRec && serverRec.jistic_dum_cena) ? serverRec.jistic_dum_cena + ' Kč/měs' : '';
+  // Možnosti jističe SP pro select — ze serveru nebo výchozí
+  const jistic_sp_opts_raw = (serverRec && serverRec.jistic_sp_opts) || [25,32,40,50,63,80,100];
+  const jistic_sp_opts_str = jistic_sp_opts_raw.map(a => '3×' + a + 'A');
+  // Zajisti že jistic_sp_val matchuje formát v opts (3×25A)
+  const jistic_sp_a_val = (serverRec && serverRec.jistic_sp_a) || (D.jistic_sp_a) || 32;
+  const jistic_sp_val_norm = '3×' + jistic_sp_a_val + 'A';
 
   const mkSelect = (val, opts, onchange, borderColor) =>
     '<select onchange="' + onchange + '" style="' + SEL_STYLE + ';border:1px solid ' + borderColor + '">'
@@ -965,10 +972,21 @@ function s4(){
     + '<label style="' + LABEL_STYLE + 'color:#1B5C8A">Sazba spol. prostor</label>'
     + mkSelect(sazba_sp_val, SAZBY_VT, 'D.sazba_sp=this.value', '#A8D4F5')
     + '<label style="' + LABEL_STYLE + 'color:#1B5C8A">Jistič spol. prostor</label>'
-    + '<div style="font-size:13px;font-weight:600;color:var(--navy);padding:6px 10px;border:1px solid #A8D4F5;border-radius:6px;background:#fff;margin-bottom:8px">' + jistic_sp_val + '</div>'
+    + mkSelect(jistic_sp_val_norm, jistic_sp_opts_str, 'D.jistic_sp_a=parseInt(this.value)||32', '#A8D4F5')
     + '<div style="' + popisStyle + 'color:#1B5C8A">' + spPopis
-    + '<br><span style="margin-top:4px;display:block;font-weight:600">Jistič domu: ' + jistic_dum_val + ' ' + jistic_dum_cena_val + '</span>'
+    + '<br><span style="margin-top:6px;display:block;font-weight:600;color:#1B5C8A">🏠 Jistič domu (EDC): ' + jistic_dum_val + (jistic_dum_cena_val ? ' · ' + jistic_dum_cena_val : '') + '</span>'
     + '</div>'
+    // PM info box — klíčové info pro rozhodnutí o modelu sdílení
+    + (serverRec && serverRec.uspora_pm_rok ? (
+        '<div style="margin-top:8px;background:#FEF9C3;border:1px solid #FDE047;border-radius:6px;padding:8px 10px;font-size:11px;color:#713F12">'
+      + '<div style="font-weight:700;margin-bottom:4px">⚡ PM — podružné měření (info pro krok 5)</div>'
+      + '<div>Jistič domu C-tarif: <strong>' + serverRec.jistic_pm_str + '</strong> · ' + (serverRec.jistic_pm_cena_mes||0).toLocaleString("cs-CZ") + ' Kč/měs</div>'
+      + '<div>Stávající platby distribuce: <strong>' + (serverRec.platby_ted_mes||0).toLocaleString("cs-CZ") + ' Kč/měs</strong></div>'
+      + '<div>Po přechodu na PM: <strong>' + (serverRec.platby_pm_mes||0).toLocaleString("cs-CZ") + ' Kč/měs</strong></div>'
+      + '<div style="color:#166534;font-weight:700;margin-top:2px">✅ Roční úspora: ' + (serverRec.uspora_pm_rok||0).toLocaleString("cs-CZ") + ' Kč/rok (' + (serverRec.uspora_pm_mes||0).toLocaleString("cs-CZ") + ' Kč/měs)</div>'
+      + '<div>Náklady měřiče: ' + (serverRec.cena_mericu_pm||0).toLocaleString("cs-CZ") + ' Kč (zahrnuto do investice v kroku Střecha)</div>'
+      + '</div>'
+    ) : '')
     + '</div>'
 
     + '</div>';
@@ -1097,13 +1115,34 @@ function s5(){
       <div><label>Baterie (kWh, 0 = bez baterie)</label>
         <div class="pro-input-wrap"><input type="number" id="sv_bat" value="${bat}" min="0" max="500" step="5" oninput="D.bat=+this.value;D._bat_user_edited=true"><div class="pro-edit-ico">✏️</div></div></div>
       <div><label>Model sdílení</label>
-        <select onchange="D.model=this.value">
+        <select onchange="D.model=this.value;render()">
           <option${D.model==='edc'?' selected':''} value="edc">EDC (komunitní)</option>
           <option${D.model==='jom'?' selected':''} value="jom">PM — podružné měření</option>
           <option${D.model==='spolecne'?' selected':''} value="spolecne">Jen spol. prostory</option>
         </select></div>
     </div>
   </div>
+
+  <!-- PM info box — zobrazí se při výběru PM modelu -->
+  \${D.model === 'jom' && serverRec ? (() => {
+    const uMes = serverRec.uspora_pm_mes || 0;
+    const uRok = serverRec.uspora_pm_rok || 0;
+    const mer  = serverRec.cena_mericu_pm || 0;
+    const jpm  = serverRec.jistic_pm_str || '—';
+    const jpmC = serverRec.jistic_pm_cena_mes || 0;
+    return '<div style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:var(--rm);padding:12px 14px;margin-bottom:12px;font-size:13px">'
+      + '<div style="font-weight:600;color:#92400E;margin-bottom:6px">⚡ PM — podružné měření: co to znamená pro váš dům</div>'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px;color:#78350F">'
+      + '<span>🔌 Nový jistič domu: <strong>' + jpm + '</strong> (C tarif)</span>'
+      + '<span>💰 Cena jističe: <strong>' + jpmC.toLocaleString("cs-CZ") + ' Kč/měs</strong></span>'
+      + '<span>✅ Úspora na distribuci: <strong>' + uMes.toLocaleString("cs-CZ") + ' Kč/měs</strong></span>'
+      + '<span>📅 Roční úspora: <strong>' + uRok.toLocaleString("cs-CZ") + ' Kč/rok</strong></span>'
+      + '<span>🔧 Investice měřiče: <strong>' + mer.toLocaleString("cs-CZ") + ' Kč</strong></span>'
+      + '<span>⚠️ C tarif = SVJ jako podnikatel</span>'
+      + '</div>'
+      + '<div style="font-size:11px;color:#92400E;margin-top:6px">Investice je navýšena o náklady na podružné měřiče. Úspora distribuce je zahrnuta ve výpočtu.</div>'
+      + '</div>';
+  })() : ''}
 
   <!-- PRO: Ekonomické parametry -->
   <div class="expert-section">
@@ -1206,9 +1245,12 @@ async function spustVypocet(){
     splatnost:     parseInt(D.splatnost) || 15,
     rust_cen:      parseFloat(D.rust_cen) || 3.0,
     deg_pan:       parseFloat(D.deg_pan) || 0.5,
-    cena_pretoky:  parseFloat(D.cena_pretoky) || 1.5,
+    cena_pretoky:  parseFloat(D.cena_pretoky) || 0.95,
     bonus_nzu:     Math.round((D.pocet_nizko||0) * (D.bonus_byt||0)),  // celkový NZÚ bonus
-    uspora_jistic: 0,
+    // Úspora PM: uživatelem upravená nebo ze serverRec; 0 pro EDC/spolecne
+    uspora_jistic: (D.model === 'jom')
+      ? parseFloat(D.uspora_jistic_rok || (serverRec && serverRec.uspora_pm_rok) || 0)
+      : 0,
   };
 
   try{
