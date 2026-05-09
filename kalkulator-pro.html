@@ -390,6 +390,9 @@ const D = {
   // Domácnosti
   zarizeni:['zaklad'], hhSlider:50,
   pct_pracujici:33, pct_seniori:33, pct_rodiny:34,
+  // Zranitelné domácnosti (NZÚ bonus)
+  pocet_nizko: 0,       // počet bytů se zranitelnou domácností
+  bonus_byt: 100000,    // bonus NZÚ na jeden takový byt (Kč)
   // Distributor + sazba — editovatelné v PRO
   dist:'ČEZ Distribuce',
   sazba_byt:'D02d',
@@ -399,7 +402,7 @@ const D = {
   sp_by_nt_mwh: 0.0,   // MWh/byt/rok NT
   sp_sp_mwh: 3.5,      // MWh/rok SP celkem
   // FVE
-  kwp: 26, sklon:35, azimut:0, strTyp:'sedelova',
+  kwp: 15, sklon:35, azimut:0, strTyp:'sedelova',
   bat: 0,              // baterie kWh — editovatelná
   // Ekonomika — editovatelná v PRO
   cena_invest: 0,
@@ -407,8 +410,8 @@ const D = {
   splatnost: 15,
   rust_cen: 3.0,
   deg_pan: 0.5,
-  cena_pretoky: 1.5,
-  bonus_nzu: 0,
+  cena_pretoky: 0.95,  // Kč/kWh — výkupní cena přetoků (dle app.py výchozí)
+  bonus_nzu: 0,        // celkový bonus = pocet_nizko × bonus_byt
   // Model sdílení
   model: 'edc',
   edc_ztrata: 15,
@@ -482,6 +485,7 @@ async function getUser(){
 // ================================================================
 const IS_DEV = window.location.hostname === 'localhost' ||
                window.location.hostname === '127.0.0.1';
+let IS_ADMIN = false; // nastaví se v initAuth po přihlášení
 
 async function initAuth(){
   // DEV MODE — přeskočit přihlášení
@@ -505,6 +509,7 @@ async function initAuth(){
     return false;
   }
   USER = user;
+  IS_ADMIN = (user.email === 'lnovak88@seznam.cz');
   const name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Účet';
   const initials = name.trim().split(' ').map(n=>n[0]||'').join('').toUpperCase().slice(0,2) || 'U';
   document.getElementById('userAvatar').textContent = initials;
@@ -534,7 +539,8 @@ async function getVypoctyDnes(){
 }
 
 async function checkLimit(){
-  if(IS_DEV) return true; // DEV — vždy povolí výpočet
+  if(IS_DEV) return true;    // DEV — vždy povolí výpočet
+  if(IS_ADMIN) return true;  // Admin — neomezený počet výpočtů
   // Počítáme kolik výpočtů bylo VYTVOŘENO za posledních 12h
   // Mazání simulací limit NEOBNOVÍ
   const sims = await getVypoctyDnes();
@@ -544,6 +550,12 @@ async function checkLimit(){
 
 async function updateLimitBar(){
   if(!USER) return;
+  // Admin — zobrazit speciální info bez limitu
+  if(IS_ADMIN){
+    const bar = document.getElementById('limitBar');
+    if(bar){ bar.style.display='flex'; document.getElementById('limitDots').innerHTML=''; document.getElementById('limitTxt').innerHTML='👑 <strong>Admin účet</strong> — neomezený počet výpočtů'; }
+    return true;
+  }
   const sims = await getVypoctyDnes();
   const pouzito = Array.isArray(sims) ? sims.length : 0;
   const zbyva = Math.max(0, LIMIT_VYPOCTU - pouzito);
@@ -564,11 +576,6 @@ async function updateLimitBar(){
     txt.innerHTML = `Zbývají <strong>${zbyva} z ${LIMIT_VYPOCTU} výpočtů</strong> za posledních ${LIMIT_HODIN} hodin`;
   }
   return zbyva > 0;
-}
-
-async function checkLimit(){
-  const sims = await getVypoctyDnes();
-  return sims.length < LIMIT_VYPOCTU;
 }
 
 // ================================================================
@@ -647,15 +654,19 @@ async function nactiDoporuceni(){
     if(!r.ok) throw new Error('HTTP ' + r.status);
     serverRec = await r.json();
 
-    // Uložit doporučení do D (pouze pokud uživatel ještě ručně neupravil)
-    if(serverRec.sazba_byt) D.sazba_byt     = serverRec.sazba_byt;
-    if(serverRec.sazba_sp)  D.sazba_sp      = serverRec.sazba_sp;
-    if(serverRec.sp_sp_mwh) D.sp_sp_mwh    = serverRec.sp_sp_mwh;
-    if(serverRec.sp_by_vt_mwh) D.sp_by_vt_mwh = serverRec.sp_by_vt_mwh;
-    if(serverRec.sp_by_nt_mwh) D.sp_by_nt_mwh = serverRec.sp_by_nt_mwh;
-    if(serverRec.kwp)  { D.kwp = serverRec.kwp;  D._kwp_user_edited = false; }
-    if(serverRec.bat !== undefined) { D.bat = serverRec.bat; D._bat_user_edited = false; }
-    if(serverRec.cena_celkem) { D.cena_invest = serverRec.cena_celkem; D._inv_user_edited = false; }
+    // Uložit doporučení do D — vše explicitně parseFloat + zaokrouhlení
+    if(serverRec.sazba_byt) D.sazba_byt = serverRec.sazba_byt;
+    if(serverRec.sazba_sp)  D.sazba_sp  = serverRec.sazba_sp;
+    // Spotřeby — server vrací MWh (desetinná čísla, např. 1.6)
+    if(serverRec.sp_sp_mwh    != null) D.sp_sp_mwh    = Math.round(parseFloat(serverRec.sp_sp_mwh)    * 10) / 10;
+    if(serverRec.sp_by_vt_mwh != null) D.sp_by_vt_mwh = Math.round(parseFloat(serverRec.sp_by_vt_mwh) * 10) / 10;
+    if(serverRec.sp_by_nt_mwh != null) D.sp_by_nt_mwh = Math.round(parseFloat(serverRec.sp_by_nt_mwh) * 10) / 10;
+    // kWp — server vrací kWp (např. 30.0), zaokrouhlíme na 0.5
+    if(serverRec.kwp != null)  { D.kwp = Math.round(parseFloat(serverRec.kwp) * 2) / 2; D._kwp_user_edited = false; }
+    // Baterie — server vrací kWh (např. 40), zaokrouhlíme na celé
+    if(serverRec.bat != null)  { D.bat = Math.round(parseFloat(serverRec.bat));           D._bat_user_edited = false; }
+    // Investice — server vrací Kč (celá čísla), zaokrouhlíme na 1000
+    if(serverRec.cena_celkem != null) { D.cena_invest = Math.round(parseFloat(serverRec.cena_celkem) / 1000) * 1000; D._inv_user_edited = false; }
 
   }catch(e){
     console.warn('/recommend selhal, pokračuji bez doporučení:', e.message);
@@ -686,12 +697,26 @@ function stepDirect(key,mn,mx){
   const val=parseFloat(el.value);
   D[key]=Math.min(mx,Math.max(mn,isNaN(val)?mn:val));
   el.value=D[key];
+  if(key==='pocet_nizko') _updateNzuInfo();
 }
 
 function stepChange(key,delta,min,max){
   D[key]=Math.min(max,Math.max(min,(+D[key]||0)+delta));
   const el=document.getElementById('sv_'+key);
   if(el&&delta!==0) el.value=D[key];
+  if(key==='pocet_nizko') _updateNzuInfo();
+}
+
+function _updateNzuInfo(){
+  D.bonus_nzu = (D.pocet_nizko||0) * (D.bonus_byt||0);
+  const el = document.getElementById('nzu_bonus_info');
+  if(!el) return;
+  const n = D.pocet_nizko||0;
+  const b = D.bonus_byt||0;
+  const suffix = n>4?'ů':n>1?'y':'';
+  el.innerHTML = n > 0
+    ? `✅ Celkový bonus: <strong>${(n*b).toLocaleString('cs-CZ')} Kč</strong> (${n} byt${suffix} × ${b.toLocaleString('cs-CZ')} Kč)`
+    : '<span style="color:var(--text-2)">Zadejte počet bytů pro výpočet bonusu.</span>';
 }
 
 // (výpočetní funkce přesunuty na server — /recommend endpoint)
@@ -837,6 +862,33 @@ function s4(){
       <div><label>Sazba spol. prostor</label>
         <select onchange="D.sazba_sp=this.value">${SAZBY_VT.map(s=>`<option${sazba_sp===s?' selected':''}>${s}</option>`).join('')}</select></div>
     </div>
+  </div>
+
+  <div class="tip">💡 Hodnoty spotřeby najdete na ročním vyúčtování nebo faktuře od dodavatele elektřiny. Přesné zadání zlepší přesnost výpočtu na ±5 %.</div>
+
+  <!-- Zranitelné domácnosti — NZÚ bonus -->
+  <div class="slabel">Zranitelné domácnosti — bonus NZÚ</div>
+  <div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:var(--rm);padding:12px 14px;margin-bottom:10px;font-size:12px;color:#92400E;line-height:1.5">
+    <strong>🏛️ Co je bonus NZÚ pro zranitelné domácnosti?</strong><br>
+    Stát může přispět přímým bonusem na každý byt, jehož obyvatelé pobírají určité sociální dávky (superdávka, příspěvek na bydlení apod.). Bonus snižuje podíl tohoto bytu na úvěru SVJ — ostatní byty splácejí standardně.<br>
+    <span style="display:block;margin-top:6px;color:#78350F">⚠️ Přesné podmínky NZÚ budou upřesněny v září 2026. Hodnoty jsou orientační — max. avizováno 150 000 Kč/byt. Může být podmíněno spoluúčastí domácnosti.</span>
+  </div>
+  <div class="g2" style="gap:10px;margin-bottom:10px">
+    <div>
+      <label>Počet bytů se zranitelnou domácností</label>
+      ${stepper('pocet_nizko','',0,parseInt(D.bytu)||100)}
+    </div>
+    <div>
+      <label>Odhadovaný bonus NZÚ na byt (Kč)</label>
+      <div class="pro-input-wrap">
+        <input type="number" id="sv_bonus_byt" value="${D.bonus_byt}" min="0" max="150000" step="5000"
+          oninput="D.bonus_byt=+this.value;D.bonus_nzu=D.pocet_nizko*D.bonus_byt">
+        <div class="pro-edit-ico">✏️</div>
+      </div>
+    </div>
+  </div>
+  <div id="nzu_bonus_info" style="font-size:12px;color:var(--green);margin-bottom:4px">
+    ${D.pocet_nizko > 0 ? '✅ Celkový bonus: <strong>' + (D.pocet_nizko * D.bonus_byt).toLocaleString('cs-CZ') + ' Kč</strong> (' + D.pocet_nizko + ' byt${D.pocet_nizko > 4 ? \ů\ : D.pocet_nizko > 1 ? \y\ : \} × ' + D.bonus_byt.toLocaleString('cs-CZ') + ' Kč)' : '<span style="color:var(--text-2)">Zadejte počet bytů pro výpočet bonusu.</span>'}
   </div>
 
   <div class="tip">💡 Hodnoty spotřeby najdete na ročním vyúčtování nebo faktuře od dodavatele elektřiny. Přesné zadání zlepší přesnost výpočtu na ±5 %.</div>
@@ -1005,7 +1057,7 @@ async function spustVypocet(){
     rust_cen:      parseFloat(D.rust_cen) || 3.0,
     deg_pan:       parseFloat(D.deg_pan) || 0.5,
     cena_pretoky:  parseFloat(D.cena_pretoky) || 1.5,
-    bonus_nzu:     parseFloat(D.bonus_nzu) || 0,
+    bonus_nzu:     Math.round((D.pocet_nizko||0) * (D.bonus_byt||0)),  // celkový NZÚ bonus
     uspora_jistic: 0,
   };
 
