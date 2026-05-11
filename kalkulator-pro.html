@@ -1478,40 +1478,53 @@ function s7(){
 // KROK 8 — Výsledky (volá FastAPI /simulate)
 // ================================================================
 async function goToResults(){
-  // Kontrola limitu
   const ok = await checkLimit();
   if(!ok){
-    alert('Dosahli jste limitu ' + LIMIT_VYPOCTU + ' vypoctu za ' + LIMIT_HODIN + ' hodin. Zkuste to prosim za chvili.');
+    alert('Dosáhli jste limitu ' + LIMIT_VYPOCTU + ' výpočtů za ' + LIMIT_HODIN + ' hodin. Zkuste to prosím za chvíli.');
     return;
   }
-  // Validace
   if(!D.lat || !D.lon){
-    if(!confirm('Nezadali jste adresu — vypocet pouzije prumer CR misto presnych PVGIS dat. Pokracovat?')) return;
-    D.lat = 49.75; D.lon = 15.5; // střed ČR
+    if(!confirm('Nezadali jste adresu — výpočet použije průměr ČR místo přesných PVGIS dat. Pokračovat?')) return;
+    D.lat = 49.75; D.lon = 15.5;
   }
-  cur = 7;
-  render();
-  window.scrollTo(0,0);
+  // Pokud uživatel nezměnil klíčové parametry, použít SROV přímo bez nového /simulate
+  if(SROV && !D._kwp_user_edited && !D._bat_user_edited && !D._inv_user_edited && D.model === 'edc'){
+    RES = {
+      ...SROV,
+      inv: SROV.cena_invest || parseFloat(D.cena_invest),
+      bytu: D.bytu, lokace: D.lokace, dist: D.dist, sazba: D.sazba_byt,
+      kwp: SROV.kwp || parseFloat(D.kwp),
+    };
+    cur = 7; render(); window.scrollTo(0,0);
+    setTimeout(()=>{
+      const ps = document.getElementById('pvgisStatus');
+      if(ps) ps.innerHTML = '<div style="font-size:12px;color:var(--green);padding:4px 0">✅ Výsledky načteny — parametry nebyly změněny</div>';
+      const rb = document.getElementById('resBody');
+      if(rb){ rb.innerHTML = renderResults(RES); setTimeout(drawAllCharts, 150); }
+      const bp = document.getElementById('btnPdf');
+      if(bp) bp.disabled = false;
+    }, 50);
+    return;
+  }
+  cur = 7; render(); window.scrollTo(0,0);
 }
 
 function s8(){
-  // Spustit výpočet po vykreslení
   setTimeout(spustVypocet, 200);
-
   return '<div class="card" style="background:var(--blue-ll);border-color:#C8DFF2">'
-    + '<div style="font-size:12px;color:#4A7BA8;font-weight:500;margin-bottom:8px">📍 ' + (D.lokace||'Zadana poloha') + ' · ' + D.bytu + ' bytu · ' + (D.kwp||15) + ' kWp · ' + D.dist + ' · ' + D.sazba_byt + '</div>'
-    + '<h2 class="ctitle">Vysledky presne analyzy FVE</h2>'
-    + '<p class="csub">15minutova simulace · PVGIS TMY · OTE TDD profily · Ceniky 2026</p>'
-    + '<div id="pvgisStatus"><div class="pvgis-loading"><div class="pvgis-spinner"></div><span>Spoustim presnou 15minutovou simulaci pres PVGIS EU JRC…</span></div></div>'
+    + '<div style="font-size:12px;color:#4A7BA8;font-weight:500;margin-bottom:8px">📍 ' + (D.lokace||'Zadaná poloha') + ' · ' + D.bytu + ' bytů · ' + (D.kwp||15) + ' kWp · ' + D.dist + ' · ' + D.sazba_byt + '</div>'
+    + '<h2 class="ctitle">Výsledky přesné analýzy FVE</h2>'
+    + '<p class="csub">Simulace · PVGIS TMY · OTE TDD profily · Ceníky 2026</p>'
+    + '<div id="pvgisStatus"><div class="pvgis-loading"><div class="pvgis-spinner"></div><span>Spouštím simulaci přes PVGIS EU JRC…</span></div></div>'
     + '</div>'
     + '<div id="resBody">'
     + '<div style="text-align:center;padding:32px;color:var(--text-2);font-size:13px">'
     + '<div class="pvgis-spinner" style="margin:0 auto 12px;width:28px;height:28px;border-width:3px"></div>'
-    + 'Vypocet probiha — muze trvat 10–30 vterin (PVGIS data)…'
+    + 'Výpočet probíhá — může trvat 10–30 vteřin…'
     + '</div>'
     + '</div>'
     + '<div class="nav" style="margin-top:12px">'
-    + '<button class="btn-out" onclick="goBack()">← Zpet a upravit</button>'
+    + '<button class="btn-out" onclick="goBack()">← Zpět a upravit</button>'
     + '<button class="btn-pdf" id="btnPdf" onclick="exportPdf()" disabled>📄 Exportovat PDF</button>'
     + '</div>';
 }
@@ -2012,10 +2025,10 @@ function renderResults(R){
         <div class="model-card-icon">🌐</div>
         <div class="model-card-name">EDC — komunitní sdílení</div>
         <div class="model-card-sub">Virtuální sdílení přes distribuci. Každý byt dostane poměrný díl výroby přímo na svůj elektroměr. Žádné fyzické přepojení.</div>
-        <div class="model-kpi"><span class="model-kpi-l">Investice FVE</span><span class="model-kpi-v">${Math.round(edcInv/1000)} tis. Kč</span></div>
-        <div class="model-kpi"><span class="model-kpi-l">Roční úspora</span><span class="model-kpi-v green">${Math.round(edcUspora).toLocaleString('cs-CZ')} Kč</span></div>
-        <div class="model-kpi"><span class="model-kpi-l">Návratnost</span><span class="model-kpi-v">${edcNav?edcNav+' let':'>25 let'}</span></div>
-        <div class="model-kpi"><span class="model-kpi-l">Kumulativ 25 let</span><span class="model-kpi-v green">${Math.round(edcKum/1000).toLocaleString('cs-CZ')} tis. Kč</span></div>
+        <div class="model-kpi"><span class="model-kpi-l">Investice FVE</span><span class="model-kpi-v">${(edcS.invest||inv).toLocaleString('cs-CZ')} Kč</span></div>
+        <div class="model-kpi"><span class="model-kpi-l">Roční úspora</span><span class="model-kpi-v green">${Math.round(edcS.uspora_rok1||uspora1).toLocaleString('cs-CZ')} Kč</span></div>
+        <div class="model-kpi"><span class="model-kpi-l">Návratnost</span><span class="model-kpi-v">${(edcS.nav||nav)?((edcS.nav||nav)+' let'):'>25 let'}</span></div>
+        <div class="model-kpi"><span class="model-kpi-l">Kumulativ 25 let</span><span class="model-kpi-v green">${Math.round(edcS.kum25||kum25).toLocaleString('cs-CZ')} Kč</span></div>
         <div class="model-kpi"><span class="model-kpi-l">Úspora / byt / měs</span><span class="model-kpi-v green">${uspora_byt_mes.toLocaleString('cs-CZ')} Kč</span></div>
         <div style="margin-top:10px;background:var(--blue-ll);border-radius:6px;padding:8px 10px;font-size:11px;color:var(--blue)">✅ Zachováme individuální elektroměry<br>✅ Jednoduché pro SVJ<br>✅ Bez C tarifu</div>
       </div>
