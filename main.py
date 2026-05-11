@@ -331,7 +331,7 @@ def simulate(vstup: SimulaceVstup):
         spl=splatka, splat=vstup.splatnost,
         rust=vstup.rust_cen, deg=vstup.deg_pan,
         jist=vstup.uspora_jistic,
-        bonus=vstup.bonus_nzu,
+        bonus=0,  # bonus NZÚ pro zranitelné domácnosti nemění cashflow SVJ — jen přerozděluje uvnitř domu
     )
 
     return {
