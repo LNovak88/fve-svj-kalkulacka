@@ -267,6 +267,7 @@ class SimulaceVstup(BaseModel):
     bat:    float = Field(0.0, ge=0)
 
     pocet_bytu:    int   = Field(..., gt=0, le=500)
+    pocet_vchodu:  int   = Field(1,   ge=1, le=20)
     sp_by_vt_mwh:  float = Field(..., gt=0)
     sp_by_nt_mwh:  float = Field(0.0, ge=0)
     sp_sp_mwh:     float = Field(0.0, ge=0)
@@ -282,6 +283,7 @@ class SimulaceVstup(BaseModel):
     edc_ztrata: float = Field(15.0, ge=0, le=50)
 
     cena_invest:  float = Field(..., gt=0)
+    cena_kwp:     float = Field(30000.0, ge=0)   # cena za kWp (pro SP výpočet)
     vlastni_pct:  float = Field(30.0, ge=0, le=100)
     splatnost:    int   = Field(20,   ge=1, le=30)
     rust_cen:     float = Field(3.0,  ge=0, le=15)
@@ -289,11 +291,13 @@ class SimulaceVstup(BaseModel):
     cena_pretoky: float = Field(0.95, ge=0)
     bonus_nzu:    float = Field(0.0,  ge=0)
     uspora_jistic: float = Field(0.0, ge=0)
+    jistic_sp_a:  int   = Field(25,   ge=0)      # ampery jističe SP (pro PM výpočet)
+    zarizeni:     list  = Field(default_factory=lambda: ["zaklad"])  # spotřebiče (pro PM výpočet)
 
 
 @app.post("/simulate", tags=["kalkulace"])
 def simulate(vstup: SimulaceVstup):
-    """Hlavní simulační endpoint — přesná 15min simulace + cashflow 25 let."""
+    """Hlavní simulační endpoint — přesná 15min simulace + cashflow 25 let + srovnání 3 modelů."""
     vyroba_hod, err = e.pvgis(vstup.lat, vstup.lon, vstup.kwp, vstup.sklon, vstup.azimut)
     if err:
         vyroba_hod = e._gen_vyroba_fallback(
@@ -307,8 +311,9 @@ def simulate(vstup: SimulaceVstup):
     sp_by_nt  = vstup.sp_by_nt_mwh * 1000 * vstup.pocet_bytu
     sp_sp     = vstup.sp_sp_mwh * 1000
 
-    sp_vt15 = e._gen_profil_vt(sp_by_vt + sp_sp, e._TDD4, uprava)
-    sp_nt15 = e._gen_profil_nt(sp_by_nt, vstup.sazba)
+    sp_vt15     = e._gen_profil_vt(sp_by_vt + sp_sp, e._TDD4, uprava)
+    sp_nt15     = e._gen_profil_nt(sp_by_nt, vstup.sazba)
+    sp_sp15     = e._gen_profil_vt(sp_sp, e._TDD4, uprava)   # jen SP (pro model spolecne)
 
     sim = e.simuluj(vyroba_15, sp_vt15, sp_nt15,
                     bat=vstup.bat, model=vstup.model, edc_ztrata=vstup.edc_ztrata)
@@ -331,8 +336,98 @@ def simulate(vstup: SimulaceVstup):
         spl=splatka, splat=vstup.splatnost,
         rust=vstup.rust_cen, deg=vstup.deg_pan,
         jist=vstup.uspora_jistic,
-        bonus=0,  # bonus NZÚ pro zranitelné domácnosti nemění cashflow SVJ — jen přerozděluje uvnitř domu
+        bonus=0,  # bonus NZÚ pro zranitelné domácnosti nemění cashflow SVJ
     )
+
+    # ================================================================
+    # SROVNÁNÍ 3 MODELŮ — stejná logika jako app.py smyčka
+    # ================================================================
+    pb           = vstup.pocet_bytu
+    dist         = vstup.dist
+    sazba        = vstup.sazba
+    stay         = e.STAY_PLAT.get(dist, 163)
+    cena_fve     = vstup.kwp * vstup.cena_kwp
+    cena_bat_tot = vstup.bat * 15000  # 15 000 Kč/kWh baterie
+    vchod_extra  = max(0, vstup.pocet_vchodu - 1) * 30000
+
+    # SP kWp — malá FVE jen pro společné prostory
+    sp_kwp = max(9.9, round(vstup.sp_sp_mwh * 1000 * 0.75 / 1050 * 2) / 2)
+
+    srovnani = {}
+    for mk in ["edc", "jom", "spolecne"]:
+        # Investice
+        mericu_mk = (pb * 10000 + 75000) if mk == "jom" else 0
+        mericu_mk += vchod_extra if mk != "spolecne" else 0
+
+        if mk == "spolecne":
+            invest_mk = sp_kwp * vstup.cena_kwp * 0.85  # bez baterie, menší FVE
+        else:
+            invest_mk = cena_fve + cena_bat_tot + mericu_mk
+
+        vlast_mk = invest_mk * vstup.vlastni_pct / 100
+        uver_mk  = max(0.0, invest_mk - vlast_mk)
+        spl_mk   = uver_mk / vstup.splatnost if vstup.splatnost > 0 else 0.0
+
+        # Úspora jističe pro PM (JOM)
+        jist_mk = 0.0
+        if mk == "jom":
+            jbyt_c = e.JISTIC_BYT.get(dist, e.JISTIC_BYT["ČEZ Distribuce"]).get(
+                e.doporuc_jistic_byt(vstup.zarizeni), 132)
+            jsp_c  = e.cena_jistice_dum(dist, vstup.jistic_sp_a, c_tarif=False)
+            jdum_a = e.doporuc_jistic_dum(pb, vstup.zarizeni)[1]
+            jdum_c = e.cena_jistice_dum(dist, jdum_a, c_tarif=True)
+            platby_ted = (pb + 1) * stay + pb * jbyt_c + jsp_c
+            platby_jom = stay + jdum_c
+            jist_mk    = (platby_ted - platby_jom) * 12.0
+
+        # Simulace pro daný model
+        if mk == "spolecne":
+            # SP: malá FVE bez baterie, jen společné prostory
+            vyroba_sp_hod, err_sp = e.pvgis(vstup.lat, vstup.lon, sp_kwp, vstup.sklon, vstup.azimut)
+            if err_sp:
+                vyroba_sp_hod = e._gen_vyroba_fallback(sp_kwp, vstup.sklon, vstup.azimut if vstup.azimut < 900 else 0)
+            vyroba_sp_15 = e._interpoluj(vyroba_sp_hod)
+            import numpy as np
+            sm = e.simuluj(vyroba_sp_15, sp_sp15, np.zeros(len(sp_sp15), dtype=float),
+                           bat=0, model="edc", edc_ztrata=vstup.edc_ztrata)
+        else:
+            ez_mk = vstup.edc_ztrata if mk == "edc" else 0.0
+            sm = e.simuluj(vyroba_15, sp_vt15, sp_nt15,
+                           bat=vstup.bat, model=mk, edc_ztrata=ez_mk)
+
+        cfm = e.cashflow(
+            vl_vt=sm["vlastni_vt_kwh"], vl_nt=sm["vlastni_nt_kwh"],
+            pr=sm["pretoky_kwh"],
+            cvt=cvt, cnt=cnt,
+            cpr=vstup.cena_pretoky / 1000,
+            vlast=vlast_mk, uver=uver_mk,
+            spl=spl_mk, splat=vstup.splatnost,
+            rust=vstup.rust_cen, deg=vstup.deg_pan,
+            jist=jist_mk, bonus=0,
+        )
+
+        nav_m   = next((r["rok"] for r in cfm if r["kumulativni"] >= 0), None)
+        uspora1_m = cfm[0]["uspora_celkem"] if cfm else 0
+        stat_m  = invest_mk / uspora1_m if uspora1_m > 0 else 999
+        spl_byt = spl_mk / pb / 12
+        cisty_byt = uspora1_m / pb / 12 - spl_byt
+        kum25_m = cfm[24]["kumulativni"] if len(cfm) >= 25 else 0
+
+        srovnani[mk] = {
+            "invest":      round(invest_mk),
+            "mericu":      round(mericu_mk),
+            "sp_kwp":      sp_kwp if mk == "spolecne" else None,
+            "uspora_rok1": round(uspora1_m),
+            "uspora_jistic_rok": round(jist_mk),
+            "nav":         nav_m,
+            "stat":        round(stat_m, 1),
+            "kum25":       round(kum25_m),
+            "mira_vs":     round(sm.get("mira_vs", 0) * 100, 1),
+            "mira_sob":    round(sm.get("mira_sob", 0) * 100, 1),
+            "splatka_byt": round(spl_byt),
+            "cisty_byt":   round(cisty_byt),
+            "uver":        round(uver_mk),
+        }
 
     return {
         "sim":           sim,
@@ -341,6 +436,7 @@ def simulate(vstup: SimulaceVstup):
         "splatka_mesic": round(splatka / 12),
         "cvt":           round(cvt * 1000),
         "cnt":           round(cnt * 1000),
+        "srovnani":      srovnani,
     }
 
 
