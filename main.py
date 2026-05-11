@@ -353,19 +353,26 @@ def simulate(vstup: SimulaceVstup):
     # SP kWp — malá FVE jen pro společné prostory
     sp_kwp = max(9.9, round(vstup.sp_sp_mwh * 1000 * 0.75 / 1050 * 2) / 2)
 
+    import numpy as np
+
     srovnani = {}
-    for mk in ["edc", "jom", "spolecne"]:
+    for mk in ["edc", "edc_bez_bat", "jom", "spolecne"]:
         # Investice
         mericu_mk = (pb * 10000 + 75000) if mk == "jom" else 0
-        mericu_mk += vchod_extra if mk != "spolecne" else 0
+        mericu_mk += vchod_extra if mk not in ("spolecne",) else 0
+
+        bat_mk = vstup.bat if mk not in ("edc_bez_bat", "spolecne") else 0.0
+        cena_bat_mk = bat_mk * 15000
 
         if mk == "spolecne":
-            invest_mk = sp_kwp * vstup.cena_kwp * 0.85  # bez baterie, menší FVE
+            invest_mk = sp_kwp * e.cena_kwp(sp_kwp) * 0.85
+        elif mk == "edc_bez_bat":
+            invest_mk = cena_fve + mericu_mk  # bez baterie
         else:
-            invest_mk = cena_fve + cena_bat_tot + mericu_mk
+            invest_mk = cena_fve + cena_bat_mk + mericu_mk
 
         vlast_mk = invest_mk * vstup.vlastni_pct / 100
-        uver_mk  = max(0.0, invest_mk - vlast_mk)
+        uver_mk  = max(0.0, min(invest_mk - vlast_mk, pb * 350000))
         spl_mk   = uver_mk / vstup.splatnost if vstup.splatnost > 0 else 0.0
 
         # Úspora jističe pro PM (JOM)
@@ -382,18 +389,21 @@ def simulate(vstup: SimulaceVstup):
 
         # Simulace pro daný model
         if mk == "spolecne":
-            # SP: malá FVE bez baterie, jen společné prostory
             vyroba_sp_hod, err_sp = e.pvgis(vstup.lat, vstup.lon, sp_kwp, vstup.sklon, vstup.azimut)
             if err_sp:
                 vyroba_sp_hod = e._gen_vyroba_fallback(sp_kwp, vstup.sklon, vstup.azimut if vstup.azimut < 900 else 0)
             vyroba_sp_15 = e._interpoluj(vyroba_sp_hod)
-            import numpy as np
             sm = e.simuluj(vyroba_sp_15, sp_sp15, np.zeros(len(sp_sp15), dtype=float),
                            bat=0, model="edc", edc_ztrata=vstup.edc_ztrata)
-        else:
-            ez_mk = vstup.edc_ztrata if mk == "edc" else 0.0
+        elif mk == "jom":
             sm = e.simuluj(vyroba_15, sp_vt15, sp_nt15,
-                           bat=vstup.bat, model=mk, edc_ztrata=ez_mk)
+                           bat=vstup.bat, model="jom", edc_ztrata=0.0)
+        elif mk == "edc_bez_bat":
+            sm = e.simuluj(vyroba_15, sp_vt15, sp_nt15,
+                           bat=0, model="edc", edc_ztrata=vstup.edc_ztrata)
+        else:  # edc
+            sm = e.simuluj(vyroba_15, sp_vt15, sp_nt15,
+                           bat=vstup.bat, model="edc", edc_ztrata=vstup.edc_ztrata)
 
         cfm = e.cashflow(
             vl_vt=sm["vlastni_vt_kwh"], vl_nt=sm["vlastni_nt_kwh"],
@@ -406,28 +416,60 @@ def simulate(vstup: SimulaceVstup):
             jist=jist_mk, bonus=0,
         )
 
-        nav_m   = next((r["rok"] for r in cfm if r["kumulativni"] >= 0), None)
+        nav_m     = next((r["rok"] for r in cfm if r["kumulativni"] >= 0), None)
         uspora1_m = cfm[0]["uspora_celkem"] if cfm else 0
-        stat_m  = invest_mk / uspora1_m if uspora1_m > 0 else 999
-        spl_byt = spl_mk / pb / 12
-        cisty_byt = uspora1_m / pb / 12 - spl_byt
-        kum25_m = cfm[24]["kumulativni"] if len(cfm) >= 25 else 0
+        stat_m    = invest_mk / uspora1_m if uspora1_m > 0 else 999
+        spl_byt   = round(spl_mk / pb / 12)
+        cisty_byt = round(uspora1_m / pb / 12 - spl_byt)
+        kum25_m   = cfm[24]["kumulativni"] if len(cfm) >= 25 else 0
 
         srovnani[mk] = {
-            "invest":      round(invest_mk),
-            "mericu":      round(mericu_mk),
-            "sp_kwp":      sp_kwp if mk == "spolecne" else None,
-            "uspora_rok1": round(uspora1_m),
+            "invest":            round(invest_mk),
+            "mericu":            round(mericu_mk),
+            "sp_kwp":            sp_kwp if mk == "spolecne" else None,
+            "bat":               bat_mk,
+            "uspora_rok1":       round(uspora1_m),
             "uspora_jistic_rok": round(jist_mk),
-            "nav":         nav_m,
-            "stat":        round(stat_m, 1),
-            "kum25":       round(kum25_m),
-            "mira_vs":     round(sm.get("mira_vs", 0) * 100, 1),
-            "mira_sob":    round(sm.get("mira_sob", 0) * 100, 1),
-            "splatka_byt": round(spl_byt),
-            "cisty_byt":   round(cisty_byt),
-            "uver":        round(uver_mk),
+            "nav":               nav_m,
+            "stat":              round(stat_m, 1),
+            "kum25":             round(kum25_m),
+            "mira_vs":           round(sm.get("mira_vs", 0) * 100, 1),
+            "mira_sob":          round(sm.get("mira_sob", 0) * 100, 1),
+            "splatka_byt":       spl_byt,
+            "cisty_byt":         cisty_byt,
+            "uver":              round(uver_mk),
         }
+
+    # ================================================================
+    # CITLIVOSTNÍ ANALÝZA — 3 scénáře vývoje cen (backend)
+    # ================================================================
+    scenare = []
+    for rust_sc, label in [(1.0, "Pesimistický +1 %/rok"),
+                            (3.0, "Realistický +3 %/rok"),
+                            (6.0, "Krizový +6 %/rok")]:
+        kum_sc  = -(vlastni)  # startuje od vlastního vkladu
+        nav_sc  = None
+        bezfve_sc = 0.0
+        spotreba_kwh = (vstup.sp_by_vt_mwh * 1000 * pb) + (vstup.sp_sp_mwh * 1000)
+        for rok in range(1, 26):
+            c = (1 + rust_sc / 100) ** (rok - 1)
+            d = (1 - vstup.deg_pan / 100) ** (rok - 1)
+            u = (sim["vlastni_vt_kwh"] * d * cvt * c
+                 + sim["vlastni_nt_kwh"] * d * cnt * c
+                 + sim["pretoky_kwh"]    * d * (vstup.cena_pretoky / 1000) * c)
+            s = splatka if rok <= vstup.splatnost else 0
+            kum_sc += u - s
+            if kum_sc >= 0 and nav_sc is None:
+                nav_sc = rok
+            bezfve_sc += spotreba_kwh * cvt * c
+        scenare.append({
+            "label":   label,
+            "rust":    rust_sc,
+            "nav":     nav_sc,
+            "kum25":   round(kum_sc),
+            "bezfve25": round(bezfve_sc),
+            "sfve25":  round(bezfve_sc - kum_sc - (vlastni)),  # celkové náklady s FVE
+        })
 
     return {
         "sim":           sim,
@@ -437,6 +479,10 @@ def simulate(vstup: SimulaceVstup):
         "cvt":           round(cvt * 1000),
         "cnt":           round(cnt * 1000),
         "srovnani":      srovnani,
+        "scenare":       scenare,
+        "kwp":           vstup.kwp,
+        "bat":           vstup.bat,
+        "bytu":          pb,
     }
 
 
