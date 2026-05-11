@@ -1557,7 +1557,10 @@ async function spustVypocet(){
     rust_cen:      parseFloat(D.rust_cen) || 3.0,
     deg_pan:       parseFloat(D.deg_pan) || 0.5,
     cena_pretoky:  parseFloat(D.cena_pretoky) || 0.95,
-    bonus_nzu:     0,  // bonus NZÚ pro zranitelné domácnosti nemění cashflow SVJ — nepředáváme do simulace
+    pocet_vchodu:  parseInt(D.vchodu)    || 1,
+    jistic_sp_a:   parseInt(D.jistic_sp_a || (serverRec && serverRec.jistic_sp_a) || 25),
+    zarizeni:      D.zarizeni || ['zaklad'],
+    cena_kwp:      serverRec ? parseFloat(serverRec.cena_kwp||30000) : 30000,
     // Úspora PM: uživatelem upravená nebo ze serverRec; 0 pro EDC/spolecne
     uspora_jistic: (D.model === 'jom')
       ? parseFloat(D.uspora_jistic_rok || (serverRec && serverRec.uspora_pm_rok) || 0)
@@ -1821,53 +1824,32 @@ function renderResults(R){
     `Cashflow návratnost ${nav} let závisí na vývoji cen elektřiny. Při realistickém scénáři (+${D.rust_cen||3}%/rok) se vyplatí.` :
     `Zvažte vyšší výkon FVE, baterii nebo model PM.`;
 
-  // Porovnání modelů — výpočet pro EDC, PM, SP
+  // Porovnání modelů — přesná data z backendu (R.srovnani)
+  const srv = R.srovnani || {};
   const spMwh = parseFloat(D.sp_sp_mwh||0);
-  const spVtKwh = spMwh * 1000 * 0.7; // SP spotřeba je přes den — 70% překryv s FVE
-  const celkVt = (sim.vlastni_vt_kwh||0);
-  const celkNt = (sim.vlastni_nt_kwh||0);
 
-  // EDC — aktuální výsledek ze simulace
+  // EDC — aktuální výsledek ze simulace (= vybraný model uživatele)
   const edcUspora = uspora1;
   const edcNav = nav;
   const edcKum = kum25;
   const edcInv = inv;
   const edcUver = uver;
 
-  // PM — podružné měření
-  // Investice: stejná FVE + měřiče (dle app.py: bytu*10000 + 75000 + extra vchody)
-  const pmMericeInv = bytu * 10000 + 75000;
-  const pmInv = inv + pmMericeInv;
-  const pmUver = Math.min(pmInv*0.8, bytu*350000);
-  const pmVlastni = pmInv - pmUver;
-  // Úspora PM = EDC úspora + úspora na jističích (N+1 ODM → 1 ODM)
-  const pmJisticRok = serverRec ? parseFloat(serverRec.uspora_pm_rok||0) : 0;
-  const pmUspora = uspora1 * 1.08 + pmJisticRok; // ~8% více vlastní spotřeby (přímá distribuce) + úspora jistič
-  let pmKum = -pmVlastni, pmNav = null;
-  for(let rok=1;rok<=25;rok++){
-    const d=Math.pow(0.995,rok-1), c=Math.pow(1+(D.rust_cen||3)/100,rok-1);
-    const u = pmUspora*d*c;
-    const s = rok<=splatnost ? pmUver/splatnost : 0;
-    pmKum += u-s;
-    if(pmKum>=0&&!pmNav) pmNav=rok;
-  }
+  // PM z backendu
+  const pmS       = srv.jom || {};
+  const pmInv     = pmS.invest     || 0;
+  const pmUspora  = pmS.uspora_rok1|| 0;
+  const pmNav     = pmS.nav        || null;
+  const pmKum     = pmS.kum25      || 0;
+  const pmMericeInv = pmS.mericu   || 0;
 
-  // Jen SP — jen společné prostory (malá FVE)
-  // kWp pro SP: max(9.9, spMwh*1000*0.75/1050)
-  const spKwp = Math.max(9.9, Math.round(spMwh*1000*0.75/1050*2)/2);
-  const cenakWp = serverRec && serverRec.cena_kwp ? serverRec.cena_kwp : 30000;
-  const spInv = Math.round(spKwp * cenakWp * 0.85); // bez baterie
-  const spUver = Math.min(spInv*0.8, bytu*350000);
-  const spVlastni = spInv - spUver;
-  const spUspora = Math.round(spVtKwh*cvt); // vlastní spotřeba SP z FVE
-  let spKum = -spVlastni, spNav = null;
-  for(let rok=1;rok<=25;rok++){
-    const d=Math.pow(0.995,rok-1), c=Math.pow(1+(D.rust_cen||3)/100,rok-1);
-    const u = spUspora*d*c;
-    const s = rok<=splatnost ? spUver/splatnost : 0;
-    spKum += u-s;
-    if(spKum>=0&&!spNav) spNav=rok;
-  }
+  // SP z backendu
+  const spS       = srv.spolecne   || {};
+  const spInv     = spS.invest     || 0;
+  const spUspora  = spS.uspora_rok1|| 0;
+  const spNav     = spS.nav        || null;
+  const spKum     = spS.kum25      || 0;
+  const spKwp     = spS.sp_kwp     || 9.9;
 
   // Přehled na byt
   const bytUsporaMes = uspora_byt_mes;
