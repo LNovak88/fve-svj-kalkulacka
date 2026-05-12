@@ -806,7 +806,7 @@ function _updateNzuInfo(){
   if(!el) return;
   const n = D.pocet_nizko||0;
   const b = D.bonus_byt||0;
-  const sp = D.spoluucast_pct||20;
+  const sp = D.spoluucast_pct != null ? parseFloat(D.spoluucast_pct) : 20;
   const splatnost = D.splatnost||15;
   const celkem = n * b;
   // Měsíční splátka celého domu (NZÚ úvěr / splatnost / 12)
@@ -1349,7 +1349,7 @@ function s6(){
 function _nzuInfoK7(){
   const n = parseInt(D.pocet_nizko)||0;
   const b = parseFloat(D.bonus_byt)||0;
-  const sp = parseFloat(D.spoluucast_pct)||20;
+  const sp = D.spoluucast_pct != null ? parseFloat(D.spoluucast_pct) : 20;
   const splatnost = parseInt(D.splatnost)||15;
   if(n === 0 || b === 0) return '';
 
@@ -1809,13 +1809,22 @@ function renderResults(R){
   const uspora_byt_mes = Math.round(uspora1/bytu/12);
   const nav    = cf.findIndex(r=>r.kumulativni>=0)+1 || null;
   const kum25  = cf[24]?.kumulativni || 0;
-  const uver   = Math.min(inv*0.8, Math.min(5000000, bytu*350000));
+  const uver   = Math.min(inv*0.8, bytu*350000);  // stejně jako backend
   const splatnost = D.splatnost || 15;
   const nzu_spl_rok = Math.round(uver/splatnost);
   const nzu_spl_byt_mes = Math.round(nzu_spl_rok/bytu/12);
-  const splatka_mes = R.splatka_mesic || nzu_spl_byt_mes;
+  const splatka_mes = nzu_spl_byt_mes; // splátka na byt za měsíc
 
-  // Verdikt
+  // Přehled na byt
+  const bytUsporaMes = uspora_byt_mes;
+  const bytSplatka = nzu_spl_byt_mes;
+  const bytCisty = bytUsporaMes - bytSplatka;
+  const bytPodilInv = Math.round(inv/bytu);
+  // Zranitelné domácnosti — bug fix: ||20 způsoboval ignorování hodnoty 0
+  const n_nizko = parseInt(D.pocet_nizko)||0;
+  const sp_pct  = D.spoluucast_pct != null ? parseFloat(D.spoluucast_pct) : 20;
+  const stat_mes_nizko  = Math.round(nzu_spl_byt_mes * (1 - sp_pct/100));
+  const dom_mes_nizko   = Math.round(nzu_spl_byt_mes * sp_pct/100);
   const verdiktText = nav ?
     nav<=12 ? `✅ Projekt se jednoznačně vyplatí — návratnost ${nav} let` :
     nav<=20 ? `⚠️ Projekt je hraniční — návratnost ${nav} let` :
@@ -1844,18 +1853,8 @@ function renderResults(R){
   const spKum      = spS.kum25       || 0;
   const spKwp      = spS.sp_kwp      || 9.9;
 
-  // Přehled na byt
-  const bytUsporaMes = uspora_byt_mes;
-  const bytSplatka = nzu_spl_byt_mes;
-  const bytCisty = bytUsporaMes - bytSplatka;
-  const bytPodilInv = Math.round(inv/bytu);
-  // Zranitelné domácnosti
-  const n_nizko = parseInt(D.pocet_nizko)||0;
-  const sp_pct  = parseFloat(D.spoluucast_pct)||20;
-  const stat_mes_nizko  = Math.round(nzu_spl_byt_mes * (1 - sp_pct/100));
-  const dom_mes_nizko   = Math.round(nzu_spl_byt_mes * sp_pct/100);
-
-  // Cashflow tabulka
+  // Zranitelné domácnosti — bug fix: D.spoluucast_pct=0 nesmí fallbackovat na 20
+  // Zranitelné domácnosti — viz výše (n_nizko, sp_pct, stat_mes_nizko, dom_mes_nizko)
   const cfRows = cf.map((r,i) => {
     const isNav = nav && r.rok===nav;
     return `<tr class="${isNav?'nav-rok':''}">
