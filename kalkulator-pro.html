@@ -1711,12 +1711,8 @@ async function ulozSimulaci(res, payload){
     };
 
     if(Array.isArray(leads) && leads.length > 0){
-      // Aktualizovat existující lead
-      await fetch(`${SUPA_URL}/rest/v1/leads?id=eq.${leads[0].id}`,{
-        method:'PATCH',
-        headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getToken(),'Content-Type':'application/json','Prefer':'return=minimal'},
-        body: JSON.stringify(leadData),
-      });
+      // Aktualizovat existující lead — supaFetch má správný auth token
+      await supaFetch(`/rest/v1/leads?id=eq.${leads[0].id}`,'PATCH', leadData);
     } else {
       // Vytvořit nový lead
       const name = USER.user_metadata?.full_name || USER.email?.split('@')[0] || '—';
@@ -2559,7 +2555,7 @@ async function onLokInput(){
   if(v.length < 3){ const l=document.getElementById('acList'); if(l)l.classList.remove('open'); return; }
   _acTimer = setTimeout(async()=>{
     try{
-      const r = await fetch(`${API_URL}/geocode/search?q=${encodeURIComponent(v)}`);
+      const r = await fetch(`/api/geocode?q=${encodeURIComponent(v)}`);
       const data = await r.json();
       const list = document.getElementById('acList');
       if(!list) return;
@@ -3002,6 +2998,12 @@ function nacistAdresuZProfilu(){
   const meta = USER.user_metadata || {};
   if(meta.adresa_domu && !D.lokace) D.lokace = meta.adresa_domu;
 }
+
+// Keep-alive ping — každých 8 minut aby se Render neuspával
+setInterval(async()=>{
+  try{ await fetch(API_URL+'/health',{method:'GET',signal:AbortSignal.timeout(5000)}); }
+  catch(e){ /* tiše ignorovat */ }
+}, 8*60*1000);
 
 (async ()=>{
   const ok = await initAuth();
