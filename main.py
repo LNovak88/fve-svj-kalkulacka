@@ -190,7 +190,43 @@ def recommend(vstup: RecommendVstup):
         pocet_vchodu     = vstup.pocet_vchodu,
     )
 
-    # 6. Finanční srovnání — stávající stav
+    # 5b. Optimalizační smyčka baterie — stejná logika jako app.py
+    # Pokud je statická návratnost > 10 let, snižuj baterii (max 5 iterací)
+    kwp_opt = fve["kwp"]
+    bat_opt = fve["bat"]
+    cvt_opt = e.CENY_VT.get(dist, e.CENY_VT["ČEZ Distribuce"]).get(sazba_byt, 6610) / 1000
+    uprava_opt = e._smiseny_profil(33.0, 33.0, 34.0)
+    sp_vt15_opt = e._gen_profil_vt(sp_by_vt_celkem + sp["sp_mwh"] * 1000, e._TDD4, uprava_opt)
+    sp_nt15_opt = e._gen_profil_nt(sp_by_nt_mwh * pb * 1000, sazba_byt)
+    # Fallback výroba (bez PVGIS — rychlý odhad)
+    vyr_opt = e._interpoluj(e._gen_vyroba_fallback(kwp_opt, 35, 0))
+    ez_opt = min(5.0, round(10.0 / pb ** 0.5, 1))
+    for _iter in range(5):
+        inv_opt = kwp_opt * e.cena_kwp(kwp_opt) + bat_opt * 15000
+        sim_opt = e.simuluj(vyr_opt, sp_vt15_opt, sp_nt15_opt,
+                            bat=bat_opt, model="edc", edc_ztrata=ez_opt)
+        uspora_rok1 = sim_opt["vlastni_vt_kwh"] * cvt_opt + sim_opt["pretoky_kwh"] * 0.00095
+        if uspora_rok1 <= 0:
+            break
+        stat_nav = inv_opt / uspora_rok1
+        if stat_nav <= 10.0:
+            break
+        if bat_opt > 0:
+            bat_opt = max(0, bat_opt - 5)
+        else:
+            kwp_opt = max(5.0, kwp_opt - 5)
+    # Aktualizovat fve pokud se změnilo
+    if kwp_opt != fve["kwp"] or bat_opt != fve["bat"]:
+        c_kwp_opt  = e.cena_kwp(kwp_opt)
+        extra_v    = max(0, int(vstup.pocet_vchodu) - 1) * 30000
+        fve = {
+            "kwp":         kwp_opt,
+            "bat":         bat_opt,
+            "cena_kwp":    c_kwp_opt,
+            "cena_fve":    round(kwp_opt * c_kwp_opt),
+            "cena_bat":    round(bat_opt * 15000),
+            "cena_celkem": round(kwp_opt * c_kwp_opt + bat_opt * 15000 + extra_v),
+        }
     jistic_byt_tabulka = e.JISTIC_BYT.get(dist, e.JISTIC_BYT["ČEZ Distribuce"])
     cena_jistic_byt    = jistic_byt_tabulka.get(jistic_byt, 298)
     cena_stay          = e.STAY_PLAT.get(dist, 163)
