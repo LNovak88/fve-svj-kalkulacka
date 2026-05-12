@@ -27,7 +27,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "HEAD", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -47,15 +47,21 @@ def health():
 
 @app.get("/geocode", tags=["lokace"])
 def geocode(q: str = Query(...)):
-    lat, lon, nazev, err = e.geocode(q)
-    if err:
-        raise HTTPException(status_code=404, detail=err)
-    return {"lat": lat, "lon": lon, "nazev": nazev}
+    try:
+        lat, lon, nazev, err = e.geocode(q)
+        if err:
+            return {"lat": None, "lon": None, "nazev": None, "err": err}
+        return {"lat": lat, "lon": lon, "nazev": nazev, "err": None}
+    except Exception as ex:
+        return {"lat": None, "lon": None, "nazev": None, "err": str(ex)}
 
 
 @app.get("/geocode/search", tags=["lokace"])
 def geocode_search(q: str = Query(..., min_length=2)):
-    return e.geocode_search(q)
+    try:
+        return e.geocode_search(q)
+    except Exception:
+        return []
 
 
 # ================================================================
