@@ -3031,6 +3031,12 @@ function nacistAdresuZProfilu(){
   if(meta.adresa_domu && !D.lokace) D.lokace = meta.adresa_domu;
 }
 
+// Keep-alive ping — každých 8 minut aby se Render neuspával
+setInterval(async()=>{
+  try{ await fetch(API_URL+'/health',{method:'GET',signal:AbortSignal.timeout(5000)}); }
+  catch(e){ /* tiše ignorovat */ }
+}, 8*60*1000);
+
 (async ()=>{
   const ok = await initAuth();
   if(!ok) return;
