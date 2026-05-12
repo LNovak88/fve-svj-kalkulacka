@@ -199,12 +199,13 @@ def recommend(vstup: RecommendVstup):
     sp_vt15_opt = e._gen_profil_vt(sp_by_vt_celkem + sp["sp_mwh"] * 1000, e._TDD4, uprava_opt)
     sp_nt15_opt = e._gen_profil_nt(sp_by_nt_mwh * pb * 1000, sazba_byt)
     # Fallback výroba (bez PVGIS — rychlý odhad)
+    # Dynamická EDC ztráta dle počtu bytů
+    edc_ztrata_rec = min(5.0, round(10.0 / (pb ** 0.5), 1))
     vyr_opt = e._interpoluj(e._gen_vyroba_fallback(kwp_opt, 35, 0))
-    ez_opt = min(5.0, round(10.0 / pb ** 0.5, 1))
     for _iter in range(5):
         inv_opt = kwp_opt * e.cena_kwp(kwp_opt) + bat_opt * 15000
         sim_opt = e.simuluj(vyr_opt, sp_vt15_opt, sp_nt15_opt,
-                            bat=bat_opt, model="edc", edc_ztrata=ez_opt)
+                            bat=bat_opt, model="edc", edc_ztrata=edc_ztrata_rec)
         uspora_rok1 = sim_opt["vlastni_vt_kwh"] * cvt_opt + sim_opt["pretoky_kwh"] * 0.00095
         if uspora_rok1 <= 0:
             break
@@ -351,8 +352,13 @@ def simulate(vstup: SimulaceVstup):
     sp_nt15     = e._gen_profil_nt(sp_by_nt, vstup.sazba)
     sp_sp15     = e._gen_profil_vt(sp_sp, e._TDD4, uprava)   # jen SP (pro model spolecne)
 
+    # EDC ztráta — dynamická dle počtu bytů (shodné s app.py)
+    # Čím více bytů, tím nižší poplatek za přenos EDC na kWh
+    edc_ztrata_dyn = min(5.0, round(10.0 / (pb ** 0.5), 1))
+
     sim = e.simuluj(vyroba_15, sp_vt15, sp_nt15,
-                    bat=vstup.bat, model=vstup.model, edc_ztrata=vstup.edc_ztrata)
+                    bat=vstup.bat, model=vstup.model,
+                    edc_ztrata=edc_ztrata_dyn if vstup.model == "edc" else 0.0)
 
     cvt = e.CENY_VT.get(vstup.dist, e.CENY_VT["ČEZ Distribuce"]).get(vstup.sazba, 6610) / 1000
     cnt_sazby = e.CENY_NT.get(vstup.dist, e.CENY_NT["ČEZ Distribuce"])
@@ -372,7 +378,8 @@ def simulate(vstup: SimulaceVstup):
         spl=splatka, splat=vstup.splatnost,
         rust=vstup.rust_cen, deg=vstup.deg_pan,
         jist=vstup.uspora_jistic,
-        bonus=0,  # bonus NZÚ pro zranitelné domácnosti nemění cashflow SVJ
+        deg_bat=2.0,  # degradace baterie 2 %/rok — shodné s app.py
+        bonus=0,
     )
 
     # ================================================================
@@ -430,16 +437,16 @@ def simulate(vstup: SimulaceVstup):
                 vyroba_sp_hod = e._gen_vyroba_fallback(sp_kwp, vstup.sklon, vstup.azimut if vstup.azimut < 900 else 0)
             vyroba_sp_15 = e._interpoluj(vyroba_sp_hod)
             sm = e.simuluj(vyroba_sp_15, sp_sp15, np.zeros(len(sp_sp15), dtype=float),
-                           bat=0, model="edc", edc_ztrata=vstup.edc_ztrata)
+                           bat=0, model="edc", edc_ztrata=edc_ztrata_dyn)
         elif mk == "jom":
             sm = e.simuluj(vyroba_15, sp_vt15, sp_nt15,
                            bat=vstup.bat, model="jom", edc_ztrata=0.0)
         elif mk == "edc_bez_bat":
             sm = e.simuluj(vyroba_15, sp_vt15, sp_nt15,
-                           bat=0, model="edc", edc_ztrata=vstup.edc_ztrata)
+                           bat=0, model="edc", edc_ztrata=edc_ztrata_dyn)
         else:  # edc
             sm = e.simuluj(vyroba_15, sp_vt15, sp_nt15,
-                           bat=vstup.bat, model="edc", edc_ztrata=vstup.edc_ztrata)
+                           bat=vstup.bat, model="edc", edc_ztrata=edc_ztrata_dyn)
 
         cfm = e.cashflow(
             vl_vt=sm["vlastni_vt_kwh"], vl_nt=sm["vlastni_nt_kwh"],
@@ -449,7 +456,7 @@ def simulate(vstup: SimulaceVstup):
             vlast=vlast_mk, uver=uver_mk,
             spl=spl_mk, splat=vstup.splatnost,
             rust=vstup.rust_cen, deg=vstup.deg_pan,
-            jist=jist_mk, bonus=0,
+            jist=jist_mk, deg_bat=2.0, bonus=0,
         )
 
         nav_m     = next((r["rok"] for r in cfm if r["kumulativni"] >= 0), None)
@@ -490,8 +497,9 @@ def simulate(vstup: SimulaceVstup):
         for rok in range(1, 26):
             c = (1 + rust_sc / 100) ** (rok - 1)
             d = (1 - vstup.deg_pan / 100) ** (rok - 1)
+            d_bat = (1 - 2.0 / 100) ** (rok - 1)  # degradace baterie 2 %/rok
             u = (sim["vlastni_vt_kwh"] * d * cvt * c
-                 + sim["vlastni_nt_kwh"] * d * cnt * c
+                 + sim["vlastni_nt_kwh"] * d_bat * cnt * c
                  + sim["pretoky_kwh"]    * d * (vstup.cena_pretoky / 1000) * c)
             s = splatka if rok <= vstup.splatnost else 0
             kum_sc += u - s
