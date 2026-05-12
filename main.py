@@ -38,7 +38,22 @@ app.add_middleware(
 
 @app.api_route("/health", methods=["GET", "HEAD"], tags=["system"])
 def health():
-    return {"status": "ok"}
+    return {"status": "ok", "version": "2.2.0", "engine": "ok"}
+
+
+@app.get("/debug", tags=["system"])
+def debug():
+    """Diagnostický endpoint — verze kódu a test engine."""
+    try:
+        test = e.doporuc_jistic_dum(100, ["zaklad"])
+        engine_ok = str(test)
+    except Exception as ex:
+        engine_ok = f"CHYBA: {ex}"
+    return {
+        "version": "2.2.0",
+        "doporuc_jistic_dum_100": engine_ok,
+        "cena_kwp_125": e.cena_kwp(125),
+    }
 
 
 # ================================================================
