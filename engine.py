@@ -745,7 +745,7 @@ def geocode(dotaz: str) -> tuple:
             "https://nominatim.openstreetmap.org/search",
             params={"q": f"{dotaz}, Česká republika", "format": "json",
                     "limit": 1, "addressdetails": 1, "countrycodes": "cz"},
-            headers={"User-Agent": "FVE-SVJ-Kalkulacka/2.2 (svjenergie.cz; lnovak88@seznam.cz)"},
+            headers={"User-Agent": "FVE-SVJ-Kalkulacka/1.0"},
             timeout=10,
         )
         if r.status_code == 200 and r.text.strip():
@@ -770,7 +770,7 @@ def geocode_search(dotaz: str) -> list:
             "https://nominatim.openstreetmap.org/search",
             params={"q": f"{dotaz}, Česká republika", "format": "json",
                     "limit": 5, "addressdetails": 1, "countrycodes": "cz"},
-            headers={"User-Agent": "FVE-SVJ-Kalkulacka/2.2 (svjenergie.cz; lnovak88@seznam.cz)"},
+            headers={"User-Agent": "FVE-SVJ-Kalkulacka/1.0"},
             timeout=5,
         )
         if r.status_code == 200 and r.text.strip():
