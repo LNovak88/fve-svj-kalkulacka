@@ -196,31 +196,48 @@ def recommend(vstup: RecommendVstup):
         pocet_vchodu     = vstup.pocet_vchodu,
     )
 
-    # 5b. Optimalizační smyčka baterie — stejná logika jako app.py
-    # Pokud je statická návratnost > 10 let, snižuj baterii (max 5 iterací)
+    # 5b. Optimalizační smyčka baterie — snižuj baterii pokud cashflow nav > 15 let
     kwp_opt = fve["kwp"]
     bat_opt = fve["bat"]
     cvt_opt = e.CENY_VT.get(dist, e.CENY_VT["ČEZ Distribuce"]).get(sazba_byt, 6610) / 1000
     uprava_opt = e._smiseny_profil(33.0, 33.0, 34.0)
     sp_vt15_opt = e._gen_profil_vt(sp_by_vt_celkem + sp["sp_mwh"] * 1000, e._TDD4, uprava_opt)
     sp_nt15_opt = e._gen_profil_nt(sp_by_nt_mwh * pb * 1000, sazba_byt)
-    # Fallback výroba (bez PVGIS — rychlý odhad)
     vyr_opt = e._interpoluj(e._gen_vyroba_fallback(kwp_opt, 35, 0))
     ez_opt = min(5.0, round(10.0 / pb ** 0.5, 1))
-    for _iter in range(5):
-        inv_opt = kwp_opt * e.cena_kwp(kwp_opt) + bat_opt * 15000
-        sim_opt = e.simuluj(vyr_opt, sp_vt15_opt, sp_nt15_opt,
-                            bat=bat_opt, model="edc", edc_ztrata=ez_opt)
-        uspora_rok1 = sim_opt["vlastni_vt_kwh"] * cvt_opt + sim_opt["pretoky_kwh"] * 0.00095
-        if uspora_rok1 <= 0:
+
+    for _iter in range(6):
+        inv_opt   = kwp_opt * e.cena_kwp(kwp_opt) + bat_opt * 15000
+        uver_opt  = min(inv_opt, pb * 350000)  # vlastni_pct=0
+        spl_opt   = uver_opt / 15  # roční splátka, splatnost 15 let
+        sim_opt   = e.simuluj(vyr_opt, sp_vt15_opt, sp_nt15_opt,
+                              bat=bat_opt, model="edc", edc_ztrata=ez_opt)
+        uspora_r1 = (sim_opt["vlastni_vt_kwh"] * cvt_opt
+                     + sim_opt["pretoky_kwh"] * 0.00095)
+        if uspora_r1 <= 0:
             break
-        stat_nav = inv_opt / uspora_rok1
-        if stat_nav <= 10.0:
+        # Cashflow návratnost — kdy kumulativ přejde do kladných čísel
+        kum = 0.0
+        nav_opt = None
+        for rok in range(1, 26):
+            c = (1.03) ** (rok - 1)  # realistický scénář +3%
+            u = uspora_r1 * c
+            s = spl_opt if rok <= 15 else 0
+            kum += u - s
+            if kum >= 0 and nav_opt is None:
+                nav_opt = rok
+                break
+        if nav_opt is None:
+            nav_opt = 26
+        # Pokud návratnost OK (≤ 15 let), přestaň snižovat
+        if nav_opt <= 15:
             break
-        if bat_opt > 0:
+        # Jinak snižuj baterii o 5 kWh
+        if bat_opt >= 5:
             bat_opt = max(0, bat_opt - 5)
         else:
-            kwp_opt = max(5.0, kwp_opt - 5)
+            break
+
     # Aktualizovat fve pokud se změnilo
     if kwp_opt != fve["kwp"] or bat_opt != fve["bat"]:
         c_kwp_opt  = e.cena_kwp(kwp_opt)
