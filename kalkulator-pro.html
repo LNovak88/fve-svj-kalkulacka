@@ -1232,6 +1232,11 @@ async function nactiSrovnani(){
     pct_rodiny:    parseFloat(D.pct_rodiny)||34,
     uspora_jistic: 0,
   };
+  // Wake-up ping — probudí Render před simulací (zabrání CORS chybě při probuzení)
+  try{
+    await fetch(API_URL+'/health', {method:'GET', signal: AbortSignal.timeout(30000)});
+  }catch(e){ console.warn('Wake-up ping selhal:', e.message); }
+
   try{
     const r = await fetch(API_URL+'/simulate',{
       method:'POST', headers:{'Content-Type':'application/json'},
@@ -1267,12 +1272,46 @@ function vybratVariantu(model, kwp, bat, inv){
 function s6(){
   var bytu = parseInt(D.bytu)||12;
 
-  // Spinner dokud nemáme data
+  // Spinner nebo orientační karty dokud nemáme data
   if(!SROV){
-    return '<div class="card" style="text-align:center;padding:40px 20px">'
-      + '<div class="pvgis-spinner" style="margin:0 auto 16px;width:32px;height:32px;border-width:3px"></div>'
-      + '<div style="font-size:14px;font-weight:600;color:var(--navy);margin-bottom:8px">Počítám varianty pro váš dům…</div>'
-      + '<div style="font-size:12px;color:var(--text-2)">Přesná simulace PVGIS · může trvat 15–30 vteřin</div>'
+    // Orientační odhad z D objektu — zobrazit okamžitě
+    const bytuO = parseInt(D.bytu)||12;
+    const kwpO  = parseFloat(serverRec&&serverRec.kwp ? serverRec.kwp : D.kwp)||15;
+    const batO  = parseFloat(serverRec&&serverRec.bat ? serverRec.bat : D.bat)||0;
+    const invO  = parseFloat(serverRec&&serverRec.cena_celkem ? serverRec.cena_celkem : D.cena_invest)||(kwpO*25000);
+    const cvtO  = ((CENY_VT[D.dist]||CENY_VT['CEZ Distribuce'])[D.sazba_byt]||6610)/1000;
+    // Velmi hrubý odhad úspory: kwp × 950 kWh/rok × 65% vlastní × cena
+    const usporaO = Math.round(kwpO * 950 * 0.65 * cvtO);
+    const splatkaO = Math.round(invO / 15 / 12 / bytuO);
+    const cistyO = Math.round(usporaO / bytuO / 12 - splatkaO);
+
+    return '<div class="card">'
+      + '<h2 class="ctitle">Vyberte variantu FVE</h2>'
+      + '<p class="csub">Přesná simulace pro váš dům · ' + bytuO + ' bytů · ' + kwpO + ' kWp · ' + (D.lokace||'vaše adresa') + '</p>'
+      + '<div style="background:var(--blue-ll);border:1px solid #C8DFF2;border-radius:var(--rm);padding:14px;margin-bottom:16px;display:flex;align-items:center;gap:12px">'
+      + '<div class="pvgis-spinner" style="flex-shrink:0;width:20px;height:20px;border-width:2px"></div>'
+      + '<div><div style="font-size:13px;font-weight:600;color:var(--navy)">Počítám přesné varianty…</div>'
+      + '<div style="font-size:11px;color:var(--text-2)">Orientační odhad níže — přesná čísla se načtou za chvíli</div></div>'
+      + '</div>'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px;opacity:0.7">'
+      + _orientacniKarta('⭐', 'EDC s baterií', kwpO+' kWp · '+batO+' kWh', invO, usporaO, cistyO, bytuO)
+      + _orientacniKarta('🌐', 'EDC bez baterie', kwpO+' kWp · bez baterie', Math.round(invO*0.7), Math.round(usporaO*0.8), Math.round(usporaO*0.8/bytuO/12 - splatkaO*0.7), bytuO)
+      + _orientacniKarta('📊', 'PM — podružné měření', kwpO+' kWp · '+batO+' kWh', Math.round(invO*1.2), Math.round(usporaO*1.3), Math.round(usporaO*1.3/bytuO/12 - splatkaO*1.2), bytuO)
+      + _orientacniKarta('🏛️', 'Jen společné prostory', '9.9 kWp · bez baterie', Math.round(invO*0.25), Math.round(usporaO*0.12), Math.round(usporaO*0.12/bytuO/12 - splatkaO*0.25), bytuO)
+      + '</div>'
+      + '</div>'
+      + '<div class="nav"><button class="btn-out" onclick="goBack()">← Zpět</button></div>';
+  }
+
+  function _orientacniKarta(icon, name, popis, inv, uspora, cisty, bytu){
+    return '<div style="border:1px solid var(--border);border-radius:var(--r);padding:16px;background:var(--white)">'
+      + '<div style="font-size:20px;margin-bottom:4px">'+icon+'</div>'
+      + '<div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:2px">'+name+'</div>'
+      + '<div style="font-size:11px;color:var(--text-2);margin-bottom:10px">'+popis+'</div>'
+      + '<div style="font-size:12px;color:var(--text-2)">Investice: <strong>'+Math.round(inv).toLocaleString('cs-CZ')+' Kč</strong></div>'
+      + '<div style="font-size:12px;color:var(--green)">Úspora: ~<strong>'+Math.round(uspora/bytu/12).toLocaleString('cs-CZ')+' Kč/byt/měs</strong></div>'
+      + '<div style="font-size:12px;color:'+(cisty>=0?'var(--green)':'var(--rose)')+'">Čistý přínos: ~<strong>'+(cisty>=0?'+':'')+cisty.toLocaleString('cs-CZ')+' Kč/byt/měs</strong></div>'
+      + '<div style="margin-top:10px;padding:8px 0 0;border-top:1px solid var(--border);font-size:11px;color:var(--text-2)">⏳ Načítám přesná data…</div>'
       + '</div>';
   }
 
@@ -1595,6 +1634,14 @@ async function spustVypocet(){
   };
 
   try{
+    // Wake-up ping — probudí Render před simulací
+    try{
+      const wakeEl = document.getElementById('pvgisStatus');
+      if(wakeEl) wakeEl.innerHTML = '<div class="pvgis-loading"><div class="pvgis-spinner"></div><span>Probouzím výpočetní server…</span></div>';
+      await fetch(API_URL+'/health', {method:'GET', signal: AbortSignal.timeout(30000)});
+      if(wakeEl) wakeEl.innerHTML = '<div class="pvgis-loading"><div class="pvgis-spinner"></div><span>Spouštím simulaci přes PVGIS EU JRC…</span></div>';
+    }catch(we){ console.warn('Wake-up selhal:', we.message); }
+
     const r = await fetch(API_URL + '/simulate', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
