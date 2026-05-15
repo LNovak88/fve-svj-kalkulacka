@@ -1912,6 +1912,7 @@ function renderResults(R){
   }).join('');
 
   // Scénáře — z backendu
+  console.log('DEBUG citlivost:', R.scenare, 'vlastni_vklad:', R.vlastni_vklad, 'uver:', R.uver, 'splatka_rok:', R.splatka_rok);
   const scenare = (R.scenare||[]).map(s=>{
     const navColor = s.nav&&s.nav<=12?'var(--green)':s.nav&&s.nav<=18?'var(--amber)':'var(--rose)';
     const uspora25 = s.bezfve25 > 0
