@@ -486,31 +486,34 @@ def simulate(vstup: SimulaceVstup):
     # CITLIVOSTNÍ ANALÝZA — 3 scénáře vývoje cen (backend)
     # ================================================================
     scenare = []
-    for rust_sc, label in [(1.0, "Pesimistický +1 %/rok"),
-                            (3.0, "Realistický +3 %/rok"),
-                            (6.0, "Krizový +6 %/rok")]:
-        kum_sc  = -(vlastni)  # startuje od vlastního vkladu
-        nav_sc  = None
-        bezfve_sc = 0.0
-        spotreba_kwh = (vstup.sp_by_vt_mwh * 1000 * pb) + (vstup.sp_sp_mwh * 1000)
+    spotreba_kwh = (vstup.sp_by_vt_mwh * 1000 * pb) + (vstup.sp_sp_mwh * 1000) + (vstup.sp_by_nt_mwh * 1000 * pb)
+    for rust_sc, label in [(1.0, "😐 Pesimistický +1 %/rok"),
+                            (3.0, "📊 Realistický +3 %/rok"),
+                            (6.0, "🔥 Krizový +6 %/rok")]:
+        kum_sc    = -vlastni  # vlastní vklad SVJ (bez NZÚ úvěru)
+        nav_sc    = None
+        bezfve_25 = 0.0
+        sfve_25   = 0.0
         for rok in range(1, 26):
             c = (1 + rust_sc / 100) ** (rok - 1)
             d = (1 - vstup.deg_pan / 100) ** (rok - 1)
+            # Roční úspora s FVE (roste s cenami elektřiny)
             u = (sim["vlastni_vt_kwh"] * d * cvt * c
                  + sim["vlastni_nt_kwh"] * d * cnt * c
                  + sim["pretoky_kwh"]    * d * (vstup.cena_pretoky / 1000) * c)
+            # Splátka NZÚ úvěru
             s = splatka if rok <= vstup.splatnost else 0
             kum_sc += u - s
             if kum_sc >= 0 and nav_sc is None:
                 nav_sc = rok
-            bezfve_sc += spotreba_kwh * cvt * c
+            # Celkové náklady na elektřinu bez FVE za rok
+            bezfve_25 += spotreba_kwh * cvt * c
         scenare.append({
-            "label":   label,
-            "rust":    rust_sc,
-            "nav":     nav_sc,
-            "kum25":   round(kum_sc),
-            "bezfve25": round(bezfve_sc),
-            "sfve25":  round(bezfve_sc - kum_sc - (vlastni)),  # celkové náklady s FVE
+            "label":    label,
+            "rust":     rust_sc,
+            "nav":      nav_sc,
+            "kum25":    round(kum_sc),
+            "bezfve25": round(bezfve_25),
         })
 
     return {
