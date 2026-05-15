@@ -462,7 +462,9 @@ def simulate(vstup: SimulaceVstup):
         uspora1_m = cfm[0]["uspora_celkem"] if cfm else 0
         stat_m    = invest_mk / uspora1_m if uspora1_m > 0 else 999
         spl_byt   = round(spl_mk / pb / 12)
-        cisty_byt = round(uspora1_m / pb / 12 - spl_byt)
+        # cisty_byt = čistý měsíční přínos na byt (úspora - splátka)
+        # uspora1_m z cashflow již zahrnuje jist_mk (úsporu jističe PM)
+        cisty_byt = round(cfm[0]["cisty_prinos"] / pb / 12) if cfm else 0
         kum25_m   = cfm[24]["kumulativni"] if len(cfm) >= 25 else 0
 
         srovnani[mk] = {
