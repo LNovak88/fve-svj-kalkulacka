@@ -1221,7 +1221,7 @@ async function nactiSrovnani(){
     edc_ztrata: Math.min(5.0, parseFloat((10 / Math.sqrt(parseInt(D.bytu)||12)).toFixed(1))),
     cena_invest:  inv,
     cena_kwp:     serverRec ? parseFloat(serverRec.cena_kwp||30000) : 30000,
-    vlastni_pct:  parseFloat(D.vlastni_pct)||30,
+    vlastni_pct:  D.vlastni_pct != null ? parseFloat(D.vlastni_pct) : 0,
     splatnost:    parseInt(D.splatnost)||15,
     rust_cen:     parseFloat(D.rust_cen)||3,
     deg_pan:      0.5, cena_pretoky: parseFloat(D.cena_pretoky)||0.95,
@@ -1454,7 +1454,7 @@ function s7(){
     + '<div class="expert-section-title">💰 Ekonomické parametry</div>'
     + '<div class="g2" style="gap:10px;margin-bottom:10px">'
     + '<div><label>Celková investice (Kč)</label><div class="pro-input-wrap"><input type="number" id="sv_cena_invest" value="' + inv + '" min="100000" max="50000000" step="10000" oninput="D.cena_invest=+this.value;D._inv_user_edited=true"><div class="pro-edit-ico">✏️</div></div></div>'
-    + '<div><label>Vlastní zdroje (%)</label><div class="pro-input-wrap"><input type="number" value="' + (D.vlastni_pct||0) + '" min="0" max="100" step="5" oninput="D.vlastni_pct=+this.value;D._vlastni_pct_edited=true"><div class="pro-edit-ico">✏️</div></div></div>'
+    + '<div><label>Vlastní zdroje (%)</label><div class="pro-input-wrap"><input type="number" value="' + (D.vlastni_pct != null ? D.vlastni_pct : 0) + '" min="0" max="100" step="5" oninput="D.vlastni_pct=+this.value;D._vlastni_pct_edited=true"><div class="pro-edit-ico">✏️</div></div></div>'
     + '</div>'
     + '<div class="g3" style="gap:10px;margin-bottom:10px">'
     + '<div><label>Splatnost úvěru (roky)</label><div class="pro-input-wrap"><input type="number" value="' + (D.splatnost||15) + '" min="1" max="30" oninput="D.splatnost=+this.value;D._splatnost_edited=true"><div class="pro-edit-ico">✏️</div></div></div>'
@@ -1579,7 +1579,7 @@ async function spustVypocet(){
     model:         D.model || 'edc',
     edc_ztrata:    Math.min(5.0, parseFloat((10 / Math.sqrt(parseInt(D.bytu)||12)).toFixed(1))),
     cena_invest:   inv,
-    vlastni_pct:   parseFloat(D.vlastni_pct) || 30,
+    vlastni_pct:   D.vlastni_pct != null ? parseFloat(D.vlastni_pct) : 0,
     splatnost:     parseInt(D.splatnost) || 15,
     rust_cen:      parseFloat(D.rust_cen) || 3.0,
     deg_pan:       parseFloat(D.deg_pan) || 0.5,
@@ -2891,7 +2891,7 @@ function exportPdf(){
     <tr style="background:#F8FAFB"><td>Výkon FVE / baterie</td><td style="text-align:right">${RES.kwp} kWp / ${D.bat||0} kWh</td></tr>
     <tr><td>Model sdílení</td><td style="text-align:right">${D.model==='edc'?'EDC — komunitní sdílení':D.model==='jom'?'PM — podružné měření':'Jen společné prostory'}</td></tr>
     <tr style="background:#F8FAFB"><td>Celková investice</td><td style="text-align:right">${kc(inv)}</td></tr>
-    <tr><td>Vlastní zdroje SVJ / NZÚ bezúročný úvěr</td><td style="text-align:right">${D.vlastni_pct||30} % / ${kc(uver)}</td></tr>
+    <tr><td>Vlastní zdroje SVJ / NZÚ bezúročný úvěr</td><td style="text-align:right">${D.vlastni_pct != null ? D.vlastni_pct : 0} % / ${kc(uver)}</td></tr>
     <tr style="background:#F8FAFB"><td>Splatnost úvěru / Růst cen elektřiny</td><td style="text-align:right">${splatnost} let / +${D.rust_cen||3} %/rok</td></tr>
   </table>
 
