@@ -415,7 +415,7 @@ const D = {
   bonus_nzu: 0,        // celkový bonus = pocet_nizko × bonus_byt
   // Model sdílení
   model: 'edc',
-  edc_ztrata: 15,
+  edc_ztrata: 2,  // přepočítá se dynamicky dle počtu bytů (min(5, 10/√bytu))
 };
 
 // ================================================================
@@ -1217,7 +1217,8 @@ async function nactiSrovnani(){
     sp_by_nt_mwh: parseFloat(D.sp_by_nt_mwh)||0,
     sp_sp_mwh:    parseFloat(D.sp_sp_mwh)||3.5,
     sazba:    D.sazba_byt||'D02d', dist: D.dist,
-    model:    'edc', edc_ztrata: 15,
+    model:    'edc',
+    edc_ztrata: Math.min(5.0, parseFloat((10 / Math.sqrt(parseInt(D.bytu)||12)).toFixed(1))),
     cena_invest:  inv,
     cena_kwp:     serverRec ? parseFloat(serverRec.cena_kwp||30000) : 30000,
     vlastni_pct:  parseFloat(D.vlastni_pct)||30,
@@ -1555,7 +1556,7 @@ async function spustVypocet(){
     pct_seniori:   parseFloat(D.pct_seniori) || 33,
     pct_rodiny:    parseFloat(D.pct_rodiny) || 34,
     model:         D.model || 'edc',
-    edc_ztrata:    parseFloat(D.edc_ztrata) || 15,
+    edc_ztrata:    Math.min(5.0, parseFloat((10 / Math.sqrt(parseInt(D.bytu)||12)).toFixed(1))),
     cena_invest:   inv,
     vlastni_pct:   parseFloat(D.vlastni_pct) || 30,
     splatnost:     parseInt(D.splatnost) || 15,
