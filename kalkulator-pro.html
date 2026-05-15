@@ -1624,7 +1624,8 @@ async function spustVypocet(){
 // ULOŽENÍ SIMULACE DO SUPABASE
 // ================================================================
 async function ulozSimulaci(res, payload){
-  if(IS_DEV){ console.log('DEV: ukládání přeskočeno'); return; } // DEV bypass
+  if(IS_DEV){ console.log('DEV: ukládání přeskočeno'); return; }
+  if(IS_ADMIN){ console.log('Admin: ukládání leadu přeskočeno'); return; } // Admin má neomezený přístup
 
   // Klíčové výsledky — vše z backendu, žádné vlastní výpočty
   const sim  = res.sim || {};
