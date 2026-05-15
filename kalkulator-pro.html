@@ -1279,6 +1279,11 @@ function s6(){
   var srv = SROV.srovnani || {};
   var kwp = SROV.kwp || parseFloat(D.kwp)||15;
   var bat = SROV.bat || parseFloat(D.bat)||0;
+  console.log('DEBUG s6 srovnani:', JSON.stringify({
+    edc: srv.edc ? {uspora:srv.edc.uspora_rok1, cisty:srv.edc.cisty_byt, spl:srv.edc.splatka_byt, invest:srv.edc.invest} : null,
+    jom: srv.jom ? {uspora:srv.jom.uspora_rok1, cisty:srv.jom.cisty_byt, spl:srv.jom.splatka_byt, invest:srv.jom.invest} : null,
+    bytu: SROV.bytu, kwp: SROV.kwp, vlastni_pct: SROV.vlastni_pct
+  }));
 
   // Helper — jedna karta varianty
   function varCard(cfg){
