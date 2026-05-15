@@ -490,23 +490,26 @@ def simulate(vstup: SimulaceVstup):
     for rust_sc, label in [(1.0, "😐 Pesimistický +1 %/rok"),
                             (3.0, "📊 Realistický +3 %/rok"),
                             (6.0, "🔥 Krizový +6 %/rok")]:
-        kum_sc    = -vlastni  # vlastní vklad SVJ (bez NZÚ úvěru)
+        # Kumulativ startuje od záporné celé investice (vlastní vklad)
+        # Splátky NZÚ úvěru jsou náklad, úspory jsou příjem
+        # Návratnost = kdy kumulativ přejde do kladných čísel
+        kum_sc    = -vlastni  # vlastní vklad SVJ
         nav_sc    = None
         bezfve_25 = 0.0
-        sfve_25   = 0.0
         for rok in range(1, 26):
             c = (1 + rust_sc / 100) ** (rok - 1)
             d = (1 - vstup.deg_pan / 100) ** (rok - 1)
-            # Roční úspora s FVE (roste s cenami elektřiny)
+            # Roční úspora s FVE
             u = (sim["vlastni_vt_kwh"] * d * cvt * c
                  + sim["vlastni_nt_kwh"] * d * cnt * c
                  + sim["pretoky_kwh"]    * d * (vstup.cena_pretoky / 1000) * c)
-            # Splátka NZÚ úvěru
-            s = splatka if rok <= vstup.splatnost else 0
-            kum_sc += u - s
+            # Splátka NZÚ úvěru (fixní, bez úroku)
+            s = uver / vstup.splatnost if rok <= vstup.splatnost else 0
+            cisty = u - s
+            kum_sc += cisty
             if kum_sc >= 0 and nav_sc is None:
                 nav_sc = rok
-            # Celkové náklady na elektřinu bez FVE za rok
+            # Náklady na elektřinu bez FVE (rostou s cenou)
             bezfve_25 += spotreba_kwh * cvt * c
         scenare.append({
             "label":    label,
@@ -522,6 +525,7 @@ def simulate(vstup: SimulaceVstup):
         "cena_invest":     vstup.cena_invest,
         "uver":            round(uver),
         "vlastni_vklad":   round(vlastni),
+        "vlastni_pct":     vstup.vlastni_pct,
         "splatka_rok":     round(splatka),
         "splatka_mes":     round(splatka / 12),
         "splatka_byt_mes": round(splatka / 12 / pb),
