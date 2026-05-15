@@ -1690,13 +1690,15 @@ async function ulozSimulaci(res, payload){
   }catch(e){ console.warn('Chyba uložení simulace:', e); }
 
   try{
-    // 2. Uložit/aktualizovat výsledky v leads (hledat lead dle emailu uživatele)
-    // Nejdřív zkusit najít existující lead
+    // 2. Uložit/aktualizovat výsledky v leads
+    if(!USER.email){ console.warn('Chybí email uživatele, lead přeskočen'); return; }
     const existLead = await fetch(
-      `${SUPA_URL}/rest/v1/leads?email=eq.${encodeURIComponent(USER.email)}&select=id&limit=1`,
+      `${SUPA_URL}/rest/v1/leads?email=eq.${encodeURIComponent(USER.email)}&select=id,email&limit=1`,
       {headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getToken()}}
     );
     const leads = await existLead.json();
+    // Bezpečnostní kontrola — lead musí patřit přihlášenému uživateli
+    const vlastniLead = Array.isArray(leads) ? leads.filter(l => l.email === USER.email) : [];
 
     const leadData = {
       // Vstupní parametry
@@ -1737,13 +1739,16 @@ async function ulozSimulaci(res, payload){
       }),
     };
 
-    if(Array.isArray(leads) && leads.length > 0){
-      // Aktualizovat existující lead — supaFetch má správný auth token
-      await supaFetch(`/rest/v1/leads?id=eq.${leads[0].id}`,'PATCH', leadData);
+    if(Array.isArray(vlastniLead) && vlastniLead.length > 0){
+      // Aktualizovat vlastní lead
+      const patchRes = await supaFetch(`/rest/v1/leads?id=eq.${vlastniLead[0].id}`,'PATCH', leadData);
+      if(!patchRes.ok && patchRes.status !== 403){
+        console.warn('Lead PATCH selhal:', patchRes.status);
+      }
     } else {
-      // Vytvořit nový lead
+      // Vytvořit nový lead — tiše ignorovat conflict
       const name = USER.user_metadata?.full_name || USER.email?.split('@')[0] || '—';
-      await supaFetch('/rest/v1/leads','POST',{
+      const postRes = await supaFetch('/rest/v1/leads','POST',{
         ...leadData,
         jmeno: name,
         email: USER.email,
@@ -1751,6 +1756,9 @@ async function ulozSimulaci(res, payload){
         svj: USER.user_metadata?.svj||null,
         pozice: USER.user_metadata?.pozice||null,
       });
+      if(!postRes.ok && postRes.status !== 409 && postRes.status !== 403){
+        console.warn('Lead POST selhal:', postRes.status);
+      }
     }
     console.log('Výsledky uloženy do leads:', nazev);
   }catch(e){ console.warn('Chyba uložení do leads:', e); }
