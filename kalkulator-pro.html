@@ -407,7 +407,7 @@ const D = {
   bat: 0,              // baterie kWh — editovatelná
   // Ekonomika — editovatelná v PRO
   cena_invest: 0,
-  vlastni_pct: 30,
+  vlastni_pct: 0,
   splatnost: 15,
   rust_cen: 3.0,
   deg_pan: 0.5,
@@ -1251,12 +1251,17 @@ function vybratVariantu(model, kwp, bat, inv){
   D.kwp = kwp;
   D.bat = bat;
   D.cena_invest = inv;
-  D._kwp_user_edited = true;
-  D._bat_user_edited = true;
-  D._inv_user_edited = true;
-  cur = 6; // přejít na krok 7 (ekonomika)
-  render();
-  window.scrollTo(0,0);
+  // Reset edit flagů — výběr varianty = čistý start
+  D._kwp_user_edited = false;
+  D._bat_user_edited = false;
+  D._inv_user_edited = false;
+  D._model_edited = false;
+  D._vlastni_pct_edited = false;
+  D._splatnost_edited = false;
+  D._rust_cen_edited = false;
+  D._sklon_edited = false;
+  D._azimut_edited = false;
+  cur = 6; render(); window.scrollTo(0,0);
 }
 
 function s6(){
@@ -1428,15 +1433,15 @@ function s7(){
     + '<div class="g3" style="gap:10px;margin-bottom:10px">'
     + '<div><label>Výkon FVE (kWp)</label><div class="pro-input-wrap"><input type="number" id="sv_kwp" value="' + kwp + '" min="1" max="500" step="0.5" oninput="D.kwp=+this.value;D._kwp_user_edited=true"><div class="pro-edit-ico">✏️</div></div></div>'
     + '<div><label>Baterie (kWh, 0 = bez)</label><div class="pro-input-wrap"><input type="number" id="sv_bat" value="' + bat + '" min="0" max="500" step="5" oninput="D.bat=+this.value;D._bat_user_edited=true"><div class="pro-edit-ico">✏️</div></div></div>'
-    + '<div><label>Model sdílení</label><select onchange="D.model=this.value;render()">'
+    + '<div><label>Model sdílení</label><select onchange="D.model=this.value;D._model_edited=true;render()">'
     + '<option'+(D.model==='edc'?' selected':'')+' value="edc">EDC (komunitní)</option>'
     + '<option'+(D.model==='jom'?' selected':'')+' value="jom">PM — podružné měření</option>'
     + '<option'+(D.model==='spolecne'?' selected':'')+' value="spolecne">Jen spol. prostory</option>'
     + '</select></div>'
     + '</div>'
     + '<div class="g2" style="gap:10px">'
-    + '<div><label>Sklon panelů (°)</label><div class="pro-input-wrap"><input type="number" value="' + (D.sklon||35) + '" min="0" max="90" step="5" oninput="D.sklon=+this.value"><div class="pro-edit-ico">✏️</div></div></div>'
-    + '<div><label>Orientace (azimut)</label>' + azimutPopis + '<div class="pro-input-wrap"><input type="number" value="' + (D.azimut||0) + '" min="-180" max="999" step="15" oninput="D.azimut=+this.value"><div class="pro-edit-ico">✏️</div></div></div>'
+    + '<div><label>Sklon panelů (°)</label><div class="pro-input-wrap"><input type="number" value="' + (D.sklon||35) + '" min="0" max="90" step="5" oninput="D.sklon=+this.value;D._sklon_edited=true"><div class="pro-edit-ico">✏️</div></div></div>'
+    + '<div><label>Orientace (azimut)</label>' + azimutPopis + '<div class="pro-input-wrap"><input type="number" value="' + (D.azimut||0) + '" min="-180" max="999" step="15" oninput="D.azimut=+this.value;D._azimut_edited=true"><div class="pro-edit-ico">✏️</div></div></div>'
     + '</div>'
     + '</div>'
 
@@ -1444,11 +1449,11 @@ function s7(){
     + '<div class="expert-section-title">💰 Ekonomické parametry</div>'
     + '<div class="g2" style="gap:10px;margin-bottom:10px">'
     + '<div><label>Celková investice (Kč)</label><div class="pro-input-wrap"><input type="number" id="sv_cena_invest" value="' + inv + '" min="100000" max="50000000" step="10000" oninput="D.cena_invest=+this.value;D._inv_user_edited=true"><div class="pro-edit-ico">✏️</div></div></div>'
-    + '<div><label>Vlastní zdroje (%)</label><div class="pro-input-wrap"><input type="number" value="' + (D.vlastni_pct||30) + '" min="0" max="100" step="5" oninput="D.vlastni_pct=+this.value"><div class="pro-edit-ico">✏️</div></div></div>'
+    + '<div><label>Vlastní zdroje (%)</label><div class="pro-input-wrap"><input type="number" value="' + (D.vlastni_pct||0) + '" min="0" max="100" step="5" oninput="D.vlastni_pct=+this.value;D._vlastni_pct_edited=true"><div class="pro-edit-ico">✏️</div></div></div>'
     + '</div>'
     + '<div class="g3" style="gap:10px;margin-bottom:10px">'
-    + '<div><label>Splatnost úvěru (roky)</label><div class="pro-input-wrap"><input type="number" value="' + (D.splatnost||15) + '" min="1" max="30" oninput="D.splatnost=+this.value"><div class="pro-edit-ico">✏️</div></div></div>'
-    + '<div><label>Růst cen elektřiny (%/rok)</label><div class="pro-input-wrap"><input type="number" value="' + (D.rust_cen||3) + '" min="0" max="15" step="0.5" oninput="D.rust_cen=+this.value"><div class="pro-edit-ico">✏️</div></div></div>'
+    + '<div><label>Splatnost úvěru (roky)</label><div class="pro-input-wrap"><input type="number" value="' + (D.splatnost||15) + '" min="1" max="30" oninput="D.splatnost=+this.value;D._splatnost_edited=true"><div class="pro-edit-ico">✏️</div></div></div>'
+    + '<div><label>Růst cen elektřiny (%/rok)</label><div class="pro-input-wrap"><input type="number" value="' + (D.rust_cen||3) + '" min="0" max="15" step="0.5" oninput="D.rust_cen=+this.value;D._rust_cen_edited=true"><div class="pro-edit-ico">✏️</div></div></div>'
     + '<div><label>Výkupní cena přetoků (Kč/kWh)</label><div class="pro-input-wrap"><input type="number" value="' + (D.cena_pretoky||0.95) + '" min="0" max="5" step="0.1" oninput="D.cena_pretoky=+this.value"><div class="pro-edit-ico">✏️</div></div></div>'
     + '</div>'
     + '<div><label>Dotace / jiná podpora (Kč)</label>'
@@ -1487,18 +1492,24 @@ async function goToResults(){
     if(!confirm('Nezadali jste adresu — výpočet použije průměr ČR místo přesných PVGIS dat. Pokračovat?')) return;
     D.lat = 49.75; D.lon = 15.5;
   }
-  // Pokud uživatel nezměnil klíčové parametry, použít SROV přímo bez nového /simulate
-  if(SROV && !D._kwp_user_edited && !D._bat_user_edited && !D._inv_user_edited && D.model === 'edc'){
+
+  // Přeskočit nový výpočet pokud SROV existuje a parametry se nezměnily
+  // Krok 6 a 8 volají stejný backend se stejnými vstupy
+  const parametryZmeny = D._kwp_user_edited || D._bat_user_edited || D._inv_user_edited
+    || D._vlastni_pct_edited || D._splatnost_edited || D._rust_cen_edited
+    || D._sklon_edited || D._azimut_edited || D._model_edited;
+
+  if(SROV && !parametryZmeny){
+    // Použít výsledek z kroku 6 přímo
     RES = {
       ...SROV,
-      inv: SROV.cena_invest || parseFloat(D.cena_invest),
+      cena_invest: SROV.cena_invest || parseFloat(D.cena_invest),
       bytu: D.bytu, lokace: D.lokace, dist: D.dist, sazba: D.sazba_byt,
-      kwp: SROV.kwp || parseFloat(D.kwp),
     };
     cur = 7; render(); window.scrollTo(0,0);
     setTimeout(()=>{
       const ps = document.getElementById('pvgisStatus');
-      if(ps) ps.innerHTML = '<div style="font-size:12px;color:var(--green);padding:4px 0">✅ Výsledky načteny — parametry nebyly změněny</div>';
+      if(ps) ps.innerHTML = '<div style="font-size:12px;color:var(--green);padding:4px 0">✅ Výsledky načteny — parametry nebyly změněny od výběru varianty</div>';
       const rb = document.getElementById('resBody');
       if(rb){ rb.innerHTML = renderResults(RES); setTimeout(drawAllCharts, 150); }
       const bp = document.getElementById('btnPdf');
