@@ -1621,6 +1621,7 @@ async function ulozSimulaci(res, payload){
   // Klíčové výsledky — vše z backendu, žádné vlastní výpočty
   const sim  = res.sim || {};
   const cf   = res.cf  || [];
+  const bytu = parseInt(res.bytu || D.bytu) || 12;
   const cvt  = (res.cvt||6610) / 1000;
   const cnt  = (res.cnt||4070) / 1000;
   const cpr  = (D.cena_pretoky||0.95) / 1000;
