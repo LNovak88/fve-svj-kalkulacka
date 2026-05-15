@@ -1284,9 +1284,7 @@ function s6(){
     var uspora = s.uspora_rok1 || 0;
     var cisty = s.cisty_byt || 0;
     var border = cfg.best ? '2px solid var(--blue);box-shadow:0 0 0 4px rgba(27,108,168,.08)' : '1px solid var(--border)';
-    var badge = cfg.best
-      ? '<div style="position:absolute;top:-13px;left:50%;transform:translateX(-50%);background:var(--blue);color:#fff;font-size:10px;font-weight:700;padding:4px 14px;border-radius:10px;white-space:nowrap">⭐ Doporučeno</div>'
-      : '';
+    var badge = ''; // Žádný badge — uživatel si vybírá sám
     var kwpCard = cfg.key === 'spolecne' ? (s.sp_kwp||9.9) : kwp;
     var batCard = cfg.key === 'edc_bez_bat' ? 0 : cfg.key === 'spolecne' ? 0 : bat;
     var invCard = s.invest || 0;
