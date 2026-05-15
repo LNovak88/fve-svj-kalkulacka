@@ -514,17 +514,22 @@ def simulate(vstup: SimulaceVstup):
         })
 
     return {
-        "sim":           sim,
-        "cf":            cf,
-        "cena_invest":   vstup.cena_invest,
-        "splatka_mesic": round(splatka / 12),
-        "cvt":           round(cvt * 1000),
-        "cnt":           round(cnt * 1000),
-        "srovnani":      srovnani,
-        "scenare":       scenare,
-        "kwp":           vstup.kwp,
-        "bat":           vstup.bat,
-        "bytu":          pb,
+        "sim":             sim,
+        "cf":              cf,
+        "cena_invest":     vstup.cena_invest,
+        "uver":            round(uver),
+        "vlastni_vklad":   round(vlastni),
+        "splatka_rok":     round(splatka),
+        "splatka_mes":     round(splatka / 12),
+        "splatka_byt_mes": round(splatka / 12 / pb),
+        "splatnost":       vstup.splatnost,
+        "cvt":             round(cvt * 1000),
+        "cnt":             round(cnt * 1000),
+        "srovnani":        srovnani,
+        "scenare":         scenare,
+        "kwp":             vstup.kwp,
+        "bat":             vstup.bat,
+        "bytu":            pb,
     }
 
 
