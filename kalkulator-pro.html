@@ -807,13 +807,13 @@ function _updateNzuInfo(){
   const n = D.pocet_nizko||0;
   const b = D.bonus_byt||0;
   const sp = D.spoluucast_pct != null ? parseFloat(D.spoluucast_pct) : 20;
-  const splatnost = D.splatnost||15;
+  const splatnost = parseInt(D.splatnost)||15;
   const celkem = n * b;
-  // Měsíční splátka celého domu (NZÚ úvěr / splatnost / 12)
-  const inv_est = D.cena_invest || Math.round((D.kwp||15)*30000);
+  // Splátka na byt — z RES pokud existuje, jinak orientační výpočet
+  const inv_est = parseFloat(D.cena_invest) || Math.round((D.kwp||15)*30000);
   const uver_est = Math.min(inv_est*0.8, (D.bytu||12)*350000);
-  const spl_mes_byt = Math.round(uver_est / splatnost / (D.bytu||12) / 12);
-  // Kolik stát hradí za zranitelný byt (měsíčně)
+  const spl_mes_byt = (RES && RES.splatka_byt_mes) ? RES.splatka_byt_mes
+    : Math.round(uver_est / splatnost / (D.bytu||12) / 12);
   const stat_mes = Math.round(spl_mes_byt * (1 - sp/100));
   const dom_mes  = Math.round(spl_mes_byt * sp/100);
 
@@ -1355,7 +1355,8 @@ function _nzuInfoK7(){
 
   const inv_est = parseFloat(D.cena_invest)||Math.round((D.kwp||15)*30000);
   const uver_est = Math.min(inv_est*0.8, (D.bytu||12)*350000);
-  const spl_mes_byt = Math.round(uver_est / splatnost / (D.bytu||12) / 12);
+  const spl_mes_byt = (SROV && SROV.splatka_byt_mes) ? SROV.splatka_byt_mes
+    : Math.round(uver_est / splatnost / (D.bytu||12) / 12);
   const stat_mes  = Math.round(spl_mes_byt * (1 - sp/100));
   const dom_mes   = Math.round(spl_mes_byt * sp/100);
   const celkem    = n * b;
@@ -1617,28 +1618,44 @@ async function spustVypocet(){
 async function ulozSimulaci(res, payload){
   if(IS_DEV){ console.log('DEV: ukládání přeskočeno'); return; } // DEV bypass
 
-  // Vypočítat klíčové výsledky
-  const sim = res.sim || {};
-  const cf  = res.cf  || [];
-  const cvt = (res.cvt||6610) / 1000;
-  const cnt = (res.cnt||4070) / 1000;
-  const cpr = (D.cena_pretoky||1.5) / 1000;
-  const uspora_rok = cf[0]?.uspora_celkem ||
-    Math.round((sim.vlastni_vt_kwh||0)*cvt + (sim.vlastni_nt_kwh||0)*cnt + (sim.pretoky_kwh||0)*cpr);
-  const nav = cf.findIndex(r=>r.kumulativni>=0)+1 || null;
-  const kum25 = cf[24]?.kumulativni || 0;
-  const vyroba_mwh = Math.round((sim.vyroba_kwh||0)/100)/10;
-  const nazev = `${D.lokace||'Bez adresy'} · ${D.bytu} bytů · ${res.kwp} kWp`;
+  // Klíčové výsledky — vše z backendu, žádné vlastní výpočty
+  const sim  = res.sim || {};
+  const cf   = res.cf  || [];
+  const cvt  = (res.cvt||6610) / 1000;
+  const cnt  = (res.cnt||4070) / 1000;
+  const cpr  = (D.cena_pretoky||0.95) / 1000;
+
+  // Finance — z backendu
+  const inv            = res.cena_invest || parseFloat(D.cena_invest) || 0;
+  const uver           = res.uver           || Math.min(inv*0.8, bytu*350000);
+  const vlastni_vklad  = res.vlastni_vklad  || (inv - uver);
+  const splatka_rok    = res.splatka_rok    || cf[0]?.splatka || 0;
+  const splatka_mes    = res.splatka_mes    || Math.round(splatka_rok/12);
+  const splatka_byt_mes= res.splatka_byt_mes|| Math.round(splatka_mes/bytu);
+  const splatnost      = res.splatnost      || parseInt(D.splatnost) || 15;
+
+  // Výsledky — z cf[] (backend cashflow)
+  const uspora_rok  = cf[0]?.uspora_celkem || 0;
+  const uspora_rok1 = uspora_rok; // alias
+  const nav         = cf.findIndex(r=>r.kumulativni>=0)+1 || null;
+  const kum25       = cf[24]?.kumulativni || 0;
+  const vyroba_mwh  = Math.round((sim.vyroba_kwh||0)/100)/10;
+  const uspora_byt_mes = Math.round(uspora_rok / bytu / 12);
+  const nazev = `${D.lokace||'Bez adresy'} · ${D.bytu} bytů · ${res.kwp||D.kwp} kWp`;
+
+  // NZÚ splátka na byt — z backendu
+  const nzu_spl_rok     = splatka_rok;
+  const nzu_spl_byt_mes = splatka_byt_mes;
 
   const vysledky = {
     uspora_rok, nav, kum25,
-    investice: res.inv,
+    investice:   inv,
     vyroba_mwh,
-    kwp: res.kwp,
+    kwp:         res.kwp || parseFloat(D.kwp),
     vlastni_kwh: Math.round(sim.vlastni_kwh||0),
     pretoky_kwh: Math.round(sim.pretoky_kwh||0),
-    mira_vs: Math.round((sim.mira_vs||0)*100),
-    mira_sob: Math.round((sim.mira_sob||0)*100),
+    mira_vs:     Math.round((sim.mira_vs||0)*100),
+    mira_sob:    Math.round((sim.mira_sob||0)*100),
   };
 
   try{
@@ -1736,48 +1753,70 @@ function renderUlozeneVysledky(result){
   const btnPdf = document.getElementById('btnPdf');
   if(pvgisEl) pvgisEl.innerHTML = `<div style="font-size:12px;color:#4A7BA8;padding:4px 0">📂 Zobrazeny uložené výsledky — <button onclick="spustVypocet()" style="background:none;border:none;color:var(--blue);cursor:pointer;font-size:12px;text-decoration:underline;font-family:inherit">Přepočítat aktuálně →</button></div>`;
   if(!resEl) return;
-  // Sestavit RES z uložených výsledků
-  const bytu = D.bytu || 1;
-  const cvt = 6610, cnt = 4070;
+
+  const bytu      = D.bytu || 1;
+  const inv       = result.investice || parseFloat(D.cena_invest) || 0;
+  const uver      = Math.min(inv*0.8, bytu*350000);
+  const splatnost = parseInt(D.splatnost)||15;
+  const splatka_rok     = uver / splatnost;
+  const splatka_mes     = Math.round(splatka_rok / 12);
+  const splatka_byt_mes = Math.round(splatka_mes / bytu);
+  const uspora_rok      = result.uspora_rok || 0;
+
+  // Sestavit cf[] — orientačně z uložených dat
+  let _kum = -(inv - uver); // vlastní vklad
+  const cf_sim = Array.from({length:25},(_,i)=>{
+    const d = Math.pow(0.995,i), c = Math.pow(1+(D.rust_cen||3)/100,i);
+    const uspora = uspora_rok*d*c;
+    const splatka = i<splatnost ? splatka_rok : 0;
+    _kum += uspora - splatka;
+    return {
+      rok:i+1,
+      uspora_celkem:Math.round(uspora),
+      splatka:Math.round(splatka),
+      cisty_prinos:Math.round(uspora-splatka),
+      kumulativni:Math.round(_kum),
+      vyroba_mwh:(result.vyroba_mwh||0)*Math.pow(0.995,i),
+    };
+  });
+
   RES = {
     sim:{
-      vlastni_vt_kwh: result.vlastni_kwh||0, vlastni_nt_kwh:0,
-      vlastni_kwh: result.vlastni_kwh||0, pretoky_kwh: result.pretoky_kwh||0,
-      vyroba_kwh: (result.vyroba_mwh||0)*1000,
+      vlastni_vt_kwh: result.vlastni_kwh||0,
+      vlastni_nt_kwh: 0,
+      vlastni_kwh:    result.vlastni_kwh||0,
+      pretoky_kwh:    result.pretoky_kwh||0,
+      vyroba_kwh:     (result.vyroba_mwh||0)*1000,
       odber_vt_kwh:0, odber_nt_kwh:0, spotreba_kwh:0,
-      mira_vs:(result.mira_vs||0)/100, mira_sob:(result.mira_sob||0)/100,
-      edc_efektivita:0.85,
-      mesice_vyroba:Array(12).fill(0), mesice_spotreba:Array(12).fill(0),
-      mesice_vlastni:Array(12).fill(0), mesice_pretoky:Array(12).fill(0),
+      mira_vs:  (result.mira_vs||0)/100,
+      mira_sob: (result.mira_sob||0)/100,
+      edc_efektivita: 0.85,
+      mesice_vyroba:   Array(12).fill(0),
+      mesice_spotreba: Array(12).fill(0),
+      mesice_vlastni:  Array(12).fill(0),
+      mesice_pretoky:  Array(12).fill(0),
       mesice_nazvy:['Led','Úno','Bře','Dub','Kvě','Čvn','Čvc','Srp','Zář','Říj','Lis','Pro'],
     },
-    cf: Array.from({length:25},(_,i)=>{
-      const uspora_rok = result.uspora_rok||0;
-      const inv = result.investice||D.cena_invest||0;
-      const uver = Math.min(inv*0.8, (D.bytu||1)*350000);
-      const splatnost = D.splatnost||15;
-      const d = Math.pow(0.995,i), c = Math.pow(1+(D.rust_cen||3)/100,i);
-      const uspora = uspora_rok*d*c;
-      const splatka = i<splatnost ? uver/splatnost : 0;
-      return {
-        rok:i+1,
-        uspora_celkem:Math.round(uspora),
-        splatka:Math.round(splatka),
-        cisty_prinos:Math.round(uspora-splatka),
-        kumulativni:0, // bude přepočítán níže
-        vyroba_mwh:(result.vyroba_mwh||0)*Math.pow(0.995,i),
-      };
-    }),
-    cvt, cnt,
-    kwp: D.kwp, inv: result.investice||D.cena_invest||0,
-    bytu, lokace:D.lokace, dist:D.dist, sazba:D.sazba_byt,
-    splatka_mesic: Math.round((result.investice||0)*0.8/(D.splatnost||15)/12),
+    cf:              cf_sim,
+    cvt:             6610,
+    cnt:             4070,
+    kwp:             parseFloat(D.kwp)||15,
+    bat:             parseFloat(D.bat)||0,
+    bytu:            bytu,
+    // Finance — z uložených dat + výpočet
+    cena_invest:     inv,
+    uver:            Math.round(uver),
+    vlastni_vklad:   Math.round(inv - uver),
+    splatka_rok:     Math.round(splatka_rok),
+    splatka_mes:     splatka_mes,
+    splatka_byt_mes: splatka_byt_mes,
+    splatnost:       splatnost,
+    lokace:          D.lokace,
+    dist:            D.dist,
+    sazba:           D.sazba_byt,
+    srovnani:        {},
+    scenare:         [],
   };
-  // Přepočítat kumulativní cashflow
-  const _inv = result.investice||D.cena_invest||0;
-  let _kum = -(Math.max(0, _inv - uver));  // vlastní vklad SVJ
-  _kum = cf[24]?.kumulativni || -(Math.max(0, _inv - uver)); // použít kumulativ z CF pokud existuje
-  RES.cf.forEach(r=>{ _kum += r.cisty_prinos; r.kumulativni = Math.round(_kum); });
   resEl.innerHTML = renderResults(RES);
   if(btnPdf) btnPdf.disabled = false;
   setTimeout(drawAllCharts, 150);
