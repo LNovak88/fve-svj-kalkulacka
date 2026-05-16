@@ -1225,6 +1225,7 @@ async function nactiSrovnani(){
     rust_cen:     parseFloat(D.rust_cen)||3,
     deg_pan:      0.5,
     cena_pretoky: parseFloat(D.cena_pretoky)||0.95,
+    cena_kwp:     serverRec ? parseFloat(serverRec.cena_kwp||30000) : 30000,
     pct_pracujici: parseFloat(D.pct_pracujici)||33,
     pct_seniori:   parseFloat(D.pct_seniori)||33,
     pct_rodiny:    parseFloat(D.pct_rodiny)||34,
@@ -1630,6 +1631,7 @@ async function spustVypocet(){
     rust_cen:      parseFloat(D.rust_cen) || 3.0,
     deg_pan:       parseFloat(D.deg_pan) || 0.5,
     cena_pretoky:  parseFloat(D.cena_pretoky) || 0.95,
+    cena_kwp:      serverRec ? parseFloat(serverRec.cena_kwp||30000) : 30000,
     uspora_jistic: (D.model === 'jom')
       ? parseFloat(D.uspora_jistic_rok || (serverRec && serverRec.uspora_pm_rok) || 0)
       : 0,
