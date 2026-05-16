@@ -1381,7 +1381,7 @@ function s6(){
         noteBg:'var(--amber-l)',noteColor:'#92400E'})
     + varCard({key:'spolecne',best:false,icon:'🏛️',name:'Jen společné prostory',
         desc:'Malá FVE pouze pro výtahy, osvětlení a čerpadla. Byty nespoří přímo.',
-        notes:'✅ Nejjednodušší — bez nutnosti souhlasu bytů<br>✅ Nejnižší investice<br>❌ Byty nespoří přímo<br>❌ Nejnižší celková úspora',
+        notes:'✅ Nejjednodušší varianta<br>✅ Nejnižší investice<br>❌ Byty nespoří přímo<br>❌ Nejnižší celková úspora',
         noteBg:'var(--bg)',noteColor:'var(--text-2)'})
     + '</div>';
 
@@ -2135,13 +2135,22 @@ function renderResults(R){
   <!-- POROVNÁNÍ MODELŮ -->
   <div class="card">
     <div class="chart-card-title">🔄 Porovnání modelů sdílení energie</div>
-    <div class="chart-card-sub" style="margin-bottom:16px">Stejná FVE a baterie — liší se způsob sdílení elektřiny mezi byty</div>
+    <div class="chart-card-sub" style="margin-bottom:8px">Stejná FVE a baterie — liší se způsob sdílení elektřiny mezi byty</div>
+    <!-- Technické parametry společné pro všechny modely -->
+    <div style="background:var(--bg);border-radius:var(--rm);padding:10px 14px;margin-bottom:14px;font-size:12px;display:flex;flex-wrap:wrap;gap:12px;color:var(--text-2)">
+      <span>⚡ FVE: <strong style="color:var(--navy)">${R.kwp} kWp</strong></span>
+      <span>🔋 Baterie (EDC/PM): <strong style="color:var(--navy)">${R.bat>0?R.bat+' kWh':'bez baterie'}</strong></span>
+      <span>🏠 Spotřeba bytů: <strong style="color:var(--navy)">${parseFloat(D.sp_by_vt_mwh||1.2).toFixed(1)} MWh/byt/rok</strong></span>
+      <span>🏛️ Spotřeba SP: <strong style="color:var(--navy)">${parseFloat(D.sp_sp_mwh||3.5).toFixed(1)} MWh/rok</strong></span>
+      <span>👥 Počet bytů: <strong style="color:var(--navy)">${bytu}</strong></span>
+    </div>
     <div class="modely-grid" style="grid-template-columns:repeat(4,1fr)">
       <!-- EDC s bat -->
       <div class="model-card ${D.model==='edc'||!D.model?'best':''}">
         ${D.model==='edc'||!D.model ? '<div class="model-card-badge">✅ Váš výběr</div>' : ''}
         <div class="model-card-icon">🌐</div>
         <div class="model-card-name">EDC — komunitní sdílení</div>
+        <div style="font-size:11px;color:var(--text-2);margin-bottom:8px">${R.kwp} kWp · ${R.bat>0?R.bat+' kWh bat':'bez bat'} · EDC tarif</div>
         <div class="model-card-sub">Virtuální sdílení přes distribuci. Každý byt dostane poměrný díl výroby přímo na svůj elektroměr.</div>
         <div class="model-kpi"><span class="model-kpi-l">Investice FVE</span><span class="model-kpi-v">${(edcS.invest||inv).toLocaleString('cs-CZ')} Kč</span></div>
         <div class="model-kpi"><span class="model-kpi-l">Roční úspora</span><span class="model-kpi-v green">${Math.round(edcS.uspora_rok1||uspora_rok).toLocaleString('cs-CZ')} Kč</span></div>
@@ -2162,6 +2171,7 @@ function renderResults(R){
           ${D.model==='edc_bez_bat' ? '<div class="model-card-badge">✅ Váš výběr</div>' : ''}
           <div class="model-card-icon">🔌</div>
           <div class="model-card-name">EDC bez baterie</div>
+          <div style="font-size:11px;color:var(--text-2);margin-bottom:8px">${R.kwp} kWp · bez baterie · EDC tarif</div>
           <div class="model-card-sub">Komunitní sdílení bez baterie. Nižší investice, více přetoků do sítě.</div>
           <div class="model-kpi"><span class="model-kpi-l">Investice FVE</span><span class="model-kpi-v">${ebInv.toLocaleString('cs-CZ')} Kč</span></div>
           <div class="model-kpi"><span class="model-kpi-l">Roční úspora</span><span class="model-kpi-v green">${Math.round(ebUs).toLocaleString('cs-CZ')} Kč</span></div>
@@ -2176,6 +2186,7 @@ function renderResults(R){
         ${D.model==='jom' ? '<div class="model-card-badge">✅ Váš výběr</div>' : ''}
         <div class="model-card-icon">📊</div>
         <div class="model-card-name">PM — podružné měření</div>
+        <div style="font-size:11px;color:var(--text-2);margin-bottom:8px">${R.kwp} kWp · ${R.bat>0?R.bat+' kWh bat':'bez bat'} · C tarif jistič</div>
         <div class="model-card-sub">Jeden hlavní elektroměr pro celý dům, podružné měřiče na byty. SVJ platí jako podnikatel.</div>
         <div class="model-kpi"><span class="model-kpi-l">Investice FVE + měřiče</span><span class="model-kpi-v">${pmInv.toLocaleString('cs-CZ')} Kč</span></div>
         <div class="model-kpi"><span class="model-kpi-l">Roční úspora</span><span class="model-kpi-v green">${Math.round(pmUspora).toLocaleString('cs-CZ')} Kč</span></div>
@@ -2189,13 +2200,14 @@ function renderResults(R){
         ${D.model==='spolecne' ? '<div class="model-card-badge">✅ Váš výběr</div>' : ''}
         <div class="model-card-icon">🏛️</div>
         <div class="model-card-name">Jen společné prostory</div>
-        <div class="model-card-sub">Menší FVE (${spKwp} kWp) pokrývá pouze výtahy, osvětlení, čerpadla. Nejjednodušší řešení.</div>
+        <div style="font-size:11px;color:var(--text-2);margin-bottom:8px">${spKwp} kWp · bez baterie · jen SP spotřeba ${parseFloat(D.sp_sp_mwh||3.5).toFixed(1)} MWh/rok</div>
+        <div class="model-card-sub">Menší FVE pokrývá pouze výtahy, osvětlení, čerpadla. Nejjednodušší řešení.</div>
         <div class="model-kpi"><span class="model-kpi-l">Investice FVE</span><span class="model-kpi-v">${spInv.toLocaleString('cs-CZ')} Kč</span></div>
         <div class="model-kpi"><span class="model-kpi-l">Roční úspora SP</span><span class="model-kpi-v green">${Math.round(spUspora).toLocaleString('cs-CZ')} Kč</span></div>
         <div class="model-kpi"><span class="model-kpi-l">Návratnost</span><span class="model-kpi-v">${spNav?spNav+' let':'>25 let'}</span></div>
         <div class="model-kpi"><span class="model-kpi-l">Kumulativ 25 let</span><span class="model-kpi-v">${Math.round(spKum).toLocaleString('cs-CZ')} Kč</span></div>
         <div class="model-kpi"><span class="model-kpi-l">Úspora / byt / měs</span><span class="model-kpi-v">~${Math.round(spUspora/bytu/12)} Kč</span></div>
-        <div style="margin-top:10px;background:var(--green-l);border-radius:6px;padding:8px 10px;font-size:11px;color:#1A5C32">✅ Nejjednodušší varianta<br>✅ Bez nutnosti souhlasu bytů<br>❌ Byty nespoří přímo</div>
+        <div style="margin-top:10px;background:var(--green-l);border-radius:6px;padding:8px 10px;font-size:11px;color:#1A5C32">✅ Nejjednodušší varianta<br>❌ Byty nespoří přímo</div>
       </div>
     </div>
   </div>
