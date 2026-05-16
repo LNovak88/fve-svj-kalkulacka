@@ -431,18 +431,23 @@ def simulate(vstup: SimulaceVstup):
     vchod_extra  = max(0, vstup.pocet_vchodu - 1) * 30000
 
     # Pro srovnání EDC/PM vždy použít kWp dimenzované na byty (ne SP kWp)
-    # Pokud uživatel vybral SP model, odhadneme kWp pro byty z celkové spotřeby
+    # bat_byty = doporučená baterie pro EDC (bez ohledu na vybraný model)
     sp_sp     = vstup.sp_sp_mwh * 1000
     sp_by_vt_celk = vstup.sp_by_vt_mwh * 1000 * pb
+
     if vstup.model == "spolecne":
-        # Odhadnout kWp pro byty (75% celkové spotřeby)
-        kwp_byty = max(9.9, round((sp_by_vt_celk + sp_sp) * 0.75 / 1050 * 2) / 2)
-        bat_byty = max(10.0, round(kwp_byty * 1.2 / 5) * 5)
+        kwp_byty      = max(9.9, round((sp_by_vt_celk + sp_sp) * 0.75 / 1050 * 2) / 2)
         cena_kwp_byty = e.cena_kwp(kwp_byty)
     else:
-        kwp_byty = vstup.kwp
-        bat_byty = vstup.bat
+        kwp_byty      = vstup.kwp
         cena_kwp_byty = vstup.cena_kwp
+
+    # Doporučená baterie pro EDC = kWp × 1.0–1.5 (střed = ×1.2), min 10 kWh
+    # Pokud uživatel vybral variantu s baterií, použij ji; jinak odhadni
+    if vstup.bat > 0:
+        bat_byty = vstup.bat
+    else:
+        bat_byty = max(10.0, round(kwp_byty * 1.2 / 5) * 5)
 
     cena_fve     = kwp_byty * cena_kwp_byty
     cena_bat_tot = bat_byty * 15000
