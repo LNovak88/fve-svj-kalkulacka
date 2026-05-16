@@ -383,8 +383,22 @@ def simulate(vstup: SimulaceVstup):
     sp_nt15     = e._gen_profil_nt(sp_by_nt, vstup.sazba)
     sp_sp15     = e._gen_profil_vt(sp_sp, e._TDD4, uprava)   # jen SP (pro model spolecne)
 
-    sim = e.simuluj(vyroba_15, sp_vt15, sp_nt15,
-                    bat=vstup.bat, model=vstup.model, edc_ztrata=vstup.edc_ztrata)
+    # Pro SP model simulujeme jen SP spotřebu a menší FVE
+    if vstup.model == "spolecne":
+        sp_kwp_main = max(9.9, round(vstup.sp_sp_mwh * 1000 * 0.75 / 1050 * 2) / 2)
+        if abs(sp_kwp_main - vstup.kwp) > 0.1:
+            # Přepočítat výrobu pro SP kWp
+            vyroba_hod_sp, err_sp = e.pvgis(vstup.lat, vstup.lon, sp_kwp_main, vstup.sklon, vstup.azimut)
+            if err_sp:
+                vyroba_hod_sp = e._gen_vyroba_fallback(sp_kwp_main, vstup.sklon, vstup.azimut if vstup.azimut < 900 else 0)
+            vyroba_15_main = e._interpoluj(vyroba_hod_sp)
+        else:
+            vyroba_15_main = vyroba_15
+        sim = e.simuluj(vyroba_15_main, sp_sp15, np.zeros(len(sp_sp15), dtype=float),
+                        bat=0, model="edc", edc_ztrata=vstup.edc_ztrata)
+    else:
+        sim = e.simuluj(vyroba_15, sp_vt15, sp_nt15,
+                        bat=vstup.bat, model=vstup.model, edc_ztrata=vstup.edc_ztrata)
 
     cvt = e.CENY_VT.get(vstup.dist, e.CENY_VT["ČEZ Distribuce"]).get(vstup.sazba, 6610) / 1000
     cnt_sazby = e.CENY_NT.get(vstup.dist, e.CENY_NT["ČEZ Distribuce"])
@@ -420,8 +434,6 @@ def simulate(vstup: SimulaceVstup):
 
     # SP kWp — malá FVE jen pro společné prostory
     sp_kwp = max(9.9, round(vstup.sp_sp_mwh * 1000 * 0.75 / 1050 * 2) / 2)
-
-    import numpy as np
 
     srovnani = {}
     for mk in ["edc", "edc_bez_bat", "jom", "spolecne"]:
