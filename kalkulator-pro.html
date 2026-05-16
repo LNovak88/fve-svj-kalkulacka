@@ -1923,11 +1923,13 @@ function renderResults(R){
   const uspora_byt_mes = Math.round(uspora1/bytu/12);
   const nav    = cf.findIndex(r=>r.kumulativni>=0)+1 || null;
   const kum25  = cf[24]?.kumulativni || 0;
-  const uver   = Math.min(inv*0.8, bytu*350000);  // stejně jako backend
-  const splatnost = D.splatnost || 15;
-  const nzu_spl_rok = Math.round(uver/splatnost);
-  const nzu_spl_byt_mes = Math.round(nzu_spl_rok/bytu/12);
-  const splatka_mes = nzu_spl_byt_mes; // splátka na byt za měsíc
+  // uver z backendu — backend zná vlastni_pct a správně počítá uver
+  const uver   = R.uver || Math.round(inv * (1 - (D.vlastni_pct||0)/100));
+  const vlastni_vklad = R.vlastni_vklad || (inv - uver);
+  const splatnost = R.splatnost || parseInt(D.splatnost) || 15;
+  const nzu_spl_rok = R.splatka_rok || Math.round(uver/splatnost);
+  const nzu_spl_byt_mes = R.splatka_byt_mes || Math.round(nzu_spl_rok/bytu/12);
+  const splatka_mes = nzu_spl_byt_mes;
 
   // Přehled na byt
   const bytUsporaMes = uspora_byt_mes;
@@ -2185,7 +2187,7 @@ function renderResults(R){
         <div class="byt-card-title">💳 Finanční účast</div>
         <div class="byt-row"><span class="byt-row-l">Podíl na investici</span><span class="byt-row-v">${Math.round(inv/bytu).toLocaleString('cs-CZ')} Kč</span></div>
         <div class="byt-row"><span class="byt-row-l">NZÚ bezúročný úvěr</span><span class="byt-row-v">${Math.round(uver/bytu).toLocaleString('cs-CZ')} Kč</span></div>
-        <div class="byt-row"><span class="byt-row-l">Vlastní vklad bytu</span><span class="byt-row-v">${Math.round((inv-uver)/bytu).toLocaleString('cs-CZ')} Kč</span></div>
+        <div class="byt-row"><span class="byt-row-l">Vlastní vklad bytu</span><span class="byt-row-v">${Math.round(vlastni_vklad/bytu).toLocaleString('cs-CZ')} Kč</span></div>
         <div class="byt-row"><span class="byt-row-l">Měsíční splátka NZÚ</span><span class="byt-row-v" style="color:var(--rose)">−${nzu_spl_byt_mes.toLocaleString('cs-CZ')} Kč/měs</span></div>
       </div>
       <div class="byt-card ${bytCisty>=0?'positive':'negative'}">
