@@ -97,6 +97,7 @@ def pvgis(
 # ================================================================
 
 class RecommendVstup(BaseModel):
+    model_config = {"extra": "ignore"}
     pocet_bytu:       int        = Field(..., gt=0, le=500)
     pocet_vchodu:     int        = Field(1,   ge=1, le=20)
     pocet_pater:      int        = Field(4,   ge=1, le=30)
@@ -327,6 +328,7 @@ def recommend(vstup: RecommendVstup):
 # ================================================================
 
 class SimulaceVstup(BaseModel):
+    model_config = {"extra": "ignore"}  # ignorovat neznámá pole (zpětná kompatibilita)
     lat:    float = Field(...)
     lon:    float = Field(...)
     kwp:    float = Field(..., gt=0)
