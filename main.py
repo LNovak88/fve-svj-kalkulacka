@@ -428,9 +428,24 @@ def simulate(vstup: SimulaceVstup):
     dist         = vstup.dist
     sazba        = vstup.sazba
     stay         = e.STAY_PLAT.get(dist, 163)
-    cena_fve     = vstup.kwp * vstup.cena_kwp
-    cena_bat_tot = vstup.bat * 15000  # 15 000 Kč/kWh baterie
     vchod_extra  = max(0, vstup.pocet_vchodu - 1) * 30000
+
+    # Pro srovnání EDC/PM vždy použít kWp dimenzované na byty (ne SP kWp)
+    # Pokud uživatel vybral SP model, odhadneme kWp pro byty z celkové spotřeby
+    sp_sp     = vstup.sp_sp_mwh * 1000
+    sp_by_vt_celk = vstup.sp_by_vt_mwh * 1000 * pb
+    if vstup.model == "spolecne":
+        # Odhadnout kWp pro byty (75% celkové spotřeby)
+        kwp_byty = max(9.9, round((sp_by_vt_celk + sp_sp) * 0.75 / 1050 * 2) / 2)
+        bat_byty = max(10.0, round(kwp_byty * 1.2 / 5) * 5)
+        cena_kwp_byty = e.cena_kwp(kwp_byty)
+    else:
+        kwp_byty = vstup.kwp
+        bat_byty = vstup.bat
+        cena_kwp_byty = vstup.cena_kwp
+
+    cena_fve     = kwp_byty * cena_kwp_byty
+    cena_bat_tot = bat_byty * 15000
 
     # SP kWp — malá FVE jen pro společné prostory
     sp_kwp = max(9.9, round(vstup.sp_sp_mwh * 1000 * 0.75 / 1050 * 2) / 2)
@@ -475,15 +490,25 @@ def simulate(vstup: SimulaceVstup):
             vyroba_sp_15 = e._interpoluj(vyroba_sp_hod)
             sm = e.simuluj(vyroba_sp_15, sp_sp15, np.zeros(len(sp_sp15), dtype=float),
                            bat=0, model="edc", edc_ztrata=vstup.edc_ztrata)
-        elif mk == "jom":
-            sm = e.simuluj(vyroba_15, sp_vt15, sp_nt15,
-                           bat=vstup.bat, model="jom", edc_ztrata=0.0)
-        elif mk == "edc_bez_bat":
-            sm = e.simuluj(vyroba_15, sp_vt15, sp_nt15,
-                           bat=0, model="edc", edc_ztrata=vstup.edc_ztrata)
-        else:  # edc
-            sm = e.simuluj(vyroba_15, sp_vt15, sp_nt15,
-                           bat=vstup.bat, model="edc", edc_ztrata=vstup.edc_ztrata)
+        else:
+            # Pokud uživatel vybral SP model, pro EDC/PM potřebujeme výrobu pro kWp_byty
+            if vstup.model == "spolecne" and abs(kwp_byty - vstup.kwp) > 0.5:
+                vyroba_byty_hod, err_b = e.pvgis(vstup.lat, vstup.lon, kwp_byty, vstup.sklon, vstup.azimut)
+                if err_b:
+                    vyroba_byty_hod = e._gen_vyroba_fallback(kwp_byty, vstup.sklon, vstup.azimut if vstup.azimut < 900 else 0)
+                vyroba_byty_15 = e._interpoluj(vyroba_byty_hod)
+            else:
+                vyroba_byty_15 = vyroba_15  # stejné kWp — použít existující výrobu
+
+            if mk == "jom":
+                sm = e.simuluj(vyroba_byty_15, sp_vt15, sp_nt15,
+                               bat=bat_byty, model="jom", edc_ztrata=0.0)
+            elif mk == "edc_bez_bat":
+                sm = e.simuluj(vyroba_byty_15, sp_vt15, sp_nt15,
+                               bat=0, model="edc", edc_ztrata=vstup.edc_ztrata)
+            else:  # edc
+                sm = e.simuluj(vyroba_byty_15, sp_vt15, sp_nt15,
+                               bat=bat_byty, model="edc", edc_ztrata=vstup.edc_ztrata)
 
         cfm = e.cashflow(
             vl_vt=sm["vlastni_vt_kwh"], vl_nt=sm["vlastni_nt_kwh"],
@@ -509,7 +534,8 @@ def simulate(vstup: SimulaceVstup):
             "invest":            round(invest_mk),
             "mericu":            round(mericu_mk),
             "sp_kwp":            sp_kwp if mk == "spolecne" else None,
-            "bat":               bat_mk,
+            "kwp":               sp_kwp if mk == "spolecne" else kwp_byty,
+            "bat":               0 if mk in ("edc_bez_bat","spolecne") else bat_byty,
             "uspora_rok1":       round(uspora1_m),
             "uspora_jistic_rok": round(jist_mk),
             "nav":               nav_m,
