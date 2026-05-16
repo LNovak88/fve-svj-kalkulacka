@@ -461,7 +461,13 @@ def simulate(vstup: SimulaceVstup):
         mericu_mk = (pb * 10000 + 75000) if mk == "jom" else 0
         mericu_mk += vchod_extra if mk not in ("spolecne",) else 0
 
-        bat_mk = vstup.bat if mk not in ("edc_bez_bat", "spolecne") else 0.0
+        # bat_mk: pro EDC s bat vždy bat_byty (doporučená), pro ostatní 0
+        if mk == "edc":
+            bat_mk = bat_byty
+        elif mk == "jom":
+            bat_mk = bat_byty  # PM také s baterií
+        else:
+            bat_mk = 0.0  # edc_bez_bat a spolecne bez baterie
         cena_bat_mk = bat_mk * 15000
 
         if mk == "spolecne":
