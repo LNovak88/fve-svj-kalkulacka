@@ -1982,15 +1982,12 @@ function renderResults(R){
   }).join('');
 
   // Scénáře — z backendu
-  console.log('DEBUG citlivost:', R.scenare, 'vlastni_vklad:', R.vlastni_vklad, 'uver:', R.uver, 'splatka_rok:', R.splatka_rok);
   const scenare = (R.scenare||[]).map(s=>{
-    const navColor = s.nav&&s.nav<=12?'var(--green)':s.nav&&s.nav<=18?'var(--amber)':'var(--rose)';
-    const uspora25 = s.bezfve25 > 0
-      ? `<div style="font-size:11px;color:var(--text-2);margin-top:6px">Bez FVE zaplatíte za 25 let o <strong style="color:var(--green)">${Math.round(s.bezfve25 - (s.bezfve25 - s.kum25)).toLocaleString('cs-CZ')} Kč více</strong></div>`
-      : '';
+    const navColor = s.nav&&s.nav<=10?'var(--green)':s.nav&&s.nav<=16?'var(--amber)':'var(--rose)';
+    const navTxt = !s.nav ? '>25 let' : s.nav === 1 ? 'od 1. roku ✅' : s.nav + ' let';
     return `<div class="scenar-card">
       <div class="scenar-title">${s.label}</div>
-      <div class="scenar-v" style="color:${navColor}">${s.nav?s.nav:'>25'} <span style="font-size:13px;font-weight:400">let</span></div>
+      <div class="scenar-v" style="color:${navColor}">${navTxt}</div>
       <div class="scenar-sub">cashflow návratnost</div>
       <div style="font-size:14px;font-weight:700;color:${s.kum25>=0?'var(--green)':'var(--rose)'};margin-top:8px">${s.kum25>=0?'+':''}${Math.round(s.kum25).toLocaleString('cs-CZ')} Kč</div>
       <div class="scenar-sub">kumulativně 25 let</div>
@@ -2015,7 +2012,7 @@ function renderResults(R){
     </div>
     <div class="kpi">
       <div class="kpi-l">Výkon FVE · Baterie · Výroba</div>
-      <div class="kpi-v">${R.kwp} <span style="font-size:13px;font-weight:400">kWp</span>${R.bat>0?' · '+R.bat+' kWh':''}</div>
+      <div class="kpi-v">${R.kwp} <span style="font-size:13px;font-weight:400">kWp</span>${R.bat>0?' · '+R.bat+' <span style="font-size:13px;font-weight:400">kWh</span>':''}</div>
       <div class="kpi-u">${vyroba} MWh/rok · ${mira_vs} % vlastní spotřeba</div>
     </div>
     <div class="kpi amber">
