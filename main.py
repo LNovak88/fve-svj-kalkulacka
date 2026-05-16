@@ -359,8 +359,9 @@ class SimulaceVstup(BaseModel):
     cena_pretoky: float = Field(0.95, ge=0)
     bonus_nzu:    float = Field(0.0,  ge=0)
     uspora_jistic: float = Field(0.0, ge=0)
-    jistic_sp_a:  int   = Field(25,   ge=0)      # ampery jističe SP (pro PM výpočet)
-    zarizeni:     list  = Field(default_factory=lambda: ["zaklad"])  # spotřebiče (pro PM výpočet)
+    jistic_sp_a:  int   = Field(25,   ge=0)
+    zarizeni:     list  = Field(default_factory=lambda: ["zaklad"])
+    bat_doporucena: float = Field(0.0, ge=0)  # doporučená bat pro srovnání EDC/PM
 
 
 @app.post("/simulate", tags=["kalkulace"])
@@ -442,9 +443,11 @@ def simulate(vstup: SimulaceVstup):
         kwp_byty      = vstup.kwp
         cena_kwp_byty = vstup.cena_kwp
 
-    # Doporučená baterie pro EDC = kWp × 1.0–1.5 (střed = ×1.2), min 10 kWh
-    # Pokud uživatel vybral variantu s baterií, použij ji; jinak odhadni
-    if vstup.bat > 0:
+    # Doporučená baterie pro srovnání EDC/PM
+    # Pořadí priority: bat_doporucena (z frontendu) > vstup.bat (pokud > 0) > odhad kWp×1.2
+    if vstup.bat_doporucena > 0:
+        bat_byty = vstup.bat_doporucena
+    elif vstup.bat > 0:
         bat_byty = vstup.bat
     else:
         bat_byty = max(10.0, round(kwp_byty * 1.2 / 5) * 5)
