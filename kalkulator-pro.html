@@ -1335,8 +1335,8 @@ function s6(){
     var cisty = s.cisty_byt || 0;
     var border = cfg.best ? '2px solid var(--blue);box-shadow:0 0 0 4px rgba(27,108,168,.08)' : '1px solid var(--border)';
     var badge = ''; // Žádný badge — uživatel si vybírá sám
-    var kwpCard = cfg.key === 'spolecne' ? (s.sp_kwp||9.9) : kwp;
-    var batCard = cfg.key === 'edc_bez_bat' ? 0 : cfg.key === 'spolecne' ? 0 : bat;
+    var kwpCard = s.kwp || (cfg.key === 'spolecne' ? (s.sp_kwp||9.9) : kwp);
+    var batCard = s.bat != null ? s.bat : (cfg.key === 'edc_bez_bat' ? 0 : cfg.key === 'spolecne' ? 0 : bat);
     var invCard = s.invest || 0;
 
     return '<div style="position:relative;border:'+border+';border-radius:var(--r);padding:22px 16px 16px;background:var(--white)">'
@@ -1376,7 +1376,7 @@ function s6(){
         notes:'✅ Nejnižší investice<br>✅ Jednoduchá instalace<br>❌ Více přetoků do sítě<br>❌ Nižší využití vlastní výroby',
         noteBg:'var(--green-l)',noteColor:'#1A5C32'})
     + varCard({key:'jom',best:false,icon:'📊',name:'PM — podružné měření',
-        desc:'Jeden hlavní elektroměr pro dům, podružné měřiče na byty. SVJ platí jako podnikatel.',
+        desc:'Jeden hlavní elektroměr pro dům, podružné měřiče na byty. SVJ přechází na C tarif distribuce.',
         notes:'✅ Nejvyšší využití vlastní výroby<br>⚠️ C tarif = dražší jistič domu<br>⚠️ Složitější administrativa SVJ<br>⚠️ Extra investice měřičů: +'+(srv.jom&&srv.jom.mericu?srv.jom.mericu.toLocaleString('cs-CZ'):'-')+' Kč',
         noteBg:'var(--amber-l)',noteColor:'#92400E'})
     + varCard({key:'spolecne',best:false,icon:'🏛️',name:'Jen společné prostory',
@@ -1447,7 +1447,7 @@ function s7(){
       + '<span style="color:#166534;font-weight:700">✅ Úspora/měs: <strong>' + uMes2 + ' Kč</strong></span>'
       + '<span style="color:#166534;font-weight:700">✅ Úspora/rok: <strong>' + uRok2 + ' Kč</strong></span>'
       + '</div>'
-      + '<div style="font-size:12px;color:#92400E;margin-top:8px">🔧 Náklady měřiče: <strong>' + mer2 + ' Kč</strong> — zahrnuto v investici &nbsp;·&nbsp; ⚠️ C tarif = SVJ se stává podnikatelem</div>'
+      + '<div style="font-size:12px;color:#92400E;margin-top:8px">🔧 Náklady měřiče: <strong>' + mer2 + ' Kč</strong> — zahrnuto v investici &nbsp;·&nbsp; ⚠️ C tarif = SVJ přechází na C tarif</div>'
       + '</div>';
   }
 
@@ -2187,7 +2187,7 @@ function renderResults(R){
         <div class="model-card-icon">📊</div>
         <div class="model-card-name">PM — podružné měření</div>
         <div style="font-size:11px;color:var(--text-2);margin-bottom:8px">${pmS.kwp||R.kwp} kWp · ${(pmS.bat||0)>0?(pmS.bat||0)+' kWh bat':'bez bat'} · C tarif jistič</div>
-        <div class="model-card-sub">Jeden hlavní elektroměr pro celý dům, podružné měřiče na byty. SVJ platí jako podnikatel.</div>
+        <div class="model-card-sub">Jeden hlavní elektroměr pro celý dům, podružné měřiče na byty. SVJ přechází na C tarif distribuce.</div>
         <div class="model-kpi"><span class="model-kpi-l">Investice FVE + měřiče</span><span class="model-kpi-v">${pmInv.toLocaleString('cs-CZ')} Kč</span></div>
         <div class="model-kpi"><span class="model-kpi-l">Roční úspora</span><span class="model-kpi-v green">${Math.round(pmUspora).toLocaleString('cs-CZ')} Kč</span></div>
         <div class="model-kpi"><span class="model-kpi-l">Návratnost</span><span class="model-kpi-v">${pmNav?pmNav+' let':'>25 let'}</span></div>
