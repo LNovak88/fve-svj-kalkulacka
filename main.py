@@ -506,29 +506,26 @@ def simulate(vstup: SimulaceVstup):
     # ================================================================
     scenare = []
     spotreba_kwh = (vstup.sp_by_vt_mwh * 1000 * pb) + (vstup.sp_sp_mwh * 1000) + (vstup.sp_by_nt_mwh * 1000 * pb)
-    for rust_sc, label in [(1.0, "😐 Pesimistický +1 %/rok"),
-                            (3.0, "📊 Realistický +3 %/rok"),
-                            (6.0, "🔥 Krizový +6 %/rok")]:
-        # Kumulativ startuje od záporné celé investice (vlastní vklad)
-        # Splátky NZÚ úvěru jsou náklad, úspory jsou příjem
-        # Návratnost = kdy kumulativ přejde do kladných čísel
-        kum_sc    = -vlastni  # vlastní vklad SVJ
+    for rust_sc, label in [(1.0, "📉 Pomalý růst cen EE +1 %/rok"),
+                            (3.0, "📊 Realistický scénář +3 %/rok"),
+                            (6.0, "🔥 Rychlý růst cen EE +6 %/rok")]:
+        # Kumulativ = čistý cashflow SVJ
+        # Startuje od záporného vlastního vkladu (co SVJ zaplatí z kapsy)
+        # Splátky NZÚ jsou výdaj, úspory jsou příjem
+        # Návratnost = kdy kumulativ přejde do kladna (vlastní vklad se vrátil)
+        kum_sc    = -vlastni if vlastni > 0 else -vstup.cena_invest  # min. záporný start = celá investice
         nav_sc    = None
         bezfve_25 = 0.0
         for rok in range(1, 26):
             c = (1 + rust_sc / 100) ** (rok - 1)
             d = (1 - vstup.deg_pan / 100) ** (rok - 1)
-            # Roční úspora s FVE
             u = (sim["vlastni_vt_kwh"] * d * cvt * c
                  + sim["vlastni_nt_kwh"] * d * cnt * c
                  + sim["pretoky_kwh"]    * d * (vstup.cena_pretoky / 1000) * c)
-            # Splátka NZÚ úvěru (fixní, bez úroku)
             s = uver / vstup.splatnost if rok <= vstup.splatnost else 0
-            cisty = u - s
-            kum_sc += cisty
+            kum_sc += u - s
             if kum_sc >= 0 and nav_sc is None:
                 nav_sc = rok
-            # Náklady na elektřinu bez FVE (rostou s cenou)
             bezfve_25 += spotreba_kwh * cvt * c
         scenare.append({
             "label":    label,
