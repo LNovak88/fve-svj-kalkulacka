@@ -669,7 +669,7 @@ async function updateLimitBar(){
 // ================================================================
 // NAVIGACE
 // ================================================================
-const LABELS = ['Lokalita','Budova','Investice','Domácnosti','Střecha','Varianta','Ekonomika','Výsledky'];
+const LABELS = ['Lokalita','Budova','Investice','Domácnosti','Střecha','Varianta','Výsledky'];
 const TOTAL_STEPS = LABELS.length;
 
 function renderDots(){
@@ -699,7 +699,7 @@ function goBack(){ if(cur>0){ cur--; render(); window.scrollTo(0,0); } }
 function render(){
   renderDots();
   document.getElementById('progBar').style.width = Math.round((cur+1)/TOTAL_STEPS*100) + '%';
-  const steps = [s1,s2,s3,s4,s5,s6,s7,s8];
+  const steps = [s1,s2,s3,s4,s5,s6,s7];
   document.getElementById('content').innerHTML = steps[cur]();
   afterRender();
 }
@@ -708,7 +708,7 @@ function afterRender(){
   const lok = document.getElementById('fLok');
   if(lok){ lok.addEventListener('input', onLokInput); lok.addEventListener('blur', ()=>setTimeout(()=>{const l=document.getElementById('acList');if(l)l.classList.remove('open');},200)); }
   if(cur===3) setTimeout(drawProfile, 50);
-  if(cur===7 && RES) setTimeout(drawAllCharts, 150);
+  if(cur===6 && RES) setTimeout(drawAllCharts, 150);
 }
 
 // ================================================================
@@ -1274,7 +1274,7 @@ function vybratVariantu(model, kwp, bat, inv){
   D._rust_cen_edited = false;
   D._sklon_edited = false;
   D._azimut_edited = false;
-  cur = 6; render(); window.scrollTo(0,0);
+  goToResults();
 }
 
 function s6(){
@@ -1430,63 +1430,45 @@ function _nzuInfoK7(){
 }
 
 // ================================================================
-// KROK 7 — Ekonomika + spuštění výpočtu
+// KROK 7 — Výsledky (s možností úpravy parametrů)
 // ================================================================
 function s7(){
   var kwp = parseFloat(D.kwp)||15;
   var bat = parseFloat(D.bat)||0;
   var inv = parseFloat(D.cena_invest)||Math.round(kwp*30000);
-  var modelNazev = D.model==='edc' ? 'EDC — komunitní sdílení' : D.model==='jom' ? 'PM — podružné měření' : 'Jen společné prostory';
+  var modelNazev = {edc:'EDC — komunitní sdílení s baterií', edc_bez_bat:'EDC — komunitní sdílení', jom:'PM — podružné měření', spolecne:'Jen společné prostory'}[D.model] || 'EDC';
+  var modelIkona = {edc:'⭐', edc_bez_bat:'🌐', jom:'📊', spolecne:'🏛️'}[D.model] || '⭐';
 
-  // PM info box — zobrazit jen pro PM
-  var pmInfoHtml2 = '';
-  if(D.model === 'jom' && serverRec && serverRec.uspora_pm_rok){
-    var uMes2 = (serverRec.uspora_pm_mes||0).toLocaleString('cs-CZ');
-    var uRok2 = (serverRec.uspora_pm_rok||0).toLocaleString('cs-CZ');
-    var mer2  = (serverRec.cena_mericu_pm||0).toLocaleString('cs-CZ');
-    var jpm2  = serverRec.jistic_pm_str || '—';
-    var jpmC2 = (serverRec.jistic_pm_cena_mes||0).toLocaleString('cs-CZ');
-    pmInfoHtml2 = '<div style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:var(--rm);padding:12px 14px;margin-bottom:12px;font-size:13px">'
-      + '<div style="font-weight:600;color:#92400E;margin-bottom:6px">⚡ PM — podružné měření: co to znamená pro váš dům</div>'
-      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px 16px;font-size:12px;color:#78350F">'
-      + '<span>🔌 Nový jistič domu: <strong>' + jpm2 + '</strong> (C tarif)</span>'
-      + '<span>💰 Cena jističe: <strong>' + jpmC2 + ' Kč/měs</strong></span>'
-      + '<span style="color:#166534;font-weight:700">✅ Úspora/měs: <strong>' + uMes2 + ' Kč</strong></span>'
-      + '<span style="color:#166534;font-weight:700">✅ Úspora/rok: <strong>' + uRok2 + ' Kč</strong></span>'
-      + '</div>'
-      + '<div style="font-size:12px;color:#92400E;margin-top:8px">🔧 Náklady měřiče: <strong>' + mer2 + ' Kč</strong> — zahrnuto v investici &nbsp;·&nbsp; ⚠️ C tarif = SVJ přechází na C tarif</div>'
-      + '</div>';
-  }
-
-  // Shrnutí vybrané varianty
-  var shrnuti = '<div style="background:var(--blue-ll);border:1px solid #C8DFF2;border-radius:var(--rm);padding:12px 16px;margin-bottom:14px;font-size:13px;color:#1B5C8A">'
-    + '<div style="font-weight:700;margin-bottom:8px">📋 Zvolená varianta: ' + modelNazev + '</div>'
-    + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px 16px;font-size:12px">'
-    + '<span>⚡ FVE: <strong>' + kwp + ' kWp</strong></span>'
-    + '<span>🔋 Baterie: <strong>' + (bat>0?bat+' kWh':'bez bat.') + '</strong></span>'
-    + '<span>💰 Investice: <strong>' + Math.round(inv).toLocaleString('cs-CZ') + ' Kč</strong></span>'
+  // Shrnutí nahoře — zvolená varianta
+  var shrnuti = '<div style="display:flex;align-items:center;gap:12px;background:var(--blue-ll);border:1px solid #C8DFF2;border-radius:var(--rm);padding:12px 16px;margin-bottom:14px">'
+    + '<div style="font-size:28px;flex-shrink:0">' + modelIkona + '</div>'
+    + '<div style="flex:1;min-width:0">'
+    + '<div style="font-size:13px;font-weight:700;color:var(--navy)">' + modelNazev + '</div>'
+    + '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:6px;font-size:12px;color:#1B5C8A">'
+    + '<span>⚡ <strong>' + kwp + ' kWp</strong></span>'
+    + '<span>🔋 <strong>' + (bat>0?bat+' kWh':'bez baterie') + '</strong></span>'
+    + '<span>💰 <strong>' + Math.round(inv).toLocaleString('cs-CZ') + ' Kč</strong></span>'
     + '</div>'
-    + '<div style="font-size:11px;color:#4A7BA8;margin-top:6px">Všechny hodnoty můžete upravit níže před spuštěním výpočtu.</div>'
+    + '</div>'
+    + '<button onclick="goBack()" style="flex-shrink:0;background:none;border:1px solid #C8DFF2;border-radius:var(--rm);padding:6px 12px;font-size:12px;color:var(--blue);cursor:pointer;font-family:inherit">← Změnit variantu</button>'
     + '</div>';
 
+  // Panel úprav — skrytý za odkazem
   var DIST_sel = DISTRIBUTORI.map(function(d){return '<option'+(D.dist===d?' selected':'')+'>'+ d+'</option>';}).join('');
+  var azimutPopis = '<div style="font-size:11px;color:var(--text-2);margin-bottom:4px">Jih = 0° · Východ = −90° · Západ = 90° · 999 = Vých.+Záp. · 998 = JV+JZ</div>';
 
-  // Popis azimutů
-  var azimutPopis = '<div style="font-size:11px;color:var(--text-2);margin-bottom:4px">Jih = 0° · Východ = −90° · Západ = 90° · 999 = Východ+Západ · 998 = JV+JZ</div>';
-
-  return '<div class="card">'
-    + '<h2 class="ctitle">Nastavte parametry a spusťte výpočet <span class="badge b-pro">PRO: editovatelné</span></h2>'
-    + '<p class="csub">Upravte hodnoty dle skutečné nabídky instalatéra a faktury od dodavatele elektřiny. Pak spusťte přesnou simulaci.</p>'
-    + shrnuti
-    + pmInfoHtml2
+  var panelUprav = '<div id="panelUprav" style="display:none">'
+    + '<div style="background:#FFFBEB;border:1px solid #FCD34D;border-radius:var(--rm);padding:14px;margin-bottom:12px">'
+    + '<div style="font-size:12px;font-weight:600;color:#92400E;margin-bottom:12px">⚙️ Úprava parametrů — po změně se výsledky přepočítají</div>'
 
     + '<div class="expert-section">'
     + '<div class="expert-section-title">⚡ FVE systém</div>'
     + '<div class="g3" style="gap:10px;margin-bottom:10px">'
     + '<div><label>Výkon FVE (kWp)</label><div class="pro-input-wrap"><input type="number" id="sv_kwp" value="' + kwp + '" min="1" max="500" step="0.5" oninput="D.kwp=+this.value;D._kwp_user_edited=true"><div class="pro-edit-ico">✏️</div></div></div>'
     + '<div><label>Baterie (kWh, 0 = bez)</label><div class="pro-input-wrap"><input type="number" id="sv_bat" value="' + bat + '" min="0" max="500" step="5" oninput="D.bat=+this.value;D._bat_user_edited=true"><div class="pro-edit-ico">✏️</div></div></div>'
-    + '<div><label>Model sdílení</label><select onchange="D.model=this.value;D._model_edited=true;render()">'
-    + '<option'+(D.model==='edc'?' selected':'')+' value="edc">EDC (komunitní)</option>'
+    + '<div><label>Model sdílení</label><select onchange="D.model=this.value;D._model_edited=true">'
+    + '<option'+(D.model==='edc'?' selected':'')+' value="edc">EDC s baterií</option>'
+    + '<option'+(D.model==='edc_bez_bat'?' selected':'')+' value="edc_bez_bat">EDC bez baterie</option>'
     + '<option'+(D.model==='jom'?' selected':'')+' value="jom">PM — podružné měření</option>'
     + '<option'+(D.model==='spolecne'?' selected':'')+' value="spolecne">Jen spol. prostory</option>'
     + '</select></div>'
@@ -1508,10 +1490,6 @@ function s7(){
     + '<div><label>Růst cen elektřiny (%/rok)</label><div class="pro-input-wrap"><input type="number" value="' + (D.rust_cen||3) + '" min="0" max="15" step="0.5" oninput="D.rust_cen=+this.value;D._rust_cen_edited=true"><div class="pro-edit-ico">✏️</div></div></div>'
     + '<div><label>Výkupní cena přetoků (Kč/kWh)</label><div class="pro-input-wrap"><input type="number" value="' + (D.cena_pretoky||0.95) + '" min="0" max="5" step="0.1" oninput="D.cena_pretoky=+this.value"><div class="pro-edit-ico">✏️</div></div></div>'
     + '</div>'
-    + '<div><label>Dotace / jiná podpora (Kč)</label>'
-    + '<div style="font-size:11px;color:var(--text-2);margin-bottom:4px">Jiné dotace snižující investici (např. OPŽP). Podpora pro zranitelné domácnosti se zde nezadává — nemění cashflow SVJ.</div>'
-    + '<div class="pro-input-wrap"><input type="number" value="' + (D.bonus_nzu||0) + '" min="0" max="5000000" step="10000" oninput="D.bonus_nzu=+this.value"><div class="pro-edit-ico">✏️</div></div></div>'
-    + _nzuInfoK7()
     + '</div>'
 
     + '<div class="expert-section">'
@@ -1526,13 +1504,68 @@ function s7(){
     + '</div>'
     + '</div>'
 
-    + '<div class="tip">💡 Hodnoty ze složenky nebo faktury značně zpřesní výsledek. Zejména spotřeba bytu a cena elektřiny.</div>'
+    + '<div style="margin-top:12px;display:flex;gap:10px">'
+    + '<button class="btn-prim" onclick="prepocitat()" style="flex:1">⚡ Přepočítat s novými hodnotami</button>'
+    + '<button onclick="zavritPanel()" style="padding:10px 16px;border:1px solid var(--border);border-radius:var(--rm);background:var(--white);color:var(--text-2);cursor:pointer;font-family:inherit;font-size:13px">Zrušit</button>'
     + '</div>'
-    + '<div class="nav"><button class="btn-out" onclick="goBack()">← Zpět</button><button class="btn-prim" id="btnVypocitat" onclick="goToResults()">⚡ Spustit výpočet →</button></div>';
+    + '</div>'
+    + '</div>';
+
+  // Výsledková část
+  var vysledky = '<div style="background:var(--blue-ll);border:1px solid #C8DFF2;border-radius:var(--rm);padding:12px;margin-bottom:10px">'
+    + '<div style="font-size:12px;color:#4A7BA8;font-weight:500" id="pvgisStatus">'
+    + '<div class="pvgis-loading"><div class="pvgis-spinner"></div><span>Spouštím simulaci přes PVGIS EU JRC…</span></div>'
+    + '</div>'
+    + '</div>'
+    + '<div id="resBody">'
+    + '<div style="text-align:center;padding:32px;color:var(--text-2);font-size:13px">'
+    + '<div class="pvgis-spinner" style="margin:0 auto 12px;width:28px;height:28px;border-width:3px"></div>'
+    + 'Výpočet probíhá — může trvat 10–30 vteřin…'
+    + '</div>'
+    + '</div>';
+
+  return '<div class="card" style="background:var(--blue-ll);border-color:#C8DFF2">'
+    + '<h2 class="ctitle">Výsledky přesné analýzy FVE</h2>'
+    + '<p class="csub">Simulace · PVGIS TMY · OTE TDD profily · Ceníky 2026</p>'
+    + shrnuti
+    + panelUprav
+    + vysledky
+    + '</div>'
+    + '<div class="nav" style="margin-top:12px">'
+    + '<button class="btn-out" onclick="otevrítPanel()">⚙️ Upravit parametry</button>'
+    + '<button class="btn-pdf" id="btnPdf" onclick="exportPdf()" disabled>📄 Exportovat PDF</button>'
+    + '</div>';
+}
+
+function otevrítPanel(){
+  var p = document.getElementById('panelUprav');
+  if(p){ p.style.display='block'; p.scrollIntoView({behavior:'smooth',block:'start'}); }
+}
+
+function zavritPanel(){
+  var p = document.getElementById('panelUprav');
+  if(p) p.style.display='none';
+}
+
+async function prepocitat(){
+  var limitOk = await checkLimit();
+  if(!limitOk){
+    alert('Dosáhli jste limitu ' + LIMIT_VYPOCTU + ' výpočtů za ' + LIMIT_HODIN + ' hodin.');
+    return;
+  }
+  zavritPanel();
+  // Reset status a resBody
+  var ps = document.getElementById('pvgisStatus');
+  var rb = document.getElementById('resBody');
+  var bp = document.getElementById('btnPdf');
+  if(ps) ps.innerHTML = '<div class="pvgis-loading"><div class="pvgis-spinner"></div><span>Přepočítávám…</span></div>';
+  if(rb) rb.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text-2);font-size:13px"><div class="pvgis-spinner" style="margin:0 auto 12px;width:28px;height:28px;border-width:3px"></div>Výpočet probíhá…</div>';
+  if(bp) bp.disabled = true;
+  await spustVypocet();
 }
 
 // ================================================================
-// KROK 8 — Výsledky (volá FastAPI /simulate)
+// KROK 8 — ZRUŠEN — nahrazen s7() výše
 // ================================================================
 async function goToResults(){
   const ok = await checkLimit();
@@ -1544,60 +1577,12 @@ async function goToResults(){
     if(!confirm('Nezadali jste adresu — výpočet použije průměr ČR místo přesných PVGIS dat. Pokračovat?')) return;
     D.lat = 49.75; D.lon = 15.5;
   }
-
-  // Přeskočit nový výpočet pokud SROV existuje a parametry se nezměnily
-  // Krok 6 a 8 volají stejný backend se stejnými vstupy
-  const parametryZmeny = D._kwp_user_edited || D._bat_user_edited || D._inv_user_edited
-    || D._vlastni_pct_edited || D._splatnost_edited || D._rust_cen_edited
-    || D._sklon_edited || D._azimut_edited || D._model_edited;
-
-  if(SROV && !parametryZmeny){
-    // Použít výsledek z kroku 6 přímo
-    RES = {
-      ...SROV,
-      cena_invest: SROV.cena_invest || parseFloat(D.cena_invest),
-      bytu: D.bytu, lokace: D.lokace, dist: D.dist, sazba: D.sazba_byt,
-    };
-    cur = 7; render(); window.scrollTo(0,0);
-    setTimeout(()=>{
-      const ps = document.getElementById('pvgisStatus');
-      if(ps) ps.innerHTML = '<div style="font-size:12px;color:var(--green);padding:4px 0">✅ Výsledky načteny — parametry nebyly změněny od výběru varianty</div>';
-      const rb = document.getElementById('resBody');
-      if(rb){ rb.innerHTML = renderResults(RES); setTimeout(drawAllCharts, 150); }
-      const bp = document.getElementById('btnPdf');
-      if(bp) bp.disabled = false;
-    }, 50);
-    return;
-  }
-  cur = 7; render(); window.scrollTo(0,0);
-}
-
-function s8(){
+  cur = 6; render(); window.scrollTo(0,0);
+  // Spustit výpočet automaticky po přechodu
   setTimeout(spustVypocet, 200);
-  return '<div class="card" style="background:var(--blue-ll);border-color:#C8DFF2">'
-    + '<div style="font-size:12px;color:#4A7BA8;font-weight:500;margin-bottom:8px">' + s8info() + '</div>'
-    + '<h2 class="ctitle">Výsledky přesné analýzy FVE</h2>'
-    + '<p class="csub">Simulace · PVGIS TMY · OTE TDD profily · Ceníky 2026</p>'
-    + '<div id="pvgisStatus"><div class="pvgis-loading"><div class="pvgis-spinner"></div><span>Spouštím simulaci přes PVGIS EU JRC…</span></div></div>'
-    + '</div>'
-    + '<div id="resBody">'
-    + '<div style="text-align:center;padding:32px;color:var(--text-2);font-size:13px">'
-    + '<div class="pvgis-spinner" style="margin:0 auto 12px;width:28px;height:28px;border-width:3px"></div>'
-    + 'Výpočet probíhá — může trvat 10–30 vteřin…'
-    + '</div>'
-    + '</div>'
-    + '<div class="nav" style="margin-top:12px">'
-    + '<button class="btn-out" onclick="goBack()">← Zpět a upravit</button>'
-    + '<button class="btn-pdf" id="btnPdf" onclick="exportPdf()" disabled>📄 Exportovat PDF</button>'
-    + '</div>';
 }
 
-function s8info(){
-  const kwp = parseFloat(D.kwp)||15;
-  const bat = parseFloat(D.bat)||0;
-  const batTxt = bat > 0 ? ` · ${bat} kWh baterie` : ' · bez baterie';
-  return `📍 ${D.lokace||'Zadaná poloha'} · ${D.bytu} bytů · ${kwp} kWp${batTxt} · ${D.dist} · ${D.sazba_byt}`;
-}
+// s8() odstraněno — výsledky jsou nyní součástí s7()
 
 // ================================================================
 // VOLÁNÍ FastAPI /simulate
@@ -3148,7 +3133,7 @@ async function nacistUlozenouSimulaci(){
       };
       sessionStorage.setItem('show_sim_result', JSON.stringify(result));
     }
-    cur = 7;
+    cur = 6;
     return true;
   }catch(e){ console.warn('Chyba načtení simulace:', e); return false; }
 }
