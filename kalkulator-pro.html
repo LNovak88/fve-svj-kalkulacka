@@ -269,7 +269,8 @@ input[type=range]{width:100%;accent-color:var(--blue);margin-bottom:12px;cursor:
 .nzu-kalk-l{font-size:10px;color:#2E6B40;margin-bottom:3px}
 .nzu-kalk-v{font-size:16px;font-weight:700;color:#1A5C32;line-height:1}
 .nzu-kalk-u{font-size:10px;color:#2E6B40;margin-top:2px}
-@media(max-width:700px){.modely-grid{grid-template-columns:1fr}.byt-grid{grid-template-columns:1fr}.nzu-kalk-grid{grid-template-columns:1fr}}
+@media(max-width:900px){.modely-grid{grid-template-columns:1fr 1fr!important}}
+@media(max-width:700px){.modely-grid{grid-template-columns:1fr!important}.byt-grid{grid-template-columns:1fr}.nzu-kalk-grid{grid-template-columns:1fr}}
 @media(max-width:700px){.variant-grid-2col{grid-template-columns:1fr!important}}
 @media(max-width:480px){.g2{grid-template-columns:1fr}.kpi-row{grid-template-columns:1fr}.nav{flex-wrap:wrap;gap:8px}}
 .bilance-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
@@ -2135,13 +2136,13 @@ function renderResults(R){
   <div class="card">
     <div class="chart-card-title">🔄 Porovnání modelů sdílení energie</div>
     <div class="chart-card-sub" style="margin-bottom:16px">Stejná FVE a baterie — liší se způsob sdílení elektřiny mezi byty</div>
-    <div class="modely-grid">
-      <!-- EDC -->
+    <div class="modely-grid" style="grid-template-columns:repeat(4,1fr)">
+      <!-- EDC s bat -->
       <div class="model-card ${D.model==='edc'||!D.model?'best':''}">
         ${D.model==='edc'||!D.model ? '<div class="model-card-badge">✅ Váš výběr</div>' : ''}
         <div class="model-card-icon">🌐</div>
         <div class="model-card-name">EDC — komunitní sdílení</div>
-        <div class="model-card-sub">Virtuální sdílení přes distribuci. Každý byt dostane poměrný díl výroby přímo na svůj elektroměr. Žádné fyzické přepojení.</div>
+        <div class="model-card-sub">Virtuální sdílení přes distribuci. Každý byt dostane poměrný díl výroby přímo na svůj elektroměr.</div>
         <div class="model-kpi"><span class="model-kpi-l">Investice FVE</span><span class="model-kpi-v">${(edcS.invest||inv).toLocaleString('cs-CZ')} Kč</span></div>
         <div class="model-kpi"><span class="model-kpi-l">Roční úspora</span><span class="model-kpi-v green">${Math.round(edcS.uspora_rok1||uspora_rok).toLocaleString('cs-CZ')} Kč</span></div>
         <div class="model-kpi"><span class="model-kpi-l">Návratnost</span><span class="model-kpi-v">${(edcS.nav||nav)?((edcS.nav||nav)+' let'):'>25 let'}</span></div>
@@ -2149,17 +2150,38 @@ function renderResults(R){
         <div class="model-kpi"><span class="model-kpi-l">Úspora / byt / měs</span><span class="model-kpi-v green">${uspora_byt_mes.toLocaleString('cs-CZ')} Kč</span></div>
         <div style="margin-top:10px;background:var(--blue-ll);border-radius:6px;padding:8px 10px;font-size:11px;color:var(--blue)">✅ Zachováme individuální elektroměry<br>✅ Jednoduché pro SVJ<br>✅ Bez C tarifu</div>
       </div>
+      <!-- EDC bez bat -->
+      ${(()=>{
+        const ebS = srv.edc_bez_bat || {};
+        const ebNav = ebS.nav;
+        const ebKum = ebS.kum25||0;
+        const ebInv = ebS.invest||0;
+        const ebUs  = ebS.uspora_rok1||0;
+        const ebByt = Math.round(ebUs/bytu/12);
+        return `<div class="model-card ${D.model==='edc_bez_bat'?'best':''}">
+          ${D.model==='edc_bez_bat' ? '<div class="model-card-badge">✅ Váš výběr</div>' : ''}
+          <div class="model-card-icon">🔌</div>
+          <div class="model-card-name">EDC bez baterie</div>
+          <div class="model-card-sub">Komunitní sdílení bez baterie. Nižší investice, více přetoků do sítě.</div>
+          <div class="model-kpi"><span class="model-kpi-l">Investice FVE</span><span class="model-kpi-v">${ebInv.toLocaleString('cs-CZ')} Kč</span></div>
+          <div class="model-kpi"><span class="model-kpi-l">Roční úspora</span><span class="model-kpi-v green">${Math.round(ebUs).toLocaleString('cs-CZ')} Kč</span></div>
+          <div class="model-kpi"><span class="model-kpi-l">Návratnost</span><span class="model-kpi-v">${ebNav?ebNav+' let':'>25 let'}</span></div>
+          <div class="model-kpi"><span class="model-kpi-l">Kumulativ 25 let</span><span class="model-kpi-v ${ebKum>=0?'green':''}">${Math.round(ebKum).toLocaleString('cs-CZ')} Kč</span></div>
+          <div class="model-kpi"><span class="model-kpi-l">Úspora / byt / měs</span><span class="model-kpi-v green">${ebByt.toLocaleString('cs-CZ')} Kč</span></div>
+          <div style="margin-top:10px;background:var(--green-l);border-radius:6px;padding:8px 10px;font-size:11px;color:#1A5C32">✅ Nejnižší investice<br>✅ Jednoduchá instalace<br>❌ Více přetoků do sítě</div>
+        </div>`;
+      })()}
       <!-- PM -->
       <div class="model-card ${D.model==='jom'?'best':''}">
         ${D.model==='jom' ? '<div class="model-card-badge">✅ Váš výběr</div>' : ''}
         <div class="model-card-icon">📊</div>
         <div class="model-card-name">PM — podružné měření</div>
-        <div class="model-card-sub">Jeden hlavní elektroměr pro celý dům, podružné měřiče na byty. SVJ platí jako podnikatel — C tarif jističe je dražší.</div>
+        <div class="model-card-sub">Jeden hlavní elektroměr pro celý dům, podružné měřiče na byty. SVJ platí jako podnikatel.</div>
         <div class="model-kpi"><span class="model-kpi-l">Investice FVE + měřiče</span><span class="model-kpi-v">${pmInv.toLocaleString('cs-CZ')} Kč</span></div>
         <div class="model-kpi"><span class="model-kpi-l">Roční úspora</span><span class="model-kpi-v green">${Math.round(pmUspora).toLocaleString('cs-CZ')} Kč</span></div>
         <div class="model-kpi"><span class="model-kpi-l">Návratnost</span><span class="model-kpi-v">${pmNav?pmNav+' let':'>25 let'}</span></div>
         <div class="model-kpi"><span class="model-kpi-l">Kumulativ 25 let</span><span class="model-kpi-v ${pmKum>=0?'green':''}">${Math.round(pmKum).toLocaleString('cs-CZ')} Kč</span></div>
-        <div class="model-kpi"><span class="model-kpi-l">Extra investice měřičů</span><span class="model-kpi-v">+${pmMericeInv.toLocaleString('cs-CZ')} Kč</span></div>
+        <div class="model-kpi"><span class="model-kpi-l">Úspora / byt / měs</span><span class="model-kpi-v green">${(pmS.splatka_byt!=null?Math.round(pmS.uspora_rok1/bytu/12):Math.round(pmUspora/bytu/12)).toLocaleString('cs-CZ')} Kč</span></div>
         <div style="margin-top:10px;background:var(--amber-l);border-radius:6px;padding:8px 10px;font-size:11px;color:#92400E">⚠️ C tarif jističe výrazně dražší<br>⚠️ Složitější administrativa SVJ<br>✅ Vyšší využití vlastní výroby</div>
       </div>
       <!-- Jen SP -->
@@ -2167,7 +2189,7 @@ function renderResults(R){
         ${D.model==='spolecne' ? '<div class="model-card-badge">✅ Váš výběr</div>' : ''}
         <div class="model-card-icon">🏛️</div>
         <div class="model-card-name">Jen společné prostory</div>
-        <div class="model-card-sub">Menší FVE (${spKwp} kWp) pokrývá pouze výtahy, osvětlení, čerpadla. Nejjednodušší řešení, nejmenší úspory.</div>
+        <div class="model-card-sub">Menší FVE (${spKwp} kWp) pokrývá pouze výtahy, osvětlení, čerpadla. Nejjednodušší řešení.</div>
         <div class="model-kpi"><span class="model-kpi-l">Investice FVE</span><span class="model-kpi-v">${spInv.toLocaleString('cs-CZ')} Kč</span></div>
         <div class="model-kpi"><span class="model-kpi-l">Roční úspora SP</span><span class="model-kpi-v green">${Math.round(spUspora).toLocaleString('cs-CZ')} Kč</span></div>
         <div class="model-kpi"><span class="model-kpi-l">Návratnost</span><span class="model-kpi-v">${spNav?spNav+' let':'>25 let'}</span></div>
