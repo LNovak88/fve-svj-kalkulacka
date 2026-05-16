@@ -1245,6 +1245,13 @@ async function nactiSrovnani(){
     });
     if(!r.ok) throw new Error('HTTP '+r.status);
     SROV = await r.json();
+    // Synchronizovat D.kwp a D.bat se srovnáním — použít kWp z EDC srovnání
+    if(SROV && SROV.srovnani && SROV.srovnani.edc){
+      const edcRec = SROV.srovnani.edc;
+      if(edcRec.kwp) { D.kwp = edcRec.kwp; D._kwp_user_edited = false; }
+      if(edcRec.bat != null) { D.bat = edcRec.bat; D._bat_user_edited = false; }
+      if(edcRec.invest) { D.cena_invest = edcRec.invest; D._inv_user_edited = false; }
+    }
   }catch(err){
     SROV = null;
     console.warn('nactiSrovnani selhal:', err.message);
@@ -2156,7 +2163,7 @@ function renderResults(R){
         <div class="model-kpi"><span class="model-kpi-l">Roční úspora</span><span class="model-kpi-v green">${Math.round(edcS.uspora_rok1||uspora_rok).toLocaleString('cs-CZ')} Kč</span></div>
         <div class="model-kpi"><span class="model-kpi-l">Návratnost</span><span class="model-kpi-v">${(edcS.nav||nav)?((edcS.nav||nav)+' let'):'>25 let'}</span></div>
         <div class="model-kpi"><span class="model-kpi-l">Kumulativ 25 let</span><span class="model-kpi-v green">${Math.round(edcS.kum25||kum25).toLocaleString('cs-CZ')} Kč</span></div>
-        <div class="model-kpi"><span class="model-kpi-l">Úspora / byt / měs</span><span class="model-kpi-v green">${uspora_byt_mes.toLocaleString('cs-CZ')} Kč</span></div>
+        <div class="model-kpi"><span class="model-kpi-l">Úspora / byt / měs</span><span class="model-kpi-v green">${Math.round((edcS.uspora_rok1||uspora_rok)/bytu/12).toLocaleString('cs-CZ')} Kč</span></div>
         <div style="margin-top:10px;background:var(--blue-ll);border-radius:6px;padding:8px 10px;font-size:11px;color:var(--blue)">✅ Zachováme individuální elektroměry<br>✅ Jednoduché pro SVJ<br>✅ Bez C tarifu</div>
       </div>
       <!-- EDC bez bat -->
