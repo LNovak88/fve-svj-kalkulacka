@@ -1308,10 +1308,6 @@ function renderResults(R){
               <span style="color:var(--text)"> ${okamzity?'Kladné cash flow hned od 1. roku (projekt je plně samofinancovatelný)':'Záporné cash flow — projekt závisí na růstu cen'}</span>
             </div>
             <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:0.5px solid var(--border)">
-              <span style="color:var(--text-2)">Návratnost investice</span>
-              <strong style="color:${navColor}">${navSc?navSc+' let':'>25 let'}</strong>
-            </div>
-            <div style="display:flex;justify-content:space-between;padding:5px 0">
               <span style="color:var(--text-2)">Čistý zisk za 25 let</span>
               <strong style="color:${kum>=0?'var(--green)':'var(--rose)'}">${kum>=0?'+':''}${Math.round(kum).toLocaleString('cs-CZ')} Kč</strong>
             </div>
