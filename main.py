@@ -552,7 +552,9 @@ def simulate(vstup: SimulaceVstup):
         for rust_sc, label_sc in [(1.0, "📉 Pomalý růst cen EE +1 %/rok"),
                                    (3.0, "📊 Realistický scénář +3 %/rok"),
                                    (6.0, "🔥 Rychlý růst cen EE +6 %/rok")]:
-            kum_sc = -(invest_mk - uver_mk)  # záporný start = vlastní vklad
+            # Startovat stejně jako cashflow: -(vlastní vklad + uver)
+            # = -invest_mk (protože vlastni_pct=0 → vlastní vklad=0, uver=invest)
+            kum_sc = -(vlast_mk + uver_mk)
             nav_sc = None
             bezfve_25 = 0.0
             for rok in range(1, 26):
@@ -561,7 +563,7 @@ def simulate(vstup: SimulaceVstup):
                 u = (sm["vlastni_vt_kwh"] * d * cvt * c
                      + sm["vlastni_nt_kwh"] * d * cnt * c
                      + sm["pretoky_kwh"]    * d * (vstup.cena_pretoky / 1000) * c
-                     + jist_mk * c)  # úspora jističe — roste s cenami el.
+                     + jist_mk * c)
                 s = spl_mk if rok <= vstup.splatnost else 0
                 kum_sc += u - s
                 if kum_sc >= 0 and nav_sc is None:
@@ -603,7 +605,7 @@ def simulate(vstup: SimulaceVstup):
     for rust_sc, label in [(1.0, "📉 Pomalý růst cen EE +1 %/rok"),
                             (3.0, "📊 Realistický scénář +3 %/rok"),
                             (6.0, "🔥 Rychlý růst cen EE +6 %/rok")]:
-        kum_sc    = -vlastni if vlastni > 0 else -vstup.cena_invest
+        kum_sc    = -(vlastni + uver)  # stejný start jako cf[] — zahrnuje celou investici
         nav_sc    = None
         bezfve_25 = 0.0
         for rok in range(1, 26):
