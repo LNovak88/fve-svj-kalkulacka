@@ -1244,13 +1244,14 @@ async function nactiSrovnani(){
     });
     if(!r.ok) throw new Error('HTTP '+r.status);
     SROV = await r.json();
+    // Doplnit splatnost do SROV pro použití v goToResults
+    SROV.splatnost = parseInt(D.splatnost)||15;
     // Synchronizovat D.kwp a D.bat se srovnáním — použít kWp/bat z EDC srovnání
     if(SROV && SROV.srovnani && SROV.srovnani.edc){
       const edcRec = SROV.srovnani.edc;
       if(edcRec.kwp) { D.kwp = edcRec.kwp; D._kwp_user_edited = false; }
       if(edcRec.bat != null) { D.bat = edcRec.bat; D._bat_user_edited = false; }
       if(edcRec.invest) { D.cena_invest = edcRec.invest; D._inv_user_edited = false; }
-      // Uložit doporučenou baterii pro srovnání — použije se i při výběru SP/edc_bez_bat
       D._bat_doporucena = edcRec.bat || 0;
     }
   }catch(err){
@@ -1579,8 +1580,50 @@ async function goToResults(){
     D.lat = 49.75; D.lon = 15.5;
   }
   cur = 6; render(); window.scrollTo(0,0);
-  // Spustit výpočet automaticky po přechodu
-  setTimeout(spustVypocet, 200);
+
+  // Použít data přímo ze SROV.srovnani — stejná čísla jako krok 6
+  if(SROV && SROV.srovnani && SROV.srovnani[D.model]){
+    const mk = SROV.srovnani[D.model];
+    RES = {
+      sim:             mk.sim || SROV.sim,
+      cf:              mk.cf  || SROV.cf,
+      cena_invest:     mk.invest,
+      uver:            mk.uver,
+      vlastni_vklad:   mk.vlastni_vklad,
+      vlastni_pct:     SROV.vlastni_pct || 0,
+      splatka_rok:     mk.splatka_rok,
+      splatka_mes:     Math.round((mk.splatka_rok||0)/12),
+      splatka_byt_mes: mk.splatka_byt_mes || mk.splatka_byt,
+      splatnost:       SROV.splatnost,
+      cvt:             mk.cvt || SROV.cvt,
+      cnt:             mk.cnt || SROV.cnt,
+      srovnani:        SROV.srovnani,
+      scenare:         mk.scenare || SROV.scenare,
+      kwp:             mk.kwp,
+      bat:             mk.bat,
+      bytu:            SROV.bytu || D.bytu,
+      lokace:          D.lokace,
+      dist:            D.dist,
+      sazba:           D.sazba_byt,
+      inv:             mk.invest,
+    };
+
+    // Vykreslit výsledky přímo — bez čekání na síť
+    setTimeout(()=>{
+      const ps = document.getElementById('pvgisStatus');
+      const rb = document.getElementById('resBody');
+      const bp = document.getElementById('btnPdf');
+      if(ps) ps.innerHTML = '<div style="font-size:12px;color:var(--green);padding:4px 0">✅ Výpočet dokončen — přesná 15minutová simulace · PVGIS TMY data</div>';
+      if(rb){ rb.innerHTML = renderResults(RES); setTimeout(drawAllCharts, 150); }
+      if(bp) bp.disabled = false;
+      // Uložit simulaci
+      ulozSimulaci(RES, {model: D.model, kwp: mk.kwp, bat: mk.bat, pocet_bytu: D.bytu});
+      updateLimitBar();
+    }, 100);
+  } else {
+    // Fallback — SROV není k dispozici, spustit /simulate znovu
+    setTimeout(spustVypocet, 200);
+  }
 }
 
 // s8() odstraněno — výsledky jsou nyní součástí s7()
