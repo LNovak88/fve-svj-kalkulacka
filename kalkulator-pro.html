@@ -3342,19 +3342,35 @@ setInterval(async()=>{
   if(!ok) return;
   // 1. Načíst uložené parametry z localStorage
   nacistParamyZLS();
-  // 2. Předvyplnit adresu z profilu pokud LS nemá adresu
+  // 2. Předvyplnit parametry z kalkulator.html (sessionStorage) — mají přednost před LS
+  try{
+    const raw = sessionStorage.getItem('kalkulator_params');
+    if(raw){
+      const p = JSON.parse(raw);
+      sessionStorage.removeItem('kalkulator_params'); // jednorázové použití
+      if(p._z_kalkulatoru){
+        // Přenést všechny parametry do D
+        Object.keys(p).forEach(k=>{
+          if(k !== '_z_kalkulatoru' && p[k] !== null && p[k] !== undefined){
+            D[k] = p[k];
+          }
+        });
+        console.log('✅ Parametry přeneseny z kalkulator.html:', p);
+      }
+    }
+  }catch(e){ console.warn('Chyba načtení parametrů z kalkulator.html:', e); }
+  // 3. Předvyplnit adresu z profilu pokud nemáme adresu
   nacistAdresuZProfilu();
-  // 3. Baterie přijde ze serveru /recommend — zde jen reset na 0 pokud není
+  // 4. Baterie přijde ze serveru /recommend — zde jen reset na 0 pokud není
   if(D.bat === undefined) D.bat = 0;
-  // 4. Zkusit načíst uloženou simulaci (z moje-vypocty)
+  // 5. Zkusit načíst uloženou simulaci (z moje-vypocty)
   const loadedSim = await nacistUlozenouSimulaci();
   render();
-  // 5. Pokud se načetla simulace BEZ výsledků, spustit výpočet
+  // 6. Pokud se načetla simulace BEZ výsledků, spustit výpočet
   if(loadedSim){
     const savedResult = sessionStorage.getItem('show_sim_result');
     sessionStorage.removeItem('show_sim_result');
     if(savedResult){
-      // Zobrazit uložené výsledky bez nového výpočtu
       const result = JSON.parse(savedResult);
       setTimeout(()=>{ renderUlozeneVysledky(result); }, 300);
     } else {
