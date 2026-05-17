@@ -556,13 +556,16 @@ function spSpVypocet(bytu, pater, ma_vytah, vytahu, ma_tuv, ma_tc, ev_nabijec, c
 
 // Optimální výkon FVE (portováno z app.py)
 function optimKwp(bytu, zarizeni, ev, tc, sp_mwh){
-  let base=(parseFloat(bytu)||0)*0.55;
+  // Základ: 1.5 kWp/byt — odpovídá doporučení backendu (45 kWp pro 30 bytů)
+  let base=(parseFloat(bytu)||0)*1.5;
   // Navýšení dle zařízení v bytech
-  if(zarizeni.includes('tc')) base*=1.35;
-  if(zarizeni.includes('akum')) base*=1.25;
-  if(parseInt(ev)>0) base*=1.15;
-  // Přidat SP spotřebu (cca 20% navýšení výkonu kvůli SP)
-  if(sp_mwh>0) base+=sp_mwh*0.05;
+  if(zarizeni.includes('tc')) base*=1.25;
+  if(zarizeni.includes('akum')) base*=1.15;
+  if(parseInt(ev)>0) base+=parseInt(ev)*3.7; // každá nabíječka ~3.7 kWp
+  // Přidat SP spotřebu
+  if(sp_mwh>0) base+=sp_mwh*0.15;
+  // Max rozumný výkon pro bytový dům — omezit na 200 kWp
+  base=Math.min(base, 200);
   // Zaokrouhlení na 0.5 kWp
   return Math.round(base*2)/2;
 }
@@ -718,10 +721,10 @@ function cashflow(sim, cvt, cnt, cpr, investice, bonus, uver, splatnost, rust=3.
 
 // NZÚ — bezúročný úvěr a bonus
 function nzuVypocet(investice, bytu){
-  // Bezúročný úvěr NZÚ — max 80 % investice, max 5 mil. Kč, splatnost 15 let
-  // Podmínka: SVJ musí mít vlastní vklad min. 20 %
-  const uver=Math.min(investice*0.80, 5000000);
-  const bonus=0; // bonus dle zranitelných domácností — zadáme po registraci
+  // NZÚ Light — předpokládáme 100% financování
+  // Přesné podmínky budou upřesněny v září 2026
+  const uver = investice;
+  const bonus = 0;
   return{uver, bonus, splatnost:15};
 }
 
@@ -1015,8 +1018,8 @@ function vypoctiVse(vyroba8760){
   const sp=spSpVypocet(D.bytu,D.pater,D.vytahu>0,D.vytahu,D.tuv,D.tc,D.ev,D.cerpadla);
   const kwp=optimKwp(D.bytu,z,D.ev,D.tc,sp.sp_mwh);
 
-  // Baterie — vždy zahrnuta
-  const bat_kwh=Math.round(kwp*1.4*10)/10;
+  // Baterie
+  const bat_kwh=Math.round(kwp*1.2*10)/10;
   const bat_cena=Math.round(bat_kwh*8000);
 
   // Spotřeba bytů (VT + NT)
@@ -1034,10 +1037,8 @@ function vypoctiVse(vyroba8760){
   if(vyroba8760){
     vyroba=vyroba8760;
   } else {
-    // Krajský fallback — rychlý matematický model kalibrovaný dle kraje
     const kwh_kraj=pvgisKrajKwh(D.lat, D.lon, D.sklon, D.azimut);
     vyroba=genVyrobaFallback(kwp, D.sklon, D.azimut);
-    // Kalibruj na krajský průměr
     const sum=vyroba.reduce((a,b)=>a+b,0);
     if(sum>0) vyroba=vyroba.map(v=>v*(kwp*kwh_kraj/sum));
   }
@@ -1047,49 +1048,55 @@ function vypoctiVse(vyroba8760){
   const cnt=CENY_NT[dist]?.[sazba]||4070;
   const cpr=500; // přetoky ~0,50 Kč/kWh
 
-  // Simulace s baterií (doporučené řešení)
-  const sim_pm=simuluj(vyroba,vt_profil,nt_profil,bat_kwh,'edc');  // podružné měření + baterie
-  const sim_edc=simuluj(vyroba,vt_profil,nt_profil,0,'edc');       // EDC bez baterie
-  const sim_sp=simuluj(vyroba,sp.sp_vt_mwh*1000>0?genProfilVt(sp.sp_vt_mwh*1000,D.hhSlider):Array(8760).fill(0),Array(8760).fill(0),0,'spolecne');
+  // ── 3 modely ──────────────────────────────────────────────────
+  // 1. EDC s baterií — DOPORUČENÉ (zobrazí se uprostřed + KPI)
+  const sim_edc_bat = simuluj(vyroba,vt_profil,nt_profil,bat_kwh,'edc');
+  const investice_edc_bat = kwp*cenaKwp(kwp) + bat_cena;
+  const nzu_edc_bat = nzuVypocet(investice_edc_bat, D.bytu);
+  const cf_edc_bat  = cashflow(sim_edc_bat,cvt,cnt,cpr,investice_edc_bat,nzu_edc_bat.bonus,nzu_edc_bat.uver,nzu_edc_bat.splatnost,3.0,0.5);
 
-  // Investice — FVE + baterie
-  const investice_fve=kwp*cenaKwp(kwp);
-  const investice=investice_fve+bat_cena;
-  const {uver, bonus, splatnost}=nzuVypocet(investice, D.bytu);
+  // 2. EDC bez baterie
+  const sim_edc = simuluj(vyroba,vt_profil,nt_profil,0,'edc');
+  const investice_edc = kwp*cenaKwp(kwp);
+  const nzu_edc = nzuVypocet(investice_edc, D.bytu);
+  const cf_edc  = cashflow(sim_edc,cvt,cnt,cpr,investice_edc,0,nzu_edc.uver,nzu_edc.splatnost,3.0,0.5);
 
-  // Cashflow — podružné měření s baterií (doporučené)
-  const cf_res=cashflow(sim_pm,cvt,cnt,cpr,investice,bonus,uver,splatnost,3.0,0.5);
-
-  // Úspora na byt
-  const uspora_byt_rok=Math.round(cf_res.cf[0]?.uspora_celkem/D.bytu)||0;
-  const uspora_byt_mes=Math.round(uspora_byt_rok/12);
-
-  // EDC bez baterie
-  const investice_edc=investice_fve; // jen FVE bez baterie
-  const nzu_edc=nzuVypocet(investice_edc,D.bytu);
-  const cf_edc=cashflow(sim_edc,cvt,cnt,cpr,investice_edc,0,nzu_edc.uver,nzu_edc.splatnost,3.0,0.5);
-  const uspora_edc=cf_edc.cf[0]?.uspora_celkem||0;
-  const nav_edc=cf_edc.nav;
-
-  // Jen SP
-  const uspora_sp=Math.round(sim_sp.vlastni_kwh*(cvt/1000)+sim_sp.pretoky_kwh*(cpr/1000));
+  // 3. Jen společné prostory
+  const sim_sp = simuluj(
+    vyroba,
+    sp.sp_vt_mwh*1000>0?genProfilVt(sp.sp_vt_mwh*1000,D.hhSlider):Array(8760).fill(0),
+    Array(8760).fill(0), 0, 'spolecne'
+  );
   const investice_sp=Math.round(kwp*0.3)*cenaKwp(kwp*0.3);
+  const uspora_sp=Math.round(sim_sp.vlastni_kwh*(cvt/1000)+sim_sp.pretoky_kwh*(cpr/1000));
   const nav_sp=Math.round(investice_sp/Math.max(uspora_sp,1)*10)/10;
+
+  // KPI — vše z EDC s baterií (doporučený model)
+  const uspora_rok     = cf_edc_bat.cf[0]?.uspora_celkem || 0;
+  const uspora_byt_rok = Math.round(uspora_rok/D.bytu);
+  const uspora_byt_mes = Math.round(uspora_byt_rok/12);
 
   return{
     kwp, bat_kwh, bat_cena,
-    investice, investice_fve, bonus, uver, splatnost,
+    // EDC s baterií — doporučené, KPI
+    investice: investice_edc_bat,
+    uver: nzu_edc_bat.uver, bonus: nzu_edc_bat.bonus, splatnost: nzu_edc_bat.splatnost,
+    cf: cf_edc_bat.cf, nav: cf_edc_bat.nav, kum25: cf_edc_bat.kum25,
+    uspora_rok, uspora_byt_rok, uspora_byt_mes,
+    sim_pm: sim_edc_bat, // alias pro citlivostní analýzu
+    // EDC bez baterie
+    uspora_edc: cf_edc.cf[0]?.uspora_celkem||0,
+    nav_edc: cf_edc.nav,
+    investice_edc,
+    // SP
+    uspora_sp, nav_sp, investice_sp,
+    // Meta
     cvt, cnt, cpr,
-    sim_pm, sim_edc, sim_sp,
-    cf:cf_res.cf, nav:cf_res.nav, kum25:cf_res.kum25,
-    uspora_rok:cf_res.cf[0]?.uspora_celkem||0,
-    uspora_byt_rok, uspora_byt_mes,
-    uspora_edc, nav_edc,
-    uspora_sp, nav_sp,
-    vyroba_mwh:Math.round(sim_pm.vyroba_kwh/1000*10)/10,
-    vlastni_pct:Math.round(sim_pm.vlastni_kwh/sim_pm.vyroba_kwh*100)||0,
-    sp_mwh:sp.sp_mwh,
-    kwh_kraj:pvgisKrajKwh(D.lat,D.lon,D.sklon,D.azimut)
+    sim_edc_bat, sim_edc, sim_sp,
+    vyroba_mwh: Math.round(sim_edc_bat.vyroba_kwh/1000*10)/10,
+    vlastni_pct: Math.round(sim_edc_bat.vlastni_kwh/sim_edc_bat.vyroba_kwh*100)||0,
+    sp_mwh: sp.sp_mwh,
+    kwh_kraj: pvgisKrajKwh(D.lat,D.lon,D.sklon,D.azimut)
   };
 }
 
@@ -1107,6 +1114,7 @@ function s6(){
     if(resEl) resEl.innerHTML=renderResults(R_rychly);
     setTimeout(()=>drawCf(R_rychly.cf),50);
     autoSaveSimulace(R_rychly);
+    initNudgeObserver(R_rychly.uspora_byt_mes);
     // 2. Pokud máme adresu — načti PVGIS na pozadí a tiše přepočítej
     if(D.lat&&D.lon){
       if(pvgisEl) pvgisEl.innerHTML='<div class="pvgis-loading"><div class="pvgis-spinner"></div><span>Zpřesňuji data z PVGIS EU JRC pro vaši adresu…</span></div>';
@@ -1116,6 +1124,7 @@ function s6(){
         if(resEl) resEl.innerHTML=renderResults(R_presny);
         setTimeout(()=>drawCf(R_presny.cf),50);
         autoSaveSimulace(R_presny);
+        initNudgeObserver(R_presny.uspora_byt_mes);
         if(pvgisEl) pvgisEl.innerHTML=`<div style="font-size:12px;color:var(--green);padding:8px 0;">✅ Zpřesněno reálnými daty PVGIS pro: <strong>${D.lokace}</strong></div>`;
       } else {
         if(pvgisEl) pvgisEl.innerHTML=`<div style="font-size:12px;color:var(--amber);padding:8px 0;">⚠️ PVGIS nedostupné — použit krajový průměr ${Math.round(pvgisKrajKwh(D.lat,D.lon,D.sklon,D.azimut))} kWh/kWp/rok</div>`;
@@ -1160,8 +1169,6 @@ function renderResults(R){
     `Doporučujeme optimalizovat výkon FVE nebo zvolit model EDC pro maximální využití výroby.`:
     'Při současných parametrech se investice za 25 let nevrátí. Zvažte vyšší výkon FVE nebo jiný model sdílení.';
 
-  const nzu_splatka=Math.round(R.uver/R.splatnost);
-
   return`
   <div class="verdikt ${verdiktCls}">
     <strong>${verdiktText}</strong><br>
@@ -1176,91 +1183,140 @@ function renderResults(R){
       <div class="kpi-u">${R.vyroba_mwh} MWh/rok · baterie ${R.bat_kwh} kWh</div>
     </div>
     <div class="kpi green">
-      <div class="kpi-l">Roční úspora (podružné měření)</div>
+      <div class="kpi-l">Roční úspora (EDC s baterií)</div>
       <div class="kpi-v">${Math.round(R.uspora_rok).toLocaleString('cs-CZ')} <span style="font-size:14px;font-weight:400">Kč</span></div>
       <div class="kpi-u">${R.uspora_byt_mes.toLocaleString('cs-CZ')} Kč/byt/měs</div>
     </div>
     <div class="kpi">
       <div class="kpi-l">Investice celkem / NZÚ úvěr</div>
       <div class="kpi-v">${Math.round(R.investice).toLocaleString('cs-CZ')} <span style="font-size:14px;font-weight:400">Kč</span></div>
-      <div class="kpi-u">splátka ${Math.round(nzu_splatka/D.bytu/12).toLocaleString('cs-CZ')} Kč/byt/měs</div>
+      <div class="kpi-u">splátka ${Math.round(R.uver/R.splatnost/D.bytu/12).toLocaleString('cs-CZ')} Kč/byt/měs</div>
     </div>
   </div>
 
-  <!-- Modely sdílení — pořadí: SP | Doporučeno EDC | Podružné měření -->
+  <!-- Modely sdílení -->
   <div class="slabel">Porovnání modelů sdílení <span class="badge b-blue" style="margin-left:6px">PVGIS · OTE 2026</span></div>
   <div class="var-grid">
-    <!-- 1. Jen společné prostory — vlevo rozmazané -->
+    <!-- 1. Jen společné prostory -->
     <div class="var-card${premium?'':' blurred'}">
       ${!premium?'<div class="var-badge" style="background:var(--text-2)">🔒 Po registraci</div>':''}
       <div class="var-name">Jen společné prostory</div>
-      <div class="var-kwp">${Math.round(R.kwp*0.3*2)/2}<span> kWp</span></div>
+      <div class="var-kwp">${Math.round(R.kwp*0.3*2)/2}<span> kWp · bez bat</span></div>
       <div class="var-save">+${Math.round(R.uspora_sp).toLocaleString('cs-CZ')} Kč/rok</div>
       <div class="var-roi">návratnost ~${R.nav_sp} let</div>
       ${!premium?'<div class="var-lock-msg" onclick="openModal();switchTab(\'reg\')">Registrovat se →</div>':''}
     </div>
-    <!-- 2. Doporučeno — EDC — uprostřed -->
+    <!-- 2. EDC s baterií — DOPORUČENO -->
     <div class="var-card best">
       <div class="var-badge">⭐ Doporučeno</div>
       <div class="var-name">EDC — komunitní sdílení</div>
-      <div class="var-kwp">${R.kwp}<span> kWp</span></div>
-      <div class="var-save">+${Math.round(R.uspora_edc).toLocaleString('cs-CZ')} Kč/rok</div>
-      <div class="var-roi">návratnost ${R.nav_edc||'>25'} let</div>
-      <div style="margin-top:10px;padding:7px 10px;background:rgba(245,158,11,0.12);border-radius:6px;border:1px solid rgba(245,158,11,0.35)">
+      <div class="var-kwp">${R.kwp}<span> kWp · bat ${R.bat_kwh} kWh</span></div>
+      <div class="var-save">+${Math.round(R.uspora_rok).toLocaleString('cs-CZ')} Kč/rok</div>
+      <div class="var-roi">návratnost ${R.nav||'>25'} let</div>
+      ${(()=>{
+        const cisty = R.uspora_byt_mes - Math.round(R.uver/R.splatnost/D.bytu/12);
+        return `<div style="margin-top:8px;padding:8px 10px;background:${cisty>=0?'rgba(46,139,74,0.12)':'rgba(244,63,94,0.08)'};border-radius:6px;border:1px solid ${cisty>=0?'rgba(46,139,74,0.3)':'rgba(244,63,94,0.2)'}">
+          <div style="font-size:11px;font-weight:700;color:${cisty>=0?'#1A5C32':'#991B1B'}">💳 Čistý přínos / byt / měs</div>
+          <div style="font-size:18px;font-weight:700;color:${cisty>=0?'#1A5C32':'#991B1B'};margin-top:2px">${cisty>=0?'+':''}${cisty.toLocaleString('cs-CZ')} Kč</div>
+          <div style="font-size:10px;color:${cisty>=0?'#2E6B40':'#991B1B'};margin-top:2px">úspora ${R.uspora_byt_mes} Kč − splátka ${Math.round(R.uver/R.splatnost/D.bytu/12)} Kč</div>
+        </div>`;
+      })()}
+      <div style="margin-top:8px;padding:7px 10px;background:rgba(245,158,11,0.12);border-radius:6px;border:1px solid rgba(245,158,11,0.35)">
         <div style="font-size:11px;font-weight:600;color:#92400E">🔋 Baterie ${R.bat_kwh} kWh zahrnuta</div>
         <div style="font-size:10px;color:#92400E;margin-top:2px;line-height:1.4">Zachytí přebytky FVE pro večer a ráno — místo přetoku za ~0,50 Kč ušetří za plnou cenu elektřiny</div>
       </div>
     </div>
-    <!-- 3. Podružné měření — vpravo rozmazané -->
+    <!-- 3. EDC bez baterie -->
     <div class="var-card${premium?'':' blurred'}">
       ${!premium?'<div class="var-badge" style="background:var(--text-2)">🔒 Po registraci</div>':''}
-      <div class="var-name">Jeden elektroměr + podružné měření</div>
-      <div class="var-kwp">${R.kwp}<span> kWp</span></div>
-      <div class="var-save">+${Math.round(R.uspora_rok).toLocaleString('cs-CZ')} Kč/rok</div>
-      <div class="var-roi">návratnost ~${R.nav||'>25'} let</div>
+      <div class="var-name">EDC bez baterie</div>
+      <div class="var-kwp">${R.kwp}<span> kWp · bez bat</span></div>
+      <div class="var-save">+${Math.round(R.uspora_edc).toLocaleString('cs-CZ')} Kč/rok</div>
+      <div class="var-roi">návratnost ${R.nav_edc||'>25'} let</div>
       ${!premium?'<div class="var-lock-msg" onclick="openModal();switchTab(\'reg\')">Registrovat se →</div>':''}
     </div>
   </div>
 
   <!-- Cashflow graf -->
-  <div class="slabel">Kumulativní cashflow — podružné měření + baterie</div>
+  <div class="slabel">Kumulativní cashflow — EDC s baterií</div>
   <div class="cf-outer">
     <div class="cf-wrap"><canvas id="cfCanvas"></canvas></div>
-    ${!premium?`<div class="cf-blur"><div style="text-align:right"><div style="font-size:12px;font-weight:600;color:var(--navy)">Plný 25letý přehled</div><button class="btn-prim" style="margin-top:8px;font-size:12px;padding:8px 16px" onclick="openModal();switchTab('reg')">Registrovat se nezávazně →</button></div></div>`:''}
+    ${!premium?`<div class="cf-blur"><div style="text-align:right"><div style="font-size:12px;font-weight:600;color:var(--navy)">Plný 25letý přehled</div><button class="btn-prim" style="margin-top:8px;font-size:12px;padding:8px 16px" onclick="openModal();switchTab('reg')">Registrovat se nezávazně →</button><div style="margin-top:8px"><button onclick="otevrítKontaktK()" style="background:none;border:none;font-size:11px;color:var(--text-2);cursor:pointer;font-family:inherit;text-decoration:underline">nebo nás kontaktujte přímo</button></div></div></div>`:''}
   </div>
   <div class="nzu-box" style="margin-top:14px">
-    <div class="nzu-title">🏛️ Státní podpora NZÚ 2026</div>
-    <div class="nzu-row">✅ <strong>Bezúročný úvěr</strong> ${Math.round(R.uver).toLocaleString('cs-CZ')} Kč (80 % investice) — splácení ${R.splatnost} let · ${Math.round(nzu_splatka).toLocaleString('cs-CZ')} Kč/rok</div>
-    <div class="nzu-row">✅ <strong>Vlastní vklad SVJ</strong> min. 20 % = ${Math.round(R.investice-R.uver).toLocaleString('cs-CZ')} Kč (${Math.round((R.investice-R.uver)/D.bytu).toLocaleString('cs-CZ')} Kč/byt)</div>
+    <div class="nzu-title">🏛️ Státní podpora NZÚ Light 2026 — kalkulačka pro váš dům</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+      <div style="background:rgba(255,255,255,.6);border-radius:var(--rm);padding:10px 12px">
+        <div style="font-size:10px;color:#2E6B40;margin-bottom:3px">Bezúročný úvěr SVJ</div>
+        <div style="font-size:18px;font-weight:700;color:#1A5C32;line-height:1">${Math.round(R.uver).toLocaleString('cs-CZ')} Kč</div>
+        <div style="font-size:10px;color:#2E6B40;margin-top:2px">splatnost ${R.splatnost} let · bez poplatků</div>
+      </div>
+      <div style="background:rgba(255,255,255,.6);border-radius:var(--rm);padding:10px 12px">
+        <div style="font-size:10px;color:#2E6B40;margin-bottom:3px">Vlastní vklad SVJ</div>
+        <div style="font-size:18px;font-weight:700;color:#1A5C32;line-height:1">${Math.round(R.investice-R.uver).toLocaleString('cs-CZ')} Kč</div>
+        <div style="font-size:10px;color:#2E6B40;margin-top:2px">${Math.round((R.investice-R.uver)/D.bytu).toLocaleString('cs-CZ')} Kč / byt</div>
+      </div>
+      <div style="background:rgba(255,255,255,.6);border-radius:var(--rm);padding:10px 12px">
+        <div style="font-size:10px;color:#2E6B40;margin-bottom:3px">Roční splátka SVJ</div>
+        <div style="font-size:18px;font-weight:700;color:#1A5C32;line-height:1">${Math.round(R.uver/R.splatnost).toLocaleString('cs-CZ')} Kč</div>
+        <div style="font-size:10px;color:#2E6B40;margin-top:2px">${Math.round(R.uver/R.splatnost/D.bytu/12).toLocaleString('cs-CZ')} Kč / byt / měsíc</div>
+      </div>
+      <div style="background:rgba(255,255,255,.6);border-radius:var(--rm);padding:10px 12px">
+        <div style="font-size:10px;color:#2E6B40;margin-bottom:3px">Podpora pro zranit. domácnosti</div>
+        <div style="font-size:18px;font-weight:700;color:#1A5C32;line-height:1">dle počtu</div>
+        <div style="font-size:10px;color:#2E6B40;margin-top:2px">Zadejte v PRO kalkulačce po registraci</div>
+      </div>
+    </div>
     <div class="nzu-row">✅ <strong>Bonus</strong> za zranitelné domácnosti (dle počtu příjemců sociálních dávek)</div>
     <div class="nzu-row">✅ <strong>NZÚ Light</strong> — přímá dotace pro nízkopříjmové domácnosti</div>
-    <div style="font-size:11px;color:#2E6B40;margin-top:6px">Vždy ověřte na <a href="https://novazelenausporam.cz" target="_blank" style="color:var(--blue)">novazelenausporam.cz</a></div>
+    <div style="font-size:11px;color:#2E6B40;margin-top:8px">
+      ✅ Úroková sazba 0 % · ✅ Splatnost až 20 let · ✅ Podmínka: energetický průkaz kategorie C nebo lepší<br>
+      ⚠️ Podmínky NZÚ Light pro bytové domy budou upřesněny v září 2026 · Vždy ověřte na <a href="https://novazelenausporam.cz" target="_blank" style="color:var(--blue)">novazelenausporam.cz</a>
+    </div>
   </div>
 
   <!-- Scénáře — za registrací -->
   <div class="slabel">Citlivostní analýza — 3 scénáře vývoje cen <span class="badge b-amber" style="margin-left:6px">Po registraci</span></div>
   <div class="scenare-wrap">
     <div class="${premium?'':'scenare-blur'} scenar-grid">
-      ${[['😐 Pesimistický','+1 %/rok',R.nav?R.nav+2:'—',R.kum25*0.6],['📊 Realistický','+3 %/rok',R.nav||'—',R.kum25],['🔥 Krizový','+6 %/rok',R.nav?R.nav-2:'—',R.kum25*1.6]].map(([t,r,nav,kum])=>`
-      <div class="scenar-card">
-        <div class="scenar-title">${t}</div>
-        <div style="font-size:10px;color:var(--text-2);margin-bottom:6px">${r}</div>
-        <div class="scenar-v">${typeof nav==='number'&&nav>0?nav:'>25'} let</div>
-        <div class="scenar-sub">návratnost</div>
-        <div style="font-size:13px;font-weight:600;color:var(--green);margin-top:6px">${kum>0?'+'+Math.round(kum/1000)+' tis. Kč':'N/A'}</div>
-        <div class="scenar-sub">kumulativně 25 let</div>
-      </div>`).join('')}
+      ${[['😐 Pesimistický',1],['📊 Realistický',3],['🔥 Krizový',6]].map(([tit,rust])=>{
+        // Reálný výpočet pro každý scénář
+        let kum = -(R.investice - R.uver); // vlastní vklad = počáteční záporný stav
+        let navSc = null;
+        for(let rok=1; rok<=25; rok++){
+          const deg = Math.pow(0.995, rok-1);
+          const c   = Math.pow(1 + rust/100, rok-1);
+          const u   = (R.sim_pm.vlastni_vt_kwh * deg * R.cvt/1000 * c)
+                    + (R.sim_pm.vlastni_nt_kwh  * deg * R.cnt/1000 * c)
+                    + (R.sim_pm.pretoky_kwh      * deg * R.cpr/1000 * c);
+          const spl = rok <= R.splatnost ? R.uver / R.splatnost : 0;
+          kum += u - spl;
+          if(kum >= 0 && !navSc) navSc = rok;
+        }
+        return`
+        <div class="scenar-card">
+          <div class="scenar-title">${tit}</div>
+          <div style="font-size:10px;color:var(--text-2);margin-bottom:6px">+${rust} %/rok</div>
+          <div class="scenar-v">${navSc||'>25'} let</div>
+          <div class="scenar-sub">cashflow návratnost</div>
+          <div style="font-size:13px;font-weight:600;color:${kum>=0?'var(--green)':'var(--rose)'};margin-top:6px">${kum>=0?'+':''}${Math.round(kum).toLocaleString('cs-CZ')} Kč</div>
+          <div class="scenar-sub">kumulativně 25 let</div>
+        </div>`;
+      }).join('')}
     </div>
-    ${!premium?`<div class="scenare-overlay"><div style="font-size:13px;font-weight:600;color:var(--navy)">📊 Plná citlivostní analýza</div><button class="btn-prim" style="font-size:12px;padding:9px 20px" onclick="openModal();switchTab('reg')">Registrovat se nezávazně →</button></div>`:''}
+    ${!premium?`<div class="scenare-overlay"><div style="font-size:13px;font-weight:600;color:var(--navy)">📊 Plná citlivostní analýza</div><button class="btn-prim" style="font-size:12px;padding:9px 20px" onclick="openModal();switchTab('reg')">Registrovat se nezávazně →</button><div style="margin-top:8px"><button onclick="otevrítKontaktK()" style="background:none;border:none;font-size:11px;color:var(--text-2);cursor:pointer;font-family:inherit;text-decoration:underline">nebo nás kontaktujte přímo</button></div></div>`:''}
   </div>
 
   <!-- CTA -->
-  <div class="cta-box">
+  <div class="cta-box" id="ctaBox">
     <div class="cta-body">
       <div class="cta-title">Připravit podklady pro schůzi SVJ?</div>
       <div class="cta-desc">Přesný výpočet · Bezplatné měření střechy · Nabídka na míru · Pomoc s NZÚ žádostí</div>
     </div>
-    <button class="btn-cta" onclick="openModal();switchTab('reg')">Nezávazně →</button>
+    <div style="display:flex;flex-direction:column;gap:8px;flex-shrink:0">
+      <button class="btn-cta" onclick="openModal();switchTab('reg')">Nezávazně →</button>
+      <button onclick="otevrítKontaktK()" style="background:none;border:1px solid rgba(255,255,255,0.3);border-radius:var(--rm);padding:8px 14px;font-size:11px;color:#CBD5E1;cursor:pointer;font-family:inherit;white-space:nowrap">✉️ Raději napište nám</button>
+    </div>
   </div>
 
   <div style="font-size:10px;color:var(--text-2);line-height:1.5;padding:8px 0">
@@ -1560,7 +1616,7 @@ async function submitReg(){
 
     document.getElementById('regFormWrap').style.display='none';
     document.getElementById('regSuccess').style.display='block';
-    setTimeout(()=>{closeModal();unlockPremium();window.location.href='kalkulator-pro.html';},1800);
+    setTimeout(()=>{closeModal();unlockPremium();},1800);
   }catch(e){
     setBtnLoading('regBtn','regBtnTxt',false,'Registrovat se nezávazně →');
     showFieldErr(document.getElementById('regEmail'),e.message);
@@ -1576,8 +1632,8 @@ async function submitLogin(){
     const {ok,data}=await supaFetch('/auth/v1/token?grant_type=password','POST',{email:em,password:pw});
     if(!ok)throw new Error(data.error_description||'Nesprávné přihlašovací údaje');
     if(data.access_token) localStorage.setItem('supa_access_token',data.access_token);
-    document.getElementById('regFormWrap').innerHTML='<div class="success-box"><div class="success-icon">✅</div><div class="success-title">Přihlášení úspěšné!</div><div class="success-desc">Přesměrováváme vás na PRO kalkulačku…</div></div>';
-    setTimeout(()=>{closeModal();unlockPremium();window.location.href='kalkulator-pro.html';},1500);
+    document.getElementById('regFormWrap').innerHTML='<div class="success-box"><div class="success-icon">✅</div><div class="success-title">Přihlášení úspěšné!</div><div class="success-desc">Přesměrováváme vás na plné výsledky…</div></div>';
+    setTimeout(()=>{closeModal();unlockPremium();},1500);
   }catch(e){setBtnLoading('loginBtn','loginBtnTxt',false,'Přihlásit se →');showFieldErr(document.getElementById('loginEmail'),e.message);}
 }
 
@@ -1723,11 +1779,6 @@ async function checkUser(){
     if(!r.ok){localStorage.removeItem('supa_access_token');return;}
     const u=await r.json();
     if(!u.id) return;
-    // Přihlášený uživatel → přesměrovat na PRO kalkulačku (ne přes hash #registrace)
-    if(!window.location.hash || window.location.hash===''){
-      window.location.href='kalkulator-pro.html';
-      return;
-    }
     const name=u.user_metadata?.full_name||u.email?.split('@')[0]||'Účet';
     const initials=name.trim().split(' ').map(n=>n[0]||'').join('').toUpperCase().slice(0,2)||'U';
     document.getElementById('userBtn').style.display='flex';
@@ -1750,6 +1801,128 @@ function odhlasit(){
 setTimeout(checkUser,200);
 
 render();
+</script>
+
+<!-- KONTAKTNÍ MODAL -->
+<div id="kontaktModalK" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;padding:16px">
+  <div style="background:#fff;border-radius:16px;padding:28px 24px;max-width:460px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);position:relative">
+    <button onclick="zavritKontaktK()" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:22px;cursor:pointer;color:#94A3B8;line-height:1">×</button>
+    <div style="font-size:22px;margin-bottom:6px">📩</div>
+    <div style="font-size:17px;font-weight:700;color:#1E3A5F;margin-bottom:4px">Napište nám</div>
+    <div style="font-size:12px;color:#64748B;margin-bottom:18px">Bezplatné poradenství · Měření střechy · Pomoc s NZÚ žádostí</div>
+    <div style="margin-bottom:12px">
+      <label style="font-size:12px;font-weight:600;color:#334155;display:block;margin-bottom:4px">Vaše jméno *</label>
+      <input id="kJmenoK" type="text" placeholder="Jan Novák" style="width:100%;padding:10px 12px;border:1.5px solid #E2E8F0;border-radius:8px;font-size:13px;font-family:inherit;outline:none">
+    </div>
+    <div style="margin-bottom:12px">
+      <label style="font-size:12px;font-weight:600;color:#334155;display:block;margin-bottom:4px">Telefon nebo e-mail *</label>
+      <input id="kKontaktK" type="text" placeholder="+420 123 456 789 nebo vas@email.cz" style="width:100%;padding:10px 12px;border:1.5px solid #E2E8F0;border-radius:8px;font-size:13px;font-family:inherit;outline:none">
+    </div>
+    <div style="margin-bottom:16px">
+      <label style="font-size:12px;font-weight:600;color:#334155;display:block;margin-bottom:4px">Zpráva</label>
+      <textarea id="kZpravaK" rows="3" placeholder="Např. adresa domu, počet bytů, otázky..." style="width:100%;padding:10px 12px;border:1.5px solid #E2E8F0;border-radius:8px;font-size:13px;font-family:inherit;outline:none;resize:vertical"></textarea>
+    </div>
+    <button onclick="odeslitKontaktK()" id="kBtnOdeslatK" style="width:100%;background:linear-gradient(135deg,#2E8B4A,#1f6b36);color:#fff;border:none;border-radius:8px;padding:13px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">Odeslat zprávu →</button>
+    <div id="kStatusK" style="margin-top:10px;font-size:12px;text-align:center;min-height:18px"></div>
+    <div style="font-size:10px;color:#94A3B8;margin-top:10px;text-align:center">Zpráva bude odeslána na svjenergie@gmail.com · Odpovíme do 24 hodin</div>
+  </div>
+</div>
+
+<!-- NUDGE OKNO -->
+<div id="nudgeBox" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:8000;width:calc(100% - 32px);max-width:420px">
+  <div style="background:#1E3A5F;border-radius:14px;padding:16px 18px;box-shadow:0 8px 32px rgba(0,0,0,.35);position:relative">
+    <button onclick="zavritNudge()" style="position:absolute;top:10px;right:12px;background:none;border:none;color:#8BA8C4;font-size:18px;cursor:pointer;line-height:1">×</button>
+    <div style="font-size:11px;color:#8BA8C4;margin-bottom:4px">☀️ Výsledek pro váš dům</div>
+    <div id="nudgeText" style="font-size:17px;font-weight:700;color:#fff;margin-bottom:12px">Váš dům ušetří 0 Kč/byt/měs</div>
+    <div style="display:flex;gap:8px">
+      <button onclick="zavritNudge();openModal();switchTab('reg')" style="flex:1;background:linear-gradient(135deg,#2E8B4A,#1f6b36);color:#fff;border:none;border-radius:8px;padding:10px 8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">Registrovat se →</button>
+      <button onclick="zavritNudge();otevrítKontaktK()" style="flex:1;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:10px 8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">✉️ Kontaktujte mě</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function otevrítKontaktK(){
+  const m = document.getElementById('kontaktModalK');
+  m.style.display = 'flex';
+  setTimeout(()=>document.getElementById('kJmenoK').focus(), 100);
+}
+
+function zavritKontaktK(){
+  document.getElementById('kontaktModalK').style.display = 'none';
+  document.getElementById('kStatusK').textContent = '';
+}
+
+function odeslitKontaktK(){
+  const jmeno   = document.getElementById('kJmenoK').value.trim();
+  const kontakt = document.getElementById('kKontaktK').value.trim();
+  const zprava  = document.getElementById('kZpravaK').value.trim();
+  const status  = document.getElementById('kStatusK');
+  const btn     = document.getElementById('kBtnOdeslatK');
+
+  if(!jmeno || !kontakt){
+    status.style.color = '#991B1B';
+    status.textContent = '⚠️ Vyplňte prosím jméno a kontakt.';
+    return;
+  }
+
+  const predmet = encodeURIComponent('SVJ Energie — poptávka: ' + (D.lokace || 'bytový dům'));
+  const telo = encodeURIComponent(
+    'Dobrý den,\n\n'
+    + 'Posílám poptávku z kalkulačky SVJ Energie.\n\n'
+    + '=== Kontaktní údaje ===\n'
+    + 'Jméno: ' + jmeno + '\n'
+    + 'Kontakt: ' + kontakt + '\n\n'
+    + '=== Projekt ===\n'
+    + 'Adresa: ' + (D.lokace || 'nezadána') + '\n'
+    + 'Počet bytů: ' + (D.bytu || '—') + '\n\n'
+    + '=== Zpráva ===\n'
+    + (zprava || '(bez zprávy)') + '\n\n'
+    + 'Odesláno z: www.svjenergie.cz/kalkulator'
+  );
+
+  window.location.href = 'mailto:svjenergie@gmail.com?subject=' + predmet + '&body=' + telo;
+  btn.disabled = true;
+  status.style.color = '#1A5C32';
+  status.textContent = '✅ Otevírám vašeho e-mailového klienta…';
+  setTimeout(()=>{ zavritKontaktK(); btn.disabled = false; }, 2500);
+}
+
+document.getElementById('kontaktModalK').addEventListener('click', function(e){
+  if(e.target === this) zavritKontaktK();
+});
+
+function zavritNudge(){
+  document.getElementById('nudgeBox').style.display = 'none';
+  sessionStorage.setItem('nudge_zavreno', '1');
+}
+
+function zobrazNudge(usporaMes){
+  // Nezobrazit pokud: již zavřeno, login modal otevřen, premium
+  if(sessionStorage.getItem('nudge_zavreno')) return;
+  if(sessionStorage.getItem('premium_unlocked')==='true') return;
+  const loginModal = document.getElementById('modal');
+  if(loginModal && loginModal.style.display !== 'none' && loginModal.style.display !== '') return;
+
+  const el = document.getElementById('nudgeText');
+  if(el) el.textContent = 'Váš dům ušetří ' + usporaMes.toLocaleString('cs-CZ') + ' Kč/byt/měsíc';
+  document.getElementById('nudgeBox').style.display = 'block';
+}
+
+// IntersectionObserver — nudge se zobrazí když CTA box vjede do pohledu
+function initNudgeObserver(usporaMes){
+  const target = document.getElementById('ctaBox');
+  if(!target) return;
+  const observer = new IntersectionObserver((entries)=>{
+    entries.forEach(entry=>{
+      if(entry.isIntersecting){
+        setTimeout(()=>zobrazNudge(usporaMes), 600);
+        observer.disconnect();
+      }
+    });
+  }, {threshold: 0.3});
+  observer.observe(target);
+}
 </script>
 </body>
 </html>
