@@ -1614,7 +1614,7 @@ async function goToResults(){
       const rb = document.getElementById('resBody');
       const bp = document.getElementById('btnPdf');
       if(ps) ps.innerHTML = '<div style="font-size:12px;color:var(--green);padding:4px 0">✅ Výpočet dokončen — přesná 15minutová simulace · PVGIS TMY data</div>';
-      if(rb){ rb.innerHTML = renderResults(RES); setTimeout(drawAllCharts, 150); }
+      if(rb){ rb.innerHTML = renderResults(RES); setTimeout(()=>drawAllCharts(1), 200); }
       if(bp) bp.disabled = false;
       // Uložit simulaci
       ulozSimulaci(RES, {model: D.model, kwp: mk.kwp, bat: mk.bat, pocet_bytu: D.bytu});
@@ -1941,21 +1941,41 @@ function renderResults(R){
   const sim = R.sim || {};
   const cf  = R.cf  || [];
   const bytu = R.bytu || D.bytu;
-  const inv  = R.inv  || R.cena_invest || 0;
+  const inv  = R.cena_invest || R.inv || 0;
+
+  // Ceny elektřiny — vždy z backendu
   const cvt = (R.cvt||6610) / 1000;
   const cnt = (R.cnt||4070) / 1000;
-  const cpr = (D.cena_pretoky||1.5) / 1000;
 
-  // Klíčové hodnoty
-  const vyroba    = Math.round((sim.vyroba_kwh||0)/100)/10;
-  const vlastni   = Math.round((sim.vlastni_kwh||0)/100)/10;
-  const pretoky   = Math.round((sim.pretoky_kwh||0)/100)/10;
-  const mira_vs   = Math.round((sim.mira_vs||0)*100);
-  const mira_sob  = Math.round((sim.mira_sob||0)*100);
-  const uspora1   = cf[0]?.uspora_celkem || 0;
-  const uspora_byt_mes = Math.round(uspora1/bytu/12);
-  const nav    = cf.findIndex(r=>r.kumulativni>=0)+1 || null;
-  const kum25  = cf[24]?.kumulativni || 0;
+  // Klíčové hodnoty — VŽDY z cf[] (backend cashflow), nikdy vlastní výpočet
+  const uspora1        = cf[0]?.uspora_celkem || 0;
+  const uspora_byt_mes = R.splatka_byt_mes
+    ? Math.round(uspora1/bytu/12)   // vypočítat stejně jako backend
+    : Math.round(uspora1/bytu/12);
+  // Návratnost — z cf[] (index prvního kladného kumulativu)
+  const nav   = cf.findIndex(r=>r.kumulativni>=0)+1 || null;
+  const kum25 = cf[24]?.kumulativni || 0;
+
+  // FVE výroba — z sim{} bez mezizaokrouhlení
+  const vyroba  = Math.round((sim.vyroba_kwh||0)/100)/10;
+  const vlastni = Math.round((sim.vlastni_kwh||0)/100)/10;
+  const pretoky = Math.round((sim.pretoky_kwh||0)/100)/10;
+  // mira_vs a mira_sob — z backendu (přesné float hodnoty)
+  const mira_vs  = Math.round((sim.mira_vs||0)*100);
+  const mira_sob = Math.round((sim.mira_sob||0)*100);
+
+  // Finance — VŽDY z backendu, žádné vlastní výpočty
+  const uver          = R.uver          || 0;
+  const vlastni_vklad = R.vlastni_vklad || (inv - uver);
+  const splatnost     = R.splatnost     || parseInt(D.splatnost) || 15;
+  const nzu_spl_rok     = R.splatka_rok     || 0;
+  const nzu_spl_byt_mes = R.splatka_byt_mes || R.splatka_byt || 0;
+  const splatka_mes     = nzu_spl_byt_mes;
+
+  // Přehled na byt — z backendu
+  const bytUsporaMes = Math.round(uspora1/bytu/12);
+  const bytSplatka   = nzu_spl_byt_mes;
+  const bytCisty     = bytUsporaMes - bytSplatka;
 
   // ── DEBUG — otevřete F12 → Console pro zobrazení ──────────────
   console.group('=== SVJ ENERGIE — DEBUG výsledků ===');
@@ -1969,22 +1989,10 @@ function renderResults(R){
   console.log('🧮 Frontend nav (návratnost):', nav);
   console.log('🧮 Frontend uspora1 (úspora rok 1):', uspora1);
   console.log('🧮 Frontend kum25 (kumulativ 25 let):', kum25);
-  console.log('🧮 Frontend uspora_byt_mes:', uspora_byt_mes);
+  console.log('🧮 Frontend uspora_byt_mes:', uspora_byt_mes, '| nzu_spl_byt_mes:', nzu_spl_byt_mes, '| bytCisty:', bytCisty);
   console.log('📦 R.srovnani:', R.srovnani);
   console.log('📦 R.scenare:', R.scenare);
   console.groupEnd();
-  // uver z backendu — backend zná vlastni_pct a správně počítá uver
-  const uver   = R.uver || Math.round(inv * (1 - (D.vlastni_pct||0)/100));
-  const vlastni_vklad = R.vlastni_vklad || (inv - uver);
-  const splatnost = R.splatnost || parseInt(D.splatnost) || 15;
-  const nzu_spl_rok = R.splatka_rok || Math.round(uver/splatnost);
-  const nzu_spl_byt_mes = R.splatka_byt_mes || Math.round(nzu_spl_rok/bytu/12);
-  const splatka_mes = nzu_spl_byt_mes;
-
-  // Přehled na byt
-  const bytUsporaMes = uspora_byt_mes;
-  const bytSplatka = nzu_spl_byt_mes;
-  const bytCisty = bytUsporaMes - bytSplatka;
   const bytPodilInv = Math.round(inv/bytu);
   // Zranitelné domácnosti — bug fix: ||20 způsoboval ignorování hodnoty 0
   const n_nizko = parseInt(D.pocet_nizko)||0;
@@ -2108,53 +2116,73 @@ function renderResults(R){
   <div class="card">
     <div class="chart-card-title">⚡ Roční energetická bilance</div>
     <div class="chart-card-sub">Jak se rozdělí vyrobená elektřina z FVE</div>
-    <div style="margin-bottom:8px">
-      <div class="bilance-row">
-        <div class="bilance-label">Výroba FVE celkem</div>
-        <div class="bilance-bar-wrap">
-          <div class="bilance-bar" style="width:100%;background:linear-gradient(90deg,#F59E0B,#FBBF24)">
-            <span class="bilance-bar-txt">${vyroba} MWh/rok</span>
+    ${(()=>{
+      // Všechna procenta počítáme z přesných (nezaokrouhlených) hodnot
+      // mira_vs z backendu = vlastni/vyroba přesně — to je základ
+      const vyr_kwh  = sim.vyroba_kwh    || 1;
+      const vt_kwh   = sim.vlastni_vt_kwh || 0;
+      const nt_kwh   = sim.vlastni_nt_kwh || 0;
+      const pr_kwh   = sim.pretoky_kwh    || 0;
+      // Procenta z přesných hodnot — žádné mezizaokrouhlení
+      const pct_vt   = Math.round(vt_kwh / vyr_kwh * 100);
+      const pct_nt   = Math.round(nt_kwh / vyr_kwh * 100);
+      const pct_pr   = Math.round(pr_kwh / vyr_kwh * 100);
+      // mira_vs = součet VT+NT (z backendu přesně) — zobrazit stejné číslo jako pct_vt+pct_nt
+      const pct_vs   = pct_vt + pct_nt;
+      // MWh zaokrouhlené na 1 desetinné místo pro zobrazení
+      const vyr_mwh  = Math.round(vyr_kwh / 100) / 10;
+      const vt_mwh   = Math.round(vt_kwh  / 100) / 10;
+      const nt_mwh   = Math.round(nt_kwh  / 100) / 10;
+      const pr_mwh   = Math.round(pr_kwh  / 100) / 10;
+      return `
+      <div style="margin-bottom:8px">
+        <div class="bilance-row">
+          <div class="bilance-label">Výroba FVE celkem</div>
+          <div class="bilance-bar-wrap">
+            <div class="bilance-bar" style="width:100%;background:linear-gradient(90deg,#F59E0B,#FBBF24)">
+              <span class="bilance-bar-txt">${vyr_mwh} MWh/rok</span>
+            </div>
           </div>
+          <div class="bilance-value">${pct_vs} % využito</div>
         </div>
-        <div class="bilance-value">${mira_vs} % využito</div>
-      </div>
-      <div class="bilance-row">
-        <div class="bilance-label">Vlastní spotřeba VT</div>
-        <div class="bilance-bar-wrap">
-          <div class="bilance-bar" style="width:${Math.min(100,Math.round((sim.vlastni_vt_kwh||0)/(sim.vyroba_kwh||1)*100))}%;background:linear-gradient(90deg,#1B6CA8,#3B82F6)">
-            <span class="bilance-bar-txt">${Math.round((sim.vlastni_vt_kwh||0)/100)/10} MWh</span>
+        <div class="bilance-row">
+          <div class="bilance-label">Vlastní spotřeba VT</div>
+          <div class="bilance-bar-wrap">
+            <div class="bilance-bar" style="width:${Math.min(100,pct_vt)}%;background:linear-gradient(90deg,#1B6CA8,#3B82F6)">
+              <span class="bilance-bar-txt">${vt_mwh} MWh</span>
+            </div>
           </div>
+          <div class="bilance-value">${pct_vt} %</div>
         </div>
-        <div class="bilance-value">${Math.round((sim.vlastni_vt_kwh||0)/(sim.vyroba_kwh||1)*100)} %</div>
-      </div>
-      <div class="bilance-row">
-        <div class="bilance-label">Vlastní spotřeba NT</div>
-        <div class="bilance-bar-wrap">
-          <div class="bilance-bar" style="width:${Math.min(100,Math.round((sim.vlastni_nt_kwh||0)/(sim.vyroba_kwh||1)*100))}%;background:linear-gradient(90deg,#7C3AED,#A78BFA)">
-            <span class="bilance-bar-txt">${Math.round((sim.vlastni_nt_kwh||0)/100)/10} MWh</span>
+        <div class="bilance-row">
+          <div class="bilance-label">Vlastní spotřeba NT</div>
+          <div class="bilance-bar-wrap">
+            <div class="bilance-bar" style="width:${Math.min(100,pct_nt)}%;background:linear-gradient(90deg,#7C3AED,#A78BFA)">
+              <span class="bilance-bar-txt">${nt_mwh} MWh</span>
+            </div>
           </div>
+          <div class="bilance-value">${pct_nt} %</div>
         </div>
-        <div class="bilance-value">${Math.round((sim.vlastni_nt_kwh||0)/(sim.vyroba_kwh||1)*100)} %</div>
-      </div>
-      <div class="bilance-row">
-        <div class="bilance-label">Přetoky do sítě</div>
-        <div class="bilance-bar-wrap">
-          <div class="bilance-bar" style="width:${Math.min(100,Math.round((sim.pretoky_kwh||0)/(sim.vyroba_kwh||1)*100))}%;background:linear-gradient(90deg,#94A3B8,#CBD5E1)">
-            <span class="bilance-bar-txt" style="color:var(--text)">${pretoky} MWh</span>
+        <div class="bilance-row">
+          <div class="bilance-label">Přetoky do sítě</div>
+          <div class="bilance-bar-wrap">
+            <div class="bilance-bar" style="width:${Math.min(100,pct_pr)}%;background:linear-gradient(90deg,#94A3B8,#CBD5E1)">
+              <span class="bilance-bar-txt" style="color:var(--text)">${pr_mwh} MWh</span>
+            </div>
           </div>
+          <div class="bilance-value">${pct_pr} %</div>
         </div>
-        <div class="bilance-value">${Math.round((sim.pretoky_kwh||0)/(sim.vyroba_kwh||1)*100)} %</div>
-      </div>
-      <div class="bilance-row">
-        <div class="bilance-label">Míra soběstačnosti</div>
-        <div class="bilance-bar-wrap">
-          <div class="bilance-bar" style="width:${mira_sob}%;background:linear-gradient(90deg,#2E8B4A,#4ADE80)">
-            <span class="bilance-bar-txt">${mira_sob} %</span>
+        <div class="bilance-row">
+          <div class="bilance-label">Míra soběstačnosti</div>
+          <div class="bilance-bar-wrap">
+            <div class="bilance-bar" style="width:${mira_sob}%;background:linear-gradient(90deg,#2E8B4A,#4ADE80)">
+              <span class="bilance-bar-txt">${mira_sob} %</span>
+            </div>
           </div>
+          <div class="bilance-value">z celk. spotřeby</div>
         </div>
-        <div class="bilance-value">z celk. spotřeby</div>
-      </div>
-    </div>
+      </div>`;
+    })()}
   </div>
 
   <!-- GRAF 1: Měsíční výroba -->
@@ -2448,8 +2476,21 @@ function setDenPocasi(p, btn){
 }
 
 // Spustit všechny Chart.js grafy
-function drawAllCharts(){
+function drawAllCharts(attempt){
   if(!RES) return;
+  attempt = attempt || 1;
+  // Zkontrolovat že canvas elementy existují v DOM
+  const canvases = ['chartMesice','chartCashflow','chartSplatka','chartDenni'];
+  const missing = canvases.filter(id => !document.getElementById(id));
+  if(missing.length > 0){
+    if(attempt <= 5){
+      // Canvas ještě není v DOM — počkat a zkusit znovu
+      setTimeout(()=>drawAllCharts(attempt+1), attempt * 150);
+      return;
+    }
+    console.warn('drawAllCharts: canvas stále chybí po 5 pokusech:', missing);
+    return;
+  }
   drawMesice();
   drawCashflow();
   drawSplatka();
