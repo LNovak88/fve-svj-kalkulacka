@@ -2000,12 +2000,12 @@ function renderResults(R){
   const sp_pct  = D.spoluucast_pct != null ? parseFloat(D.spoluucast_pct) : 20;
   const stat_mes_nizko  = Math.round(nzu_spl_byt_mes * (1 - sp_pct/100));
   const dom_mes_nizko   = Math.round(nzu_spl_byt_mes * sp_pct/100);
-  const verdiktText = nav ?
-    nav<=12 ? `✅ Projekt se jednoznačně vyplatí — návratnost ${nav} let` :
-    nav<=20 ? `⚠️ Projekt je hraniční — návratnost ${nav} let` :
-    nav<=25 ? `⚠️ Projekt je rizikový — návratnost ${nav} let` :
-    `❌ Projekt se za 25 let nevrátí` : '❌ Projekt se za 25 let nevrátí';
   const verdiktCls = nav&&nav<=12?'ok':nav&&nav<=20?'warn':'err';
+  const verdiktText = nav ?
+    nav<=12 ? `✅ Dobrá investice — Čistý přínos +${bytCisty.toLocaleString('cs-CZ')} Kč/byt/měs · návratnost ${nav} let${bytCisty>=0?' · úspora hned od 1. roku':''}` :
+    nav<=20 ? `⚠️ Hraniční investice — Čistý přínos ${bytCisty>=0?'+':''}${bytCisty.toLocaleString('cs-CZ')} Kč/byt/měs · návratnost ${nav} let${bytCisty>=0?' · úspora hned od 1. roku':''}` :
+    nav<=25 ? `⚠️ Riziková investice — návratnost ${nav} let` :
+    `❌ Projekt se za 25 let nevrátí` : '❌ Projekt se za 25 let nevrátí';
   const verdiktDetail = nav&&nav<=12 ?
     `Cashflow návratnost ${nav} let je výborná. Bezpečná investice i při konzervativním scénáři.` :
     nav&&nav<=20 ?
@@ -2072,17 +2072,34 @@ function renderResults(R){
     </tr>`;
   }).join('');
 
-  // Scénáře — z backendu
-  const scenare = (R.scenare||[]).map(s=>{
-    const navColor = s.nav&&s.nav<=10?'var(--green)':s.nav&&s.nav<=16?'var(--amber)':'var(--rose)';
-    const navTxt = !s.nav ? '>25 let' : s.nav === 1 ? 'od 1. roku ✅' : s.nav + ' let';
-    return `<div class="scenar-card">
-      <div class="scenar-title">${s.label}</div>
-      <div class="scenar-v" style="color:${navColor}">${navTxt}</div>
-      <div class="scenar-sub">cashflow návratnost</div>
-      <div style="font-size:14px;font-weight:700;color:${s.kum25>=0?'var(--green)':'var(--rose)'};margin-top:8px">${s.kum25>=0?'+':''}${Math.round(s.kum25).toLocaleString('cs-CZ')} Kč</div>
-      <div class="scenar-sub">kumulativně 25 let</div>
-      ${s.bezfve25>0?`<div style="font-size:11px;color:var(--text-2);margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">Náklady na el. bez FVE: <strong>${Math.round(s.bezfve25).toLocaleString('cs-CZ')} Kč</strong></div>`:''}
+  // Scénáře — z backendu, nový layout s textem
+  const scenare = (R.scenare||[]).map((s,idx)=>{
+    const icons = ['📉','📊','🔥'];
+    const ico = icons[idx]||'📊';
+    const cistyRok1 = s.cisty_rok1 != null ? s.cisty_rok1 : bytCisty; // čistý přínos rok 1
+    const okamzity = cistyRok1 >= 0;
+    const navTxt = !s.nav ? '>25 let' : s.nav + ' let';
+    const navColor = !s.nav?'var(--rose)':s.nav<=12?'var(--green)':s.nav<=20?'var(--amber)':'var(--rose)';
+    return `<div class="scenar-card" style="text-align:left;padding:14px 16px">
+      <div style="font-weight:700;color:var(--navy);margin-bottom:10px;font-size:13px">${ico} ${s.label||''}</div>
+      <div style="display:flex;flex-direction:column;gap:7px;font-size:12px">
+        <div style="background:${okamzity?'rgba(46,139,74,0.08)':'rgba(244,63,94,0.06)'};border-radius:6px;padding:7px 10px;border-left:3px solid ${okamzity?'var(--green)':'var(--rose)'}">
+          <strong style="color:${okamzity?'var(--green)':'var(--rose)'}">${okamzity?'✅':'⚠️'} Okamžitý efekt:</strong>
+          <span style="color:var(--text)"> ${okamzity?'Kladné cash flow hned od 1. roku (projekt je plně samofinancovatelný)':'Záporné cash flow v prvních letech — projekt závisí na růstu cen'}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:0.5px solid var(--border)">
+          <span style="color:var(--text-2)">Návratnost investice</span>
+          <strong style="color:${navColor}">${navTxt}</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:0.5px solid var(--border)">
+          <span style="color:var(--text-2)">Čistý zisk za 25 let</span>
+          <strong style="color:${s.kum25>=0?'var(--green)':'var(--rose)'}">${s.kum25>=0?'+':''}${Math.round(s.kum25||0).toLocaleString('cs-CZ')} Kč</strong>
+        </div>
+        ${s.bezfve25>0?`<div style="display:flex;justify-content:space-between;padding:5px 0">
+          <span style="color:var(--text-2)">Náklady na el. bez FVE za 25 let</span>
+          <strong style="color:var(--text)">${Math.round(s.bezfve25).toLocaleString('cs-CZ')} Kč</strong>
+        </div>`:''}
+      </div>
     </div>`;
   }).join('');
 
@@ -2922,13 +2939,12 @@ function exportPdf(){
   const modelNazev = {edc:'EDC — komunitní sdílení', edc_bez_bat:'EDC bez baterie', jom:'PM — podružné měření', spolecne:'Jen společné prostory'}[D.model] || 'EDC';
 
   const verdiktTxt = nav ?
-    (nav<=10 ? `✅ Vynikající investice — návratnost ${nav} let` :
-     nav<=15 ? `✅ Dobrá investice — návratnost ${nav} let` :
-     nav<=20 ? `⚠️ Přijatelná investice — návratnost ${nav} let` :
-               `⚠️ Hraniční projekt — návratnost ${nav} let`) :
+    (nav<=12 ? `✅ Dobrá investice — Čistý přínos +${cisty_byt.toLocaleString('cs-CZ')} Kč/byt/měs · návratnost ${nav} let${cisty_byt>=0?' · úspora hned od 1. roku':''}` :
+     nav<=20 ? `⚠️ Hraniční investice — Čistý přínos ${cisty_byt>=0?'+':''}${cisty_byt.toLocaleString('cs-CZ')} Kč/byt/měs · návratnost ${nav} let${cisty_byt>=0?' · úspora hned od 1. roku':''}` :
+               `⚠️ Riziková investice — návratnost ${nav} let`) :
     '❌ Projekt se za 25 let nevrátí';
-  const verdiktBg    = nav&&nav<=15?'#E3F4E9':nav&&nav<=20?'#FEF3C7':'#FEE2E2';
-  const verdiktColor = nav&&nav<=15?'#1A5C32':nav&&nav<=20?'#7C5300':'#991B1B';
+  const verdiktBg    = nav&&nav<=12?'#E3F4E9':nav&&nav<=20?'#FEF3C7':'#FEE2E2';
+  const verdiktColor = nav&&nav<=12?'#1A5C32':nav&&nav<=20?'#7C5300':'#991B1B';
 
   // Cashflow tabulka
   const cfRows = cf.map((r,i)=>{
@@ -2948,14 +2964,32 @@ function exportPdf(){
   const scenareData = (RES.srovnani && RES.srovnani[D.model] && RES.srovnani[D.model].scenare)
     ? RES.srovnani[D.model].scenare
     : (RES.scenare || []);
-  const scenare = scenareData.map(s=>`
-    <div style="flex:1;background:#F8FAFB;border:1px solid #E2E8F0;border-radius:10px;padding:16px;text-align:center">
-      <div style="font-weight:600;color:#1E3A5F;margin-bottom:8px;font-size:12px">${s.label||''}<br><span style="font-size:11px;color:#64748B">+${s.rust||0} %/rok</span></div>
-      <div style="font-size:22px;font-weight:700;color:#1E3A5F">${s.nav||'>25'} let</div>
-      <div style="font-size:11px;color:#64748B;margin-bottom:8px">cashflow návratnost</div>
-      <div style="font-size:16px;font-weight:700;color:${(s.kum25||0)>=0?'#1A5C32':'#991B1B'}">${(s.kum25||0)>=0?'+':''}${Math.round(s.kum25||0).toLocaleString('cs-CZ')} Kč</div>
-      <div style="font-size:11px;color:#64748B">kumulativně 25 let</div>
-    </div>`).join('');
+  const scenare = scenareData.map((s,idx)=>{
+    const icons = ['📉','📊','🔥'];
+    const ico = icons[idx]||'📊';
+    const okamzity = (s.cisty_rok1 != null ? s.cisty_rok1 : bytCisty) >= 0;
+    const navTxt = !s.nav ? '>25 let' : s.nav + ' let';
+    const navColor = !s.nav?'#991B1B':s.nav<=12?'#1A5C32':s.nav<=20?'#78350F':'#991B1B';
+    return `
+    <div style="flex:1;background:#F8FAFB;border:1px solid #E2E8F0;border-radius:10px;padding:16px">
+      <div style="font-weight:700;color:#1E3A5F;margin-bottom:12px;font-size:13px">${ico} ${s.label||''}</div>
+      <div style="background:${okamzity?'rgba(46,139,74,0.08)':'rgba(244,63,94,0.06)'};border-radius:6px;padding:8px 10px;border-left:3px solid ${okamzity?'#1A5C32':'#991B1B'};margin-bottom:10px;font-size:11px">
+        <strong style="color:${okamzity?'#1A5C32':'#991B1B'}">${okamzity?'✅':'⚠️'} Okamžitý efekt:</strong>
+        ${okamzity?'Kladné cash flow hned od 1. roku (projekt je plně samofinancovatelný) ✅':'Záporné cash flow v prvních letech'}
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:0.5px solid #E2E8F0;font-size:12px">
+        <span style="color:#64748B">Návratnost investice</span>
+        <strong style="color:${navColor}">${navTxt}</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:0.5px solid #E2E8F0;font-size:12px">
+        <span style="color:#64748B">Čistý zisk za 25 let</span>
+        <strong style="color:${(s.kum25||0)>=0?'#1A5C32':'#991B1B'}">${(s.kum25||0)>=0?'+':''}${Math.round(s.kum25||0).toLocaleString('cs-CZ')} Kč</strong>
+      </div>
+      ${s.bezfve25>0?`<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12px">
+        <span style="color:#64748B">Náklady na el. bez FVE za 25 let</span>
+        <strong style="color:#1E3A5F">${Math.round(s.bezfve25).toLocaleString('cs-CZ')} Kč</strong>
+      </div>`:''}
+    </div>`}).join('');
 
   const html = `<!DOCTYPE html>
 <html lang="cs">
@@ -3117,7 +3151,7 @@ function exportPdf(){
     <tr><th>Položka</th><th style="text-align:right">Množství</th><th style="text-align:right">Podíl</th></tr>
     <tr><td>Výroba FVE celkem</td><td style="text-align:right">${vyroba_mwh} MWh/rok</td><td style="text-align:right">100 %</td></tr>
     <tr style="background:#F8FAFB"><td>Vlastní spotřeba VT (přímá)</td><td style="text-align:right">${vt_mwh} MWh/rok</td><td style="text-align:right">${Math.round(vt_mwh/vyroba_mwh*100)} %</td></tr>
-    <tr><td>Vlastní spotřeba NT (baterie)</td><td style="text-align:right">${nt_mwh} MWh/rok</td><td style="text-align:right">${Math.round(nt_mwh/vyroba_mwh*100)} %</td></tr>
+    <tr><td>Vlastní spotřeba NT (přes baterii)</td><td style="text-align:right">${nt_mwh} MWh/rok</td><td style="text-align:right">${Math.round(nt_mwh/vyroba_mwh*100)} %</td></tr>
     <tr style="background:#F8FAFB"><td>Přetoky do sítě (prodej)</td><td style="text-align:right">${pr_mwh} MWh/rok</td><td style="text-align:right">${Math.round(pr_mwh/vyroba_mwh*100)} %</td></tr>
     <tr style="background:#E3F4E9"><td style="color:#1A5C32;font-weight:700">Míra vlastní spotřeby (self-consumption)</td><td colspan="2" style="text-align:right;color:#1A5C32;font-weight:700">${mira_vs} %</td></tr>
     <tr style="background:#E3F4E9"><td style="color:#1A5C32;font-weight:700">Míra soběstačnosti (self-sufficiency)</td><td colspan="2" style="text-align:right;color:#1A5C32;font-weight:700">${mira_sob} %</td></tr>
