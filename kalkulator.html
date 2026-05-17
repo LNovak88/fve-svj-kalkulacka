@@ -1616,7 +1616,7 @@ async function submitReg(){
 
     document.getElementById('regFormWrap').style.display='none';
     document.getElementById('regSuccess').style.display='block';
-    setTimeout(()=>{closeModal();unlockPremium();},1800);
+    setTimeout(()=>{closeModal(); ulozDatAPresmeruj();},1800);
   }catch(e){
     setBtnLoading('regBtn','regBtnTxt',false,'Registrovat se nezávazně →');
     showFieldErr(document.getElementById('regEmail'),e.message);
@@ -1632,8 +1632,8 @@ async function submitLogin(){
     const {ok,data}=await supaFetch('/auth/v1/token?grant_type=password','POST',{email:em,password:pw});
     if(!ok)throw new Error(data.error_description||'Nesprávné přihlašovací údaje');
     if(data.access_token) localStorage.setItem('supa_access_token',data.access_token);
-    document.getElementById('regFormWrap').innerHTML='<div class="success-box"><div class="success-icon">✅</div><div class="success-title">Přihlášení úspěšné!</div><div class="success-desc">Přesměrováváme vás na plné výsledky…</div></div>';
-    setTimeout(()=>{closeModal();unlockPremium();},1500);
+    document.getElementById('regFormWrap').innerHTML='<div class="success-box"><div class="success-icon">✅</div><div class="success-title">Přihlášení úspěšné!</div><div class="success-desc">Přesměrováváme vás na PRO kalkulačku…</div></div>';
+    setTimeout(()=>{closeModal(); ulozDatAPresmeruj();},1500);
   }catch(e){setBtnLoading('loginBtn','loginBtnTxt',false,'Přihlásit se →');showFieldErr(document.getElementById('loginEmail'),e.message);}
 }
 
@@ -1891,6 +1891,41 @@ function odeslitKontaktK(){
 document.getElementById('kontaktModalK').addEventListener('click', function(e){
   if(e.target === this) zavritKontaktK();
 });
+
+function ulozDatAPresmeruj(){
+  // Uložit všechny parametry z D objektu do sessionStorage
+  // kalkulator-pro.html je načte při startu a předvyplní wizard
+  try{
+    const sp = spSpVypocet(D.bytu,D.pater,D.vytahu>0,D.vytahu,D.tuv,D.tc,D.ev,D.cerpadla);
+    const kwp = optimKwp(D.bytu,D.zarizeni,D.ev,D.tc,sp.sp_mwh);
+    const bat = Math.round(kwp*1.2*10)/10;
+    const params = {
+      // Lokalita
+      lokace: D.lokace||'', lat: D.lat||null, lon: D.lon||null,
+      // Budova
+      bytu: D.bytu, vchodu: D.vchodu, pater: D.pater,
+      vytahu: D.vytahu, cerpadla: D.cerpadla,
+      tuv: D.tuv, zatepleno: D.zatepleno, okna: D.okna, topeni: D.topeni,
+      tc: D.tc, ev: D.ev, zarizeni: D.zarizeni, hhSlider: D.hhSlider,
+      // Střecha
+      sklon: D.sklon, azimut: D.azimut, strTyp: D.strTyp,
+      // Distributor a sazba
+      dist: D.dist,
+      // Vypočtené hodnoty
+      kwp: kwp, bat: bat,
+      sp_sp_mwh: parseFloat(sp.sp_mwh)||3.5,
+      sp_by_vt_mwh: parseFloat(sp.sp_by_vt)||1.2,
+      sp_by_nt_mwh: parseFloat(sp.sp_by_nt)||0,
+      // Příznak — přišli z kalkulator.html
+      _z_kalkulatoru: true,
+    };
+    sessionStorage.setItem('kalkulator_params', JSON.stringify(params));
+  }catch(e){
+    console.warn('Nepodařilo se uložit parametry:', e);
+  }
+  // Přesměrovat na PRO kalkulačku
+  window.location.href = '/kalkulator-pro.html';
+}
 
 function zavritNudge(){
   document.getElementById('nudgeBox').style.display = 'none';
