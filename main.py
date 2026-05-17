@@ -546,13 +546,13 @@ def simulate(vstup: SimulaceVstup):
         cisty_byt = round(cfm[0]["cisty_prinos"] / pb / 12) if cfm else 0
         kum25_m   = cfm[24]["kumulativni"] if len(cfm) >= 25 else 0
 
-        # Citlivostní analýza pro tento model
-        scenare_mk = []
+        # Citlivostní analýza pro tento model — stejná logika jako cfm[], včetně jist_mk
         spotreba_kwh_mk = (vstup.sp_by_vt_mwh * 1000 * pb) + (vstup.sp_sp_mwh * 1000) + (vstup.sp_by_nt_mwh * 1000 * pb)
+        scenare_mk = []
         for rust_sc, label_sc in [(1.0, "📉 Pomalý růst cen EE +1 %/rok"),
                                    (3.0, "📊 Realistický scénář +3 %/rok"),
                                    (6.0, "🔥 Rychlý růst cen EE +6 %/rok")]:
-            kum_sc = -(invest_mk - uver_mk)  # vlastní vklad = počáteční záporný stav
+            kum_sc = -(invest_mk - uver_mk)  # záporný start = vlastní vklad
             nav_sc = None
             bezfve_25 = 0.0
             for rok in range(1, 26):
@@ -561,7 +561,7 @@ def simulate(vstup: SimulaceVstup):
                 u = (sm["vlastni_vt_kwh"] * d * cvt * c
                      + sm["vlastni_nt_kwh"] * d * cnt * c
                      + sm["pretoky_kwh"]    * d * (vstup.cena_pretoky / 1000) * c
-                     + jist_mk * c)  # úspora jističe (PM)
+                     + jist_mk * c)  # úspora jističe — roste s cenami el.
                 s = spl_mk if rok <= vstup.splatnost else 0
                 kum_sc += u - s
                 if kum_sc >= 0 and nav_sc is None:
@@ -591,26 +591,6 @@ def simulate(vstup: SimulaceVstup):
             "splatka_byt":       spl_byt,
             "cisty_byt":         cisty_byt,
             "uver":              round(uver_mk),
-            "vlastni_vklad":     round(invest_mk - uver_mk),
-            "splatka_rok":       round(spl_mk),
-            "splatka_byt_mes":   spl_byt,
-            "cvt":               round(cvt * 1000),
-            "cnt":               round(cnt * 1000),
-            "cf":                cfm,
-            "sim":               {
-                "vyroba_kwh":      sm.get("vyroba_kwh", 0),
-                "vlastni_kwh":     sm.get("vlastni_kwh", 0),
-                "vlastni_vt_kwh":  sm.get("vlastni_vt_kwh", 0),
-                "vlastni_nt_kwh":  sm.get("vlastni_nt_kwh", 0),
-                "pretoky_kwh":     sm.get("pretoky_kwh", 0),
-                "mira_vs":         sm.get("mira_vs", 0),
-                "mira_sob":        sm.get("mira_sob", 0),
-                "profil_den":      sm.get("profil_den", []),
-                "mesice_vyroba":   sm.get("mesice_vyroba", []),
-                "mesice_vlastni":  sm.get("mesice_vlastni", []),
-                "mesice_pretoky":  sm.get("mesice_pretoky", []),
-                "mesice_nazvy":    sm.get("mesice_nazvy", []),
-            },
             "scenare":           scenare_mk,
         }
 
@@ -619,14 +599,11 @@ def simulate(vstup: SimulaceVstup):
     # ================================================================
     scenare = []
     spotreba_kwh = (vstup.sp_by_vt_mwh * 1000 * pb) + (vstup.sp_sp_mwh * 1000) + (vstup.sp_by_nt_mwh * 1000 * pb)
+    jist_sc = vstup.uspora_jistic  # úspora na jističi — stejná jako v cf[]
     for rust_sc, label in [(1.0, "📉 Pomalý růst cen EE +1 %/rok"),
                             (3.0, "📊 Realistický scénář +3 %/rok"),
                             (6.0, "🔥 Rychlý růst cen EE +6 %/rok")]:
-        # Kumulativ = čistý cashflow SVJ
-        # Startuje od záporného vlastního vkladu (co SVJ zaplatí z kapsy)
-        # Splátky NZÚ jsou výdaj, úspory jsou příjem
-        # Návratnost = kdy kumulativ přejde do kladna (vlastní vklad se vrátil)
-        kum_sc    = -vlastni if vlastni > 0 else -vstup.cena_invest  # min. záporný start = celá investice
+        kum_sc    = -vlastni if vlastni > 0 else -vstup.cena_invest
         nav_sc    = None
         bezfve_25 = 0.0
         for rok in range(1, 26):
@@ -634,7 +611,8 @@ def simulate(vstup: SimulaceVstup):
             d = (1 - vstup.deg_pan / 100) ** (rok - 1)
             u = (sim["vlastni_vt_kwh"] * d * cvt * c
                  + sim["vlastni_nt_kwh"] * d * cnt * c
-                 + sim["pretoky_kwh"]    * d * (vstup.cena_pretoky / 1000) * c)
+                 + sim["pretoky_kwh"]    * d * (vstup.cena_pretoky / 1000) * c
+                 + jist_sc * c)  # úspora jističe — roste s cenami elektřiny
             s = uver / vstup.splatnost if rok <= vstup.splatnost else 0
             kum_sc += u - s
             if kum_sc >= 0 and nav_sc is None:
