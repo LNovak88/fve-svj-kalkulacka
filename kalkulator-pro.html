@@ -2072,33 +2072,42 @@ function renderResults(R){
     </tr>`;
   }).join('');
 
-  const scenare = (R.scenare||[]).map((s,idx)=>{
-    const icons = ['📉','📊','🔥'];
-    const cistyRok1 = s.cisty_rok1 != null ? s.cisty_rok1 : bytCisty;
-    const okamzity = cistyRok1 >= 0;
-    // Backend posílá "📉 Pomalý růst..." — odřízneme vždy první slovo (emoji)
-    const rawLabel = s.label || '';
-    const spaceIdx = rawLabel.indexOf(' ');
-    const labelText = spaceIdx > 0 ? rawLabel.slice(spaceIdx + 1) : rawLabel;
-    const ico = icons[idx] || '📊';
-    return `<div class="scenar-card" style="text-align:left;padding:14px 16px">
-      <div style="font-weight:700;color:var(--navy);margin-bottom:10px;font-size:13px">${ico} ${labelText}</div>
-      <div style="display:flex;flex-direction:column;gap:7px;font-size:12px">
-        <div style="background:${okamzity?'rgba(46,139,74,0.08)':'rgba(244,63,94,0.06)'};border-radius:6px;padding:7px 10px;border-left:3px solid ${okamzity?'var(--green)':'var(--rose)'}">
-          <strong style="color:${okamzity?'var(--green)':'var(--rose)'}">${okamzity?'✅':'⚠️'} Okamžitý efekt:</strong>
-          <span style="color:var(--text)"> ${okamzity?'Kladné cash flow hned od 1. roku':'Záporné cash flow v prvních letech'}</span>
-        </div>
-        <div style="padding:5px 0;border-bottom:${s.bezfve25>0?'0.5px solid var(--border)':'none'}">
-          <div style="color:var(--text-2);font-size:11px;margin-bottom:2px">Čistý zisk za 25 let</div>
-          <strong style="color:${s.kum25>=0?'var(--green)':'var(--rose)'};font-size:13px">${s.kum25>=0?'+':''}${Math.round(s.kum25||0).toLocaleString('cs-CZ')} Kč</strong>
-        </div>
-        ${s.bezfve25>0?`<div style="padding:5px 0">
-          <div style="color:var(--text-2);font-size:11px;margin-bottom:2px">Bez FVE za 25 let zaplatíte</div>
-          <strong style="color:var(--text);font-size:12px">${Math.round(s.bezfve25).toLocaleString('cs-CZ')} Kč</strong>
-        </div>`:''}
-      </div>
-    </div>`;
-  }).join('');
+  // Citlivostní analýza — sestavit HTML mimo template literal
+  var scenare = '';
+  var scenareArr = R.scenare || [];
+  var scIcons = ['📉','📊','🔥'];
+  var scNazvy = ['Pomalý růst cen EE +1 %/rok','Realistický scénář +3 %/rok','Rychlý růst cen EE +6 %/rok'];
+  for(var si=0; si<scenareArr.length; si++){
+    var sc = scenareArr[si];
+    var scCistyRok1 = sc.cisty_rok1 != null ? sc.cisty_rok1 : bytCisty;
+    var scOkamzity = scCistyRok1 >= 0;
+    var scIco = scIcons[si] || '📊';
+    var scNazev = scNazvy[si] || ('Scénář ' + (si+1));
+    var scKum = Math.round(sc.kum25||0).toLocaleString('cs-CZ');
+    var scKumColor = (sc.kum25||0)>=0 ? 'var(--green)' : 'var(--rose)';
+    var scKumZnak = (sc.kum25||0)>=0 ? '+' : '';
+    var scBezFve = sc.bezfve25 > 0 ? Math.round(sc.bezfve25).toLocaleString('cs-CZ') : '';
+    var scOkBg = scOkamzity ? 'rgba(46,139,74,0.08)' : 'rgba(244,63,94,0.06)';
+    var scOkBorder = scOkamzity ? 'var(--green)' : 'var(--rose)';
+    var scOkColor = scOkamzity ? 'var(--green)' : 'var(--rose)';
+    var scOkText = scOkamzity ? 'Kladné cash flow hned od 1. roku' : 'Záporné cash flow v prvních letech';
+    var scOkIco = scOkamzity ? '✅' : '⚠️';
+    scenare += '<div class="scenar-card" style="text-align:left;padding:14px 16px">';
+    scenare += '<div style="font-weight:700;color:var(--navy);margin-bottom:10px;font-size:13px">' + scIco + ' ' + scNazev + '</div>';
+    scenare += '<div style="display:flex;flex-direction:column;gap:7px;font-size:12px">';
+    scenare += '<div style="background:' + scOkBg + ';border-radius:6px;padding:7px 10px;border-left:3px solid ' + scOkBorder + '">';
+    scenare += '<strong style="color:' + scOkColor + '">' + scOkIco + ' Okamžitý efekt:</strong> ';
+    scenare += '<span style="color:var(--text)">' + scOkText + '</span></div>';
+    scenare += '<div style="padding:5px 0;border-bottom:' + (scBezFve?'0.5px solid var(--border)':'none') + '">';
+    scenare += '<div style="color:var(--text-2);font-size:11px;margin-bottom:2px">Čistý zisk za 25 let</div>';
+    scenare += '<strong style="color:' + scKumColor + ';font-size:13px">' + scKumZnak + scKum + ' Kč</strong></div>';
+    if(scBezFve){
+      scenare += '<div style="padding:5px 0">';
+      scenare += '<div style="color:var(--text-2);font-size:11px;margin-bottom:2px">Bez FVE za 25 let zaplatíte</div>';
+      scenare += '<strong style="color:var(--text);font-size:12px">' + scBezFve + ' Kč</strong></div>';
+    }
+    scenare += '</div></div>';
+  }
 
   return `
   <!-- VERDIKT -->
