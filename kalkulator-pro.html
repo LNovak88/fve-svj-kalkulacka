@@ -280,6 +280,7 @@ input[type=range]{width:100%;accent-color:var(--blue);margin-bottom:12px;cursor:
 .bilance-bar-txt{font-size:11px;font-weight:600;color:#fff;white-space:nowrap}
 .bilance-value{font-size:12px;font-weight:600;color:var(--text);width:90px;text-align:right;flex-shrink:0}
 
+.cta-box{background:linear-gradient(135deg,#1B3A5C,#0F2640);border-radius:var(--rm);padding:18px 20px;display:flex;align-items:center;gap:16px;margin-bottom:12px}
 .cta-body{flex:1}.cta-title{font-size:15px;font-weight:600;color:#fff;margin-bottom:5px}.cta-desc{font-size:12px;color:#8BA8C4;line-height:1.4}
 .btn-cta{background:linear-gradient(135deg,var(--green),#1f6b36);color:#fff;border:none;border-radius:var(--rm);padding:13px 22px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap}
 </style>
@@ -1912,6 +1913,23 @@ function renderResults(R){
   const uspora_byt_mes = Math.round(uspora1/bytu/12);
   const nav    = cf.findIndex(r=>r.kumulativni>=0)+1 || null;
   const kum25  = cf[24]?.kumulativni || 0;
+
+  // ── DEBUG — otevřete F12 → Console pro zobrazení ──────────────
+  console.group('=== SVJ ENERGIE — DEBUG výsledků ===');
+  console.log('📥 MODEL vybraný:', D.model);
+  console.log('📥 Backend R.kwp:', R.kwp, '| R.bat:', R.bat, '| R.bytu:', R.bytu);
+  console.log('📥 Backend R.cena_invest:', R.cena_invest, '| R.uver:', R.uver, '| R.vlastni_vklad:', R.vlastni_vklad);
+  console.log('📥 Backend R.splatka_rok:', R.splatka_rok, '| R.splatka_byt_mes:', R.splatka_byt_mes, '| R.splatnost:', R.splatnost);
+  console.log('📊 cf[0] (rok 1):', cf[0]);
+  console.log('📊 cf[14] (rok 15):', cf[14]);
+  console.log('📊 cf[24] (rok 25):', cf[24]);
+  console.log('🧮 Frontend nav (návratnost):', nav);
+  console.log('🧮 Frontend uspora1 (úspora rok 1):', uspora1);
+  console.log('🧮 Frontend kum25 (kumulativ 25 let):', kum25);
+  console.log('🧮 Frontend uspora_byt_mes:', uspora_byt_mes);
+  console.log('📦 R.srovnani:', R.srovnani);
+  console.log('📦 R.scenare:', R.scenare);
+  console.groupEnd();
   // uver z backendu — backend zná vlastni_pct a správně počítá uver
   const uver   = R.uver || Math.round(inv * (1 - (D.vlastni_pct||0)/100));
   const vlastni_vklad = R.vlastni_vklad || (inv - uver);
