@@ -2076,24 +2076,28 @@ function renderResults(R){
     const icons = ['📉','📊','🔥'];
     const cistyRok1 = s.cisty_rok1 != null ? s.cisty_rok1 : bytCisty;
     const okamzity = cistyRok1 >= 0;
-    // Odstranit emoji z labelu backendu (první znak nebo dva znaky)
-    const rawLabel = s.label || (icons[idx]||'📊') + ' Scénář';
-    const labelBezEmoji = rawLabel.replace(/^[\u{1F300}-\u{1FFFF}\u{2600}-\u{27FF}]\s*/u, '');
+    // Odstranit emoji ze začátku labelu — vzít vše za prvním mezerou za emoji
+    const rawLabel = s.label || '';
+    // Emoji jsou vždy první 1-2 znaky, pak mezera — použijeme split na první mezeru
+    const parts = rawLabel.split(' ');
+    // Pokud první část je emoji (kratší než 3 znaky nebo obsahuje unicode emoji), skip
+    const firstIsEmoji = parts.length > 1 && [...parts[0]].every(c => c.codePointAt(0) > 127);
+    const labelText = firstIsEmoji ? parts.slice(1).join(' ') : rawLabel;
     const ico = icons[idx] || '📊';
     return `<div class="scenar-card" style="text-align:left;padding:14px 16px">
-      <div style="font-weight:700;color:var(--navy);margin-bottom:10px;font-size:13px">${ico} ${labelBezEmoji}</div>
+      <div style="font-weight:700;color:var(--navy);margin-bottom:10px;font-size:13px">${ico} ${labelText}</div>
       <div style="display:flex;flex-direction:column;gap:7px;font-size:12px">
         <div style="background:${okamzity?'rgba(46,139,74,0.08)':'rgba(244,63,94,0.06)'};border-radius:6px;padding:7px 10px;border-left:3px solid ${okamzity?'var(--green)':'var(--rose)'}">
           <strong style="color:${okamzity?'var(--green)':'var(--rose)'}">${okamzity?'✅':'⚠️'} Okamžitý efekt:</strong>
-          <span style="color:var(--text)"> ${okamzity?'Kladné cash flow hned od 1. roku (plně samofinancovatelný)':'Záporné cash flow v prvních letech'}</span>
+          <span style="color:var(--text)"> ${okamzity?'Kladné cash flow hned od 1. roku':'Záporné cash flow v prvních letech'}</span>
         </div>
         <div style="padding:5px 0;border-bottom:${s.bezfve25>0?'0.5px solid var(--border)':'none'}">
-          <div style="color:var(--text-2);margin-bottom:2px">Čistý zisk za 25 let</div>
-          <strong style="color:${s.kum25>=0?'var(--green)':'var(--rose)'};font-size:14px">${s.kum25>=0?'+':''}${Math.round(s.kum25||0).toLocaleString('cs-CZ')} Kč</strong>
+          <div style="color:var(--text-2);font-size:11px;margin-bottom:2px">Čistý zisk za 25 let</div>
+          <strong style="color:${s.kum25>=0?'var(--green)':'var(--rose)'};font-size:15px">${s.kum25>=0?'+':''}${Math.round(s.kum25||0).toLocaleString('cs-CZ')} Kč</strong>
         </div>
         ${s.bezfve25>0?`<div style="padding:5px 0">
-          <div style="color:var(--text-2);margin-bottom:2px">Náklady na el. bez FVE za 25 let</div>
-          <strong style="color:var(--text);font-size:13px">${Math.round(s.bezfve25).toLocaleString('cs-CZ')} Kč</strong>
+          <div style="color:var(--text-2);font-size:11px;margin-bottom:2px">Bez FVE za 25 let zaplatíte</div>
+          <strong style="color:var(--text);font-size:14px">${Math.round(s.bezfve25).toLocaleString('cs-CZ')} Kč</strong>
         </div>`:''}
       </div>
     </div>`;
