@@ -2076,22 +2076,24 @@ function renderResults(R){
     const icons = ['📉','📊','🔥'];
     const cistyRok1 = s.cisty_rok1 != null ? s.cisty_rok1 : bytCisty;
     const okamzity = cistyRok1 >= 0;
-    // Label z backendu už obsahuje emoji — nebudeme přidávat další
-    const label = s.label || (icons[idx]||'📊') + ' Scénář';
+    // Odstranit emoji z labelu backendu (první znak nebo dva znaky)
+    const rawLabel = s.label || (icons[idx]||'📊') + ' Scénář';
+    const labelBezEmoji = rawLabel.replace(/^[\u{1F300}-\u{1FFFF}\u{2600}-\u{27FF}]\s*/u, '');
+    const ico = icons[idx] || '📊';
     return `<div class="scenar-card" style="text-align:left;padding:14px 16px">
-      <div style="font-weight:700;color:var(--navy);margin-bottom:10px;font-size:13px">${label}</div>
+      <div style="font-weight:700;color:var(--navy);margin-bottom:10px;font-size:13px">${ico} ${labelBezEmoji}</div>
       <div style="display:flex;flex-direction:column;gap:7px;font-size:12px">
         <div style="background:${okamzity?'rgba(46,139,74,0.08)':'rgba(244,63,94,0.06)'};border-radius:6px;padding:7px 10px;border-left:3px solid ${okamzity?'var(--green)':'var(--rose)'}">
           <strong style="color:${okamzity?'var(--green)':'var(--rose)'}">${okamzity?'✅':'⚠️'} Okamžitý efekt:</strong>
-          <span style="color:var(--text)"> ${okamzity?'Kladné cash flow hned od 1. roku (projekt je plně samofinancovatelný)':'Záporné cash flow v prvních letech — projekt závisí na růstu cen'}</span>
+          <span style="color:var(--text)"> ${okamzity?'Kladné cash flow hned od 1. roku (plně samofinancovatelný)':'Záporné cash flow v prvních letech'}</span>
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:${s.bezfve25>0?'0.5px solid var(--border)':'none'}">
-          <span style="color:var(--text-2)">Čistý zisk za 25 let</span>
-          <strong style="color:${s.kum25>=0?'var(--green)':'var(--rose)'};white-space:nowrap">${s.kum25>=0?'+':''}${Math.round(s.kum25||0).toLocaleString('cs-CZ')} Kč</strong>
+        <div style="padding:5px 0;border-bottom:${s.bezfve25>0?'0.5px solid var(--border)':'none'}">
+          <div style="color:var(--text-2);margin-bottom:2px">Čistý zisk za 25 let</div>
+          <strong style="color:${s.kum25>=0?'var(--green)':'var(--rose)'};font-size:14px">${s.kum25>=0?'+':''}${Math.round(s.kum25||0).toLocaleString('cs-CZ')} Kč</strong>
         </div>
-        ${s.bezfve25>0?`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0">
-          <span style="color:var(--text-2)">Náklady na el. bez FVE za 25 let</span>
-          <strong style="color:var(--text);white-space:nowrap">${Math.round(s.bezfve25).toLocaleString('cs-CZ')} Kč</strong>
+        ${s.bezfve25>0?`<div style="padding:5px 0">
+          <div style="color:var(--text-2);margin-bottom:2px">Náklady na el. bez FVE za 25 let</div>
+          <strong style="color:var(--text);font-size:13px">${Math.round(s.bezfve25).toLocaleString('cs-CZ')} Kč</strong>
         </div>`:''}
       </div>
     </div>`;
@@ -2951,6 +2953,7 @@ function exportPdf(){
   const imgMesice   = canvasToPng('chartMesice');
   const imgCashflow = canvasToPng('chartCashflow');
   const imgSplatka  = canvasToPng('chartSplatka');
+  const imgDenni    = canvasToPng('chartDenni');
 
   // Cashflow tabulka
   const cfRows = cf.map((r,i)=>{
@@ -3123,6 +3126,9 @@ function exportPdf(){
   <img src="${imgCashflow}" style="width:100%;border-radius:8px;margin-bottom:14px" alt="Cashflow">` : ''}
   ${imgSplatka ? `<h2>💰 Roční úspora vs. splátka</h2>
   <img src="${imgSplatka}" style="width:100%;border-radius:8px;margin-bottom:14px" alt="Úspora vs splátka">` : ''}
+  ${imgDenni ? `<h2>🌤️ Denní profil výroby vs. spotřeby</h2>
+  <div style="font-size:11px;color:#64748B;margin-bottom:6px">Výroba je v poledne, spotřeba večer — proto je baterie důležitá. Zelená plocha = energie z FVE přímo využitá.</div>
+  <img src="${imgDenni}" style="width:100%;border-radius:8px;margin-bottom:14px" alt="Denní profil">` : ''}
 
   <!-- Přehled na byt -->
   <h2>🏠 Přehled na standardní byt</h2>
