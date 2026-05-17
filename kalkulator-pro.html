@@ -2971,7 +2971,7 @@ function exportPdf(){
     const bg = isNav?'#DCF5E7':i%2===0?'#F8FAFB':'#fff';
     return `<tr style="background:${bg};font-weight:${isNav?700:400}">
       <td style="text-align:center">${r.rok}${isNav?' ✓':''}</td>
-      <td style="text-align:right">${Math.round((r.vyroba_mwh||0)*10)/10}</td>
+      <td style="text-align:right">${(Math.round((r.vyroba_mwh||0)*10)/10).toLocaleString('cs-CZ',{minimumFractionDigits:1,maximumFractionDigits:1})}</td>
       <td style="text-align:right;color:#1A5C32">${Math.round(r.uspora_celkem).toLocaleString('cs-CZ')}</td>
       <td style="text-align:right">${Math.round(r.splatka).toLocaleString('cs-CZ')}</td>
       <td style="text-align:right;color:${r.cisty_prinos>=0?'#1A5C32':'#991B1B'}">${Math.round(r.cisty_prinos).toLocaleString('cs-CZ')}</td>
@@ -2979,31 +2979,41 @@ function exportPdf(){
     </tr>`;
   }).join('');
 
-  // Citlivostní analýza — ze srovnani[model].scenare (backend data)
+  // Citlivostní analýza — vždy ze srovnani[model].scenare (správná čísla pro daný model)
   const scenareData = (RES.srovnani && RES.srovnani[D.model] && RES.srovnani[D.model].scenare)
     ? RES.srovnani[D.model].scenare
     : (RES.scenare || []);
-  const scenare = scenareData.map((s,idx)=>{
-    const icons = ['📉','📊','🔥'];
-    const ico = icons[idx]||'📊';
-    // bytCisty → cisty_byt (správný název v exportPdf)
-    const okamzity = (s.cisty_rok1 != null ? s.cisty_rok1 : cisty_byt) >= 0;
-    return `
-    <div style="flex:1;background:#F8FAFB;border:1px solid #E2E8F0;border-radius:10px;padding:16px">
-      <div style="font-weight:700;color:#1E3A5F;margin-bottom:12px;font-size:13px">${ico} ${s.label||''}</div>
-      <div style="background:${okamzity?'rgba(46,139,74,0.08)':'rgba(244,63,94,0.06)'};border-radius:6px;padding:8px 10px;border-left:3px solid ${okamzity?'#1A5C32':'#991B1B'};margin-bottom:10px;font-size:11px">
-        <strong style="color:${okamzity?'#1A5C32':'#991B1B'}">${okamzity?'✅':'⚠️'} Okamžitý efekt:</strong>
-        ${okamzity?'Kladné cash flow hned od 1. roku (projekt je plně samofinancovatelný) ✅':'Záporné cash flow v prvních letech'}
-      </div>
-      <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:${s.bezfve25>0?'0.5px solid #E2E8F0':'none'};font-size:12px">
-        <span style="color:#64748B">Čistý zisk za 25 let</span>
-        <strong style="color:${(s.kum25||0)>=0?'#1A5C32':'#991B1B'}">${(s.kum25||0)>=0?'+':''}${Math.round(s.kum25||0).toLocaleString('cs-CZ')} Kč</strong>
-      </div>
-      ${s.bezfve25>0?`<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12px">
-        <span style="color:#64748B">Náklady na el. bez FVE za 25 let</span>
-        <strong style="color:#1E3A5F">${Math.round(s.bezfve25).toLocaleString('cs-CZ')} Kč</strong>
-      </div>`:''}
-    </div>`}).join('');
+  var scenare = '';
+  var scIcons = ['📉','📊','🔥'];
+  var scNazvy = ['Pomalý růst cen EE +1 %/rok','Realistický scénář +3 %/rok','Rychlý růst cen EE +6 %/rok'];
+  for(var si=0; si<scenareData.length; si++){
+    var sc = scenareData[si];
+    var scOkamzity = (sc.cisty_rok1 != null ? sc.cisty_rok1 : cisty_byt) >= 0;
+    var scIco = scIcons[si] || '📊';
+    var scNazev = scNazvy[si] || ('Scénář ' + (si+1));
+    var scKum = Math.round(sc.kum25||0).toLocaleString('cs-CZ');
+    var scKumColor = (sc.kum25||0)>=0 ? '#1A5C32' : '#991B1B';
+    var scKumZnak = (sc.kum25||0)>=0 ? '+' : '';
+    var scBezFve = sc.bezfve25 > 0 ? Math.round(sc.bezfve25).toLocaleString('cs-CZ') : '';
+    var scOkBg = scOkamzity ? 'rgba(46,139,74,0.08)' : 'rgba(244,63,94,0.06)';
+    var scOkBorder = scOkamzity ? '#1A5C32' : '#991B1B';
+    var scOkIco = scOkamzity ? '✅' : '⚠️';
+    var scOkText = scOkamzity ? 'Kladné cash flow hned od 1. roku (projekt je plně samofinancovatelný)' : 'Záporné cash flow v prvních letech';
+    scenare += '<div style="flex:1;background:#F8FAFB;border:1px solid #E2E8F0;border-radius:10px;padding:16px">';
+    scenare += '<div style="font-weight:700;color:#1E3A5F;margin-bottom:12px;font-size:13px">' + scIco + ' ' + scNazev + '</div>';
+    scenare += '<div style="background:' + scOkBg + ';border-radius:6px;padding:8px 10px;border-left:3px solid ' + scOkBorder + ';margin-bottom:10px;font-size:11px">';
+    scenare += '<strong style="color:' + scOkBorder + '">' + scOkIco + ' Okamžitý efekt:</strong> ' + scOkText;
+    scenare += '</div>';
+    scenare += '<div style="padding:5px 0;border-bottom:' + (scBezFve ? '0.5px solid #E2E8F0' : 'none') + ';font-size:12px">';
+    scenare += '<div style="color:#64748B;font-size:11px;margin-bottom:2px">Čistý zisk za 25 let</div>';
+    scenare += '<strong style="color:' + scKumColor + ';font-size:13px">' + scKumZnak + scKum + ' Kč</strong></div>';
+    if(scBezFve){
+      scenare += '<div style="padding:5px 0;font-size:12px">';
+      scenare += '<div style="color:#64748B;font-size:11px;margin-bottom:2px">Bez FVE za 25 let zaplatíte</div>';
+      scenare += '<strong style="color:#1E3A5F;font-size:12px">' + scBezFve + ' Kč</strong></div>';
+    }
+    scenare += '</div>';
+  }
 
   const html = `<!DOCTYPE html>
 <html lang="cs">
