@@ -558,11 +558,12 @@ def simulate(vstup: SimulaceVstup):
             nav_sc = None
             bezfve_25 = 0.0
             for rok in range(1, 26):
-                c = (1 + rust_sc / 100) ** (rok - 1)
-                d = (1 - vstup.deg_pan / 100) ** (rok - 1)
-                u = (sm["vlastni_vt_kwh"] * d * cvt * c
-                     + sm["vlastni_nt_kwh"] * d * cnt * c
-                     + sm["pretoky_kwh"]    * d * (vstup.cena_pretoky / 1000) * c
+                c     = (1 + rust_sc / 100) ** (rok - 1)
+                d     = (1 - vstup.deg_pan / 100) ** (rok - 1)
+                d_bat = (1 - 2.0 / 100) ** (rok - 1)  # degradace baterie 2%/rok — stejně jako cf[]
+                u = (sm["vlastni_vt_kwh"] * d     * cvt * c
+                     + sm["vlastni_nt_kwh"] * d_bat * cnt * c
+                     + sm["pretoky_kwh"]    * d     * (vstup.cena_pretoky / 1000) * c
                      + jist_mk * c)
                 s = spl_mk if rok <= vstup.splatnost else 0
                 kum_sc += u - s
@@ -609,11 +610,12 @@ def simulate(vstup: SimulaceVstup):
         nav_sc    = None
         bezfve_25 = 0.0
         for rok in range(1, 26):
-            c = (1 + rust_sc / 100) ** (rok - 1)
-            d = (1 - vstup.deg_pan / 100) ** (rok - 1)
-            u = (sim["vlastni_vt_kwh"] * d * cvt * c
-                 + sim["vlastni_nt_kwh"] * d * cnt * c
-                 + sim["pretoky_kwh"]    * d * (vstup.cena_pretoky / 1000) * c
+            c     = (1 + rust_sc / 100) ** (rok - 1)
+            d     = (1 - vstup.deg_pan / 100) ** (rok - 1)
+            d_bat = (1 - 2.0 / 100) ** (rok - 1)  # degradace baterie 2%/rok
+            u = (sim["vlastni_vt_kwh"] * d     * cvt * c
+                 + sim["vlastni_nt_kwh"] * d_bat * cnt * c
+                 + sim["pretoky_kwh"]    * d     * (vstup.cena_pretoky / 1000) * c
                  + jist_sc * c)  # úspora jističe — roste s cenami elektřiny
             s = uver / vstup.splatnost if rok <= vstup.splatnost else 0
             kum_sc += u - s
