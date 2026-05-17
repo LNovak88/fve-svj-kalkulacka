@@ -2072,14 +2072,11 @@ function renderResults(R){
     </tr>`;
   }).join('');
 
-  // Scénáře — z backendu, nový layout s textem
   const scenare = (R.scenare||[]).map((s,idx)=>{
     const icons = ['📉','📊','🔥'];
     const ico = icons[idx]||'📊';
-    const cistyRok1 = s.cisty_rok1 != null ? s.cisty_rok1 : bytCisty; // čistý přínos rok 1
+    const cistyRok1 = s.cisty_rok1 != null ? s.cisty_rok1 : bytCisty;
     const okamzity = cistyRok1 >= 0;
-    const navTxt = !s.nav ? '>25 let' : s.nav + ' let';
-    const navColor = !s.nav?'var(--rose)':s.nav<=12?'var(--green)':s.nav<=20?'var(--amber)':'var(--rose)';
     return `<div class="scenar-card" style="text-align:left;padding:14px 16px">
       <div style="font-weight:700;color:var(--navy);margin-bottom:10px;font-size:13px">${ico} ${s.label||''}</div>
       <div style="display:flex;flex-direction:column;gap:7px;font-size:12px">
@@ -2087,11 +2084,7 @@ function renderResults(R){
           <strong style="color:${okamzity?'var(--green)':'var(--rose)'}">${okamzity?'✅':'⚠️'} Okamžitý efekt:</strong>
           <span style="color:var(--text)"> ${okamzity?'Kladné cash flow hned od 1. roku (projekt je plně samofinancovatelný)':'Záporné cash flow v prvních letech — projekt závisí na růstu cen'}</span>
         </div>
-        <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:0.5px solid var(--border)">
-          <span style="color:var(--text-2)">Návratnost investice</span>
-          <strong style="color:${navColor}">${navTxt}</strong>
-        </div>
-        <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:0.5px solid var(--border)">
+        <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:${s.bezfve25>0?'0.5px solid var(--border)':'none'}">
           <span style="color:var(--text-2)">Čistý zisk za 25 let</span>
           <strong style="color:${s.kum25>=0?'var(--green)':'var(--rose)'}">${s.kum25>=0?'+':''}${Math.round(s.kum25||0).toLocaleString('cs-CZ')} Kč</strong>
         </div>
@@ -2936,6 +2929,8 @@ function exportPdf(){
 
   const kc  = v => Math.round(v).toLocaleString('cs-CZ') + ' Kč';
   const pct = v => Math.round(v) + ' %';
+  // MWh s českou desetinnou čárkou — 1 desetinné místo
+  const mwh = v => (Math.round(v*10)/10).toLocaleString('cs-CZ',{minimumFractionDigits:1,maximumFractionDigits:1});
   const modelNazev = {edc:'EDC — komunitní sdílení', edc_bez_bat:'EDC bez baterie', jom:'PM — podružné měření', spolecne:'Jen společné prostory'}[D.model] || 'EDC';
 
   const verdiktTxt = nav ?
@@ -2967,9 +2962,8 @@ function exportPdf(){
   const scenare = scenareData.map((s,idx)=>{
     const icons = ['📉','📊','🔥'];
     const ico = icons[idx]||'📊';
-    const okamzity = (s.cisty_rok1 != null ? s.cisty_rok1 : bytCisty) >= 0;
-    const navTxt = !s.nav ? '>25 let' : s.nav + ' let';
-    const navColor = !s.nav?'#991B1B':s.nav<=12?'#1A5C32':s.nav<=20?'#78350F':'#991B1B';
+    // bytCisty → cisty_byt (správný název v exportPdf)
+    const okamzity = (s.cisty_rok1 != null ? s.cisty_rok1 : cisty_byt) >= 0;
     return `
     <div style="flex:1;background:#F8FAFB;border:1px solid #E2E8F0;border-radius:10px;padding:16px">
       <div style="font-weight:700;color:#1E3A5F;margin-bottom:12px;font-size:13px">${ico} ${s.label||''}</div>
@@ -2977,11 +2971,7 @@ function exportPdf(){
         <strong style="color:${okamzity?'#1A5C32':'#991B1B'}">${okamzity?'✅':'⚠️'} Okamžitý efekt:</strong>
         ${okamzity?'Kladné cash flow hned od 1. roku (projekt je plně samofinancovatelný) ✅':'Záporné cash flow v prvních letech'}
       </div>
-      <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:0.5px solid #E2E8F0;font-size:12px">
-        <span style="color:#64748B">Návratnost investice</span>
-        <strong style="color:${navColor}">${navTxt}</strong>
-      </div>
-      <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:0.5px solid #E2E8F0;font-size:12px">
+      <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:${s.bezfve25>0?'0.5px solid #E2E8F0':'none'};font-size:12px">
         <span style="color:#64748B">Čistý zisk za 25 let</span>
         <strong style="color:${(s.kum25||0)>=0?'#1A5C32':'#991B1B'}">${(s.kum25||0)>=0?'+':''}${Math.round(s.kum25||0).toLocaleString('cs-CZ')} Kč</strong>
       </div>
@@ -3101,7 +3091,7 @@ function exportPdf(){
     <div class="kpi blue">
       <div class="kpi-l">Výkon FVE · Baterie</div>
       <div class="kpi-v">${RES.kwp||D.kwp} kWp</div>
-      <div class="kpi-u">${vyroba_mwh} MWh/rok · ${mira_vs} % vlastní spotřeba</div>
+      <div class="kpi-u">${mwh(vyroba_mwh)} MWh/rok · ${mira_vs} % vlastní spotřeba</div>
     </div>
     <div class="kpi amber">
       <div class="kpi-l">Celková investice</div>
@@ -3149,10 +3139,10 @@ function exportPdf(){
   <h2>⚡ Roční energetická bilance FVE</h2>
   <table>
     <tr><th>Položka</th><th style="text-align:right">Množství</th><th style="text-align:right">Podíl</th></tr>
-    <tr><td>Výroba FVE celkem</td><td style="text-align:right">${vyroba_mwh} MWh/rok</td><td style="text-align:right">100 %</td></tr>
-    <tr style="background:#F8FAFB"><td>Vlastní spotřeba VT (přímá)</td><td style="text-align:right">${vt_mwh} MWh/rok</td><td style="text-align:right">${Math.round(vt_mwh/vyroba_mwh*100)} %</td></tr>
-    <tr><td>Vlastní spotřeba NT (přes baterii)</td><td style="text-align:right">${nt_mwh} MWh/rok</td><td style="text-align:right">${Math.round(nt_mwh/vyroba_mwh*100)} %</td></tr>
-    <tr style="background:#F8FAFB"><td>Přetoky do sítě (prodej)</td><td style="text-align:right">${pr_mwh} MWh/rok</td><td style="text-align:right">${Math.round(pr_mwh/vyroba_mwh*100)} %</td></tr>
+    <tr><td>Výroba FVE celkem</td><td style="text-align:right">${mwh(vyroba_mwh)} MWh/rok</td><td style="text-align:right">100 %</td></tr>
+    <tr style="background:#F8FAFB"><td>Vlastní spotřeba VT (přímá)</td><td style="text-align:right">${mwh(vt_mwh)} MWh/rok</td><td style="text-align:right">${Math.round(vt_mwh/vyroba_mwh*100)} %</td></tr>
+    <tr><td>Vlastní spotřeba NT (přes baterii)</td><td style="text-align:right">${mwh(nt_mwh)} MWh/rok</td><td style="text-align:right">${Math.round(nt_mwh/vyroba_mwh*100)} %</td></tr>
+    <tr style="background:#F8FAFB"><td>Přetoky do sítě (prodej)</td><td style="text-align:right">${mwh(pr_mwh)} MWh/rok</td><td style="text-align:right">${Math.round(pr_mwh/vyroba_mwh*100)} %</td></tr>
     <tr style="background:#E3F4E9"><td style="color:#1A5C32;font-weight:700">Míra vlastní spotřeby (self-consumption)</td><td colspan="2" style="text-align:right;color:#1A5C32;font-weight:700">${mira_vs} %</td></tr>
     <tr style="background:#E3F4E9"><td style="color:#1A5C32;font-weight:700">Míra soběstačnosti (self-sufficiency)</td><td colspan="2" style="text-align:right;color:#1A5C32;font-weight:700">${mira_sob} %</td></tr>
   </table>
@@ -3174,8 +3164,8 @@ function exportPdf(){
     <tr><td>Adresa bytového domu</td><td style="text-align:right">${D.lokace||'—'}</td></tr>
     <tr style="background:#F8FAFB"><td>Počet bytů · vchodů · pater</td><td style="text-align:right">${bytu} · ${D.vchodu||1} · ${D.pater||4}</td></tr>
     <tr><td>Distributor · sazba bytů</td><td style="text-align:right">${D.dist||'—'} · ${D.sazba_byt||'D02d'}</td></tr>
-    <tr style="background:#F8FAFB"><td>Spotřeba bytů VT · NT</td><td style="text-align:right">${D.sp_by_vt_mwh||1.2} · ${D.sp_by_nt_mwh||0} MWh/byt/rok</td></tr>
-    <tr><td>Spotřeba společných prostor</td><td style="text-align:right">${parseFloat(D.sp_sp_mwh||0).toFixed(1)} MWh/rok</td></tr>
+    <tr style="background:#F8FAFB"><td>Spotřeba bytů VT · NT</td><td style="text-align:right">${(D.sp_by_vt_mwh||1.2).toLocaleString('cs-CZ')} · ${(D.sp_by_nt_mwh||0).toLocaleString('cs-CZ')} MWh/byt/rok</td></tr>
+    <tr><td>Spotřeba společných prostor</td><td style="text-align:right">${parseFloat(D.sp_sp_mwh||0).toLocaleString('cs-CZ',{minimumFractionDigits:1,maximumFractionDigits:1})} MWh/rok</td></tr>
     <tr style="background:#F8FAFB"><td>Výkon FVE · baterie</td><td style="text-align:right">${RES.kwp||D.kwp} kWp · ${(RES.bat||D.bat||0)>0?(RES.bat||D.bat)+' kWh':'bez baterie'}</td></tr>
     <tr><td>Model sdílení elektřiny</td><td style="text-align:right">${modelNazev}</td></tr>
     <tr style="background:#F8FAFB"><td>Splatnost NZÚ úvěru · Růst cen el.</td><td style="text-align:right">${splatnost} let · +${D.rust_cen||3} %/rok</td></tr>
