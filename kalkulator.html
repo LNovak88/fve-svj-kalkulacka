@@ -1155,19 +1155,20 @@ function s6(){
 
 function renderResults(R){
   const premium=sessionStorage.getItem('premium_unlocked')==='true';
-  const verdiktText=R.nav?
-    R.nav<=10?`✅ Výborná investice — návratnost ${R.nav} let`:
-    R.nav<=15?`✅ Dobrá investice — návratnost ${R.nav} let`:
-    R.nav<=20?`⚠️ Přijatelná investice — návratnost ${R.nav} let`:
-    `⚠️ Hraniční projekt — návratnost ${R.nav} let`:
-    '❌ Projekt se za 25 let nevrátí';
+  // Čistý přínos/byt/měs = úspora - splátka
+  const cistyByt = R.uspora_byt_mes - Math.round(R.uver/R.splatnost/D.bytu/12);
   const verdiktCls=R.nav&&R.nav<=15?'ok':R.nav&&R.nav<=20?'warn':'err';
+  const verdiktText=R.nav?
+    R.nav<=10?`✅ Dobrá investice — Čistý přínos +${cistyByt.toLocaleString('cs-CZ')} Kč/byt/měs · návratnost ${R.nav} let${cistyByt>=0?' · úspora hned od 1. roku':''}`:
+    R.nav<=15?`✅ Dobrá investice — Čistý přínos +${cistyByt.toLocaleString('cs-CZ')} Kč/byt/měs · návratnost ${R.nav} let${cistyByt>=0?' · úspora hned od 1. roku':''}`:
+    R.nav<=20?`⚠️ Hraniční investice — Čistý přínos ${cistyByt>=0?'+':''}${cistyByt.toLocaleString('cs-CZ')} Kč/byt/měs · návratnost ${R.nav} let${cistyByt>=0?' · úspora hned od 1. roku':''}`:
+    `⚠️ Riziková investice — návratnost ${R.nav} let`:
+    '❌ Projekt se za 25 let nevrátí';
   const verdiktDetail=R.nav?
-    R.nav<=10?`Při realistickém vývoji cen elektřiny (+3 %/rok) ušetříte za 25 let <strong>${Math.round(R.kum25).toLocaleString('cs-CZ')} Kč</strong>, tj. <strong>${Math.round(R.kum25/D.bytu).toLocaleString('cs-CZ')} Kč na byt</strong>. Bezúročný úvěr NZÚ výrazně snižuje riziko.`:
     R.nav<=15?`Návratnost je solidní. Za 25 let kumulativně <strong>${Math.round(R.kum25).toLocaleString('cs-CZ')} Kč</strong> čistého přínosu. S bezúročným úvěrem NZÚ je projekt bezrizikový.`:
-    R.nav<=20?`Projekt se vyplatí při realistickém vývoji cen. Doporučujeme zvýšit výkon nebo přidat baterii pro lepší využití výroby.`:
-    `Doporučujeme optimalizovat výkon FVE nebo zvolit model EDC pro maximální využití výroby.`:
-    'Při současných parametrech se investice za 25 let nevrátí. Zvažte vyšší výkon FVE nebo jiný model sdílení.';
+    R.nav<=20?`Projekt se vyplatí při realistickém vývoji cen. Doporučujeme zvýšit výkon nebo přidat baterii.`:
+    `Doporučujeme optimalizovat výkon FVE nebo zvolit model EDC.`:
+    'Při současných parametrech se investice za 25 let nevrátí. Zvažte vyšší výkon FVE.';
 
   return`
   <div class="verdikt ${verdiktCls}">
@@ -1279,28 +1280,42 @@ function renderResults(R){
   <div class="slabel">Citlivostní analýza — 3 scénáře vývoje cen <span class="badge b-amber" style="margin-left:6px">Po registraci</span></div>
   <div class="scenare-wrap">
     <div class="${premium?'':'scenare-blur'} scenar-grid">
-      ${[['😐 Pesimistický',1],['📊 Realistický',3],['🔥 Krizový',6]].map(([tit,rust])=>{
+      ${[['📉 Pesimistický',1],['📊 Realistický',3],['🔥 Krizový',6]].map(([tit,rust])=>{
         // Reálný výpočet pro každý scénář
-        let kum = -(R.investice - R.uver); // vlastní vklad = počáteční záporný stav
+        let kum = -(R.investice - R.uver);
         let navSc = null;
+        let cistyRok1 = null;
         for(let rok=1; rok<=25; rok++){
           const deg = Math.pow(0.995, rok-1);
           const c   = Math.pow(1 + rust/100, rok-1);
-          const u   = (R.sim_pm.vlastni_vt_kwh * deg * R.cvt/1000 * c)
-                    + (R.sim_pm.vlastni_nt_kwh  * deg * R.cnt/1000 * c)
-                    + (R.sim_pm.pretoky_kwh      * deg * R.cpr/1000 * c);
+          const u   = (R.sim_edc_bat.vlastni_vt_kwh * deg * R.cvt/1000 * c)
+                    + (R.sim_edc_bat.vlastni_nt_kwh  * deg * R.cnt/1000 * c)
+                    + (R.sim_edc_bat.pretoky_kwh      * deg * R.cpr/1000 * c);
           const spl = rok <= R.splatnost ? R.uver / R.splatnost : 0;
-          kum += u - spl;
+          const rocniPrinos = u - spl;
+          if(rok===1) cistyRok1 = rocniPrinos;
+          kum += rocniPrinos;
           if(kum >= 0 && !navSc) navSc = rok;
         }
+        const okamzity = cistyRok1 >= 0;
+        const navColor = !navSc?'var(--rose)':navSc<=12?'var(--green)':navSc<=20?'var(--amber)':'var(--rose)';
         return`
-        <div class="scenar-card">
-          <div class="scenar-title">${tit}</div>
-          <div style="font-size:10px;color:var(--text-2);margin-bottom:6px">+${rust} %/rok</div>
-          <div class="scenar-v">${navSc||'>25'} let</div>
-          <div class="scenar-sub">cashflow návratnost</div>
-          <div style="font-size:13px;font-weight:600;color:${kum>=0?'var(--green)':'var(--rose)'};margin-top:6px">${kum>=0?'+':''}${Math.round(kum).toLocaleString('cs-CZ')} Kč</div>
-          <div class="scenar-sub">kumulativně 25 let</div>
+        <div class="scenar-card" style="text-align:left;padding:14px 16px">
+          <div style="font-weight:700;color:var(--navy);margin-bottom:10px;font-size:13px">${tit} (+${rust} %/rok)</div>
+          <div style="display:flex;flex-direction:column;gap:7px;font-size:12px">
+            <div style="background:${okamzity?'rgba(46,139,74,0.08)':'rgba(244,63,94,0.06)'};border-radius:6px;padding:7px 10px;border-left:3px solid ${okamzity?'var(--green)':'var(--rose)'}">
+              <strong style="color:${okamzity?'var(--green)':'var(--rose)'}">${okamzity?'✅':'⚠️'} Okamžitý efekt:</strong>
+              <span style="color:var(--text)"> ${okamzity?'Kladné cash flow hned od 1. roku (projekt je plně samofinancovatelný)':'Záporné cash flow — projekt závisí na růstu cen'}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:0.5px solid var(--border)">
+              <span style="color:var(--text-2)">Návratnost investice</span>
+              <strong style="color:${navColor}">${navSc?navSc+' let':'>25 let'}</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:5px 0">
+              <span style="color:var(--text-2)">Čistý zisk za 25 let</span>
+              <strong style="color:${kum>=0?'var(--green)':'var(--rose)'}">${kum>=0?'+':''}${Math.round(kum).toLocaleString('cs-CZ')} Kč</strong>
+            </div>
+          </div>
         </div>`;
       }).join('')}
     </div>
