@@ -2532,13 +2532,18 @@ function drawMesice(){
   const vyr = (sim.mesice_vyroba||Array(12).fill(0)).map(v=>Math.round(v/10)/100);
   const vl  = (sim.mesice_vlastni||Array(12).fill(0)).map(v=>Math.round(v/10)/100);
   const pr  = (sim.mesice_pretoky||Array(12).fill(0)).map(v=>Math.round(v/10)/100);
-  // Celková spotřeba = vlastní + přetoky jsou z výroby, ale spotřeba = vlastní + to co si koupí
-  // Aproximace: spotřeba = vyroba - pretoky (= vlastni_vt + vlastni_nt)
-  // Nebo z mesice_spotreba pokud backend posílá
-  const sp_raw = sim.mesice_spotreba || null;
-  const sp = sp_raw
-    ? sp_raw.map(v=>Math.round(v/10)/100)
-    : vyr.map((v,i)=> parseFloat((v - pr[i]).toFixed(2))); // fallback
+  // Celková spotřeba domu — z backendu (TDD profily, přesná data)
+  // mesice_spotreba = svt + snt za každý měsíc = spotřeba bytů + SP
+  const sp_raw = sim.mesice_spotreba;
+  let sp;
+  if(sp_raw && sp_raw.length === 12 && sp_raw.some(v=>v>0)){
+    // Přesná data z backendu — převést z kWh na MWh
+    sp = sp_raw.map(v=>Math.round(v/10)/100);
+  } else {
+    // Fallback — odhadnout z roční spotřeby rovnoměrně
+    const sp_rok = (RES.bytu||30) * (D.sp_by_vt_mwh||1.2) * 12 + (D.sp_sp_mwh||3.5) * 12;
+    sp = Array(12).fill(Math.round(sp_rok/12*100)/100);
+  }
 
   _charts['mesice'] = new Chart(c, {
     type: 'bar',
