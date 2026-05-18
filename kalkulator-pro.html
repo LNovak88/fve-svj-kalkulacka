@@ -2532,6 +2532,13 @@ function drawMesice(){
   const vyr = (sim.mesice_vyroba||Array(12).fill(0)).map(v=>Math.round(v/10)/100);
   const vl  = (sim.mesice_vlastni||Array(12).fill(0)).map(v=>Math.round(v/10)/100);
   const pr  = (sim.mesice_pretoky||Array(12).fill(0)).map(v=>Math.round(v/10)/100);
+  // Celková spotřeba = vlastní + přetoky jsou z výroby, ale spotřeba = vlastní + to co si koupí
+  // Aproximace: spotřeba = vyroba - pretoky (= vlastni_vt + vlastni_nt)
+  // Nebo z mesice_spotreba pokud backend posílá
+  const sp_raw = sim.mesice_spotreba || null;
+  const sp = sp_raw
+    ? sp_raw.map(v=>Math.round(v/10)/100)
+    : vyr.map((v,i)=> parseFloat((v - pr[i]).toFixed(2))); // fallback
 
   _charts['mesice'] = new Chart(c, {
     type: 'bar',
@@ -2548,7 +2555,7 @@ function drawMesice(){
           order: 3,
         },
         {
-          label: 'Vlastní spotřeba (MWh)',
+          label: 'Vlastní spotřeba z FVE (MWh)',
           data: vl,
           backgroundColor: 'rgba(27,108,168,0.8)',
           borderColor: '#1B6CA8',
@@ -2565,15 +2572,39 @@ function drawMesice(){
           borderRadius: 4,
           order: 1,
         },
+        {
+          label: 'Celková spotřeba domu (MWh)',
+          data: sp,
+          type: 'line',
+          borderColor: '#EF4444',
+          backgroundColor: 'rgba(239,68,68,0.1)',
+          borderWidth: 2.5,
+          pointRadius: 4,
+          pointBackgroundColor: '#EF4444',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 1.5,
+          tension: 0.4,
+          fill: false,
+          order: 0,
+        },
       ]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
-        legend: { display: false },
+        legend: {
+          display: true,
+          position: 'bottom',
+          labels: {
+            font: { size: 11 },
+            padding: 12,
+            usePointStyle: true,
+            pointStyleWidth: 12,
+          }
+        },
         tooltip: {
           callbacks: {
-            label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)} MWh`
+            label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString('cs-CZ',{minimumFractionDigits:2,maximumFractionDigits:2})} MWh`
           }
         }
       },
@@ -2635,7 +2666,11 @@ function drawCashflow(){
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
-        legend: { display: false },
+        legend: {
+          display: true,
+          position: 'bottom',
+          labels: { font: { size: 11 }, padding: 10, usePointStyle: true, pointStyleWidth: 12 }
+        },
         tooltip: {
           callbacks: {
             label: ctx => {
@@ -2718,7 +2753,11 @@ function drawSplatka(){
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
-        legend: { display: false },
+        legend: {
+          display: true,
+          position: 'bottom',
+          labels: { font: { size: 11 }, padding: 10, usePointStyle: true, pointStyleWidth: 12 }
+        },
         tooltip: {
           callbacks: {
             label: ctx => ` ${ctx.dataset.label}: ${Math.round(ctx.parsed.y).toLocaleString('cs-CZ')} Kč`
@@ -2834,7 +2873,11 @@ function drawDenni(){
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
-        legend: { display: false },
+        legend: {
+          display: true,
+          position: 'bottom',
+          labels: { font: { size: 11 }, padding: 10, usePointStyle: true, pointStyleWidth: 12 }
+        },
         tooltip: { mode: 'index', intersect: false }
       },
       scales: {
