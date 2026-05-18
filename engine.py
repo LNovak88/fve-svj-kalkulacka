@@ -508,7 +508,8 @@ def _gen_profil_vt(kwh: float, tdd: dict, uprava: np.ndarray = None,
     else:
         mes_vahy = [1.0] * 12
 
-    vals = []
+    # Krok 1: Vygenerovat základní profil BEZ sezónních vah a normalizovat na kwh
+    vals_base = []
     den = datetime.date(2026, 1, 1)
     for _ in range(365):
         sz = _sezona(den.month)
@@ -518,15 +519,29 @@ def _gen_profil_vt(kwh: float, tdd: dict, uprava: np.ndarray = None,
         if uprava is not None:
             p = p * uprava
             p = p / p.mean()
-        # Aplikovat sezónní váhu pro tento měsíc
-        mes_vaha = mes_vahy[den.month - 1]
         for h in range(24):
-            v = float(p[h]) / 4.0 * mes_vaha
-            vals.extend([v, v, v, v])
+            v = float(p[h]) / 4.0
+            vals_base.extend([v, v, v, v])
         den += datetime.timedelta(days=1)
-    arr = np.array(vals, dtype=float)[:_CD]
-    if arr.sum() > 0:
-        arr = arr * (float(kwh) / arr.sum())
+    arr_base = np.array(vals_base, dtype=float)[:_CD]
+    # Normalizovat základní profil na kwh
+    if arr_base.sum() > 0:
+        arr_base = arr_base * (float(kwh) / arr_base.sum())
+
+    # Krok 2: Aplikovat sezónní váhy na měsíční součty
+    # Nejdřív spočítáme měsíční součty, pak přidáme váhy
+    arr = arr_base.copy()
+    den = datetime.date(2026, 1, 1)
+    idx = 0
+    for _ in range(365):
+        mes_vaha = mes_vahy[den.month - 1]
+        den_vals = 24 * 4  # 96 intervalů za den
+        arr[idx:idx + den_vals] = arr_base[idx:idx + den_vals] * mes_vaha
+        idx += den_vals
+        den += datetime.timedelta(days=1)
+    arr = arr[:_CD]
+    # Váhy jsou normalizovány na avg=1.0 — celková roční spotřeba zůstává kwh
+    # Žádná další renormalizace — ta by zrušila sezónní efekt
     return arr
 
 
