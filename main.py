@@ -611,6 +611,7 @@ def simulate(vstup: SimulaceVstup):
                 "mira_vs":        sm.get("mira_vs", 0),
                 "mira_sob":       sm.get("mira_sob", 0),
                 "profil_den":     sm.get("profil_den", []),
+                "mesice_spotreba": sm.get("mesice_spotreba", []),
                 "mesice_vyroba":  sm.get("mesice_vyroba", []),
                 "mesice_vlastni": sm.get("mesice_vlastni", []),
                 "mesice_pretoky": sm.get("mesice_pretoky", []),
