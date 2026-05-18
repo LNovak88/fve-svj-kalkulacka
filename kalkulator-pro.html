@@ -2212,13 +2212,8 @@ function renderResults(R){
   <!-- GRAF 1: Měsíční výroba -->
   <div class="chart-card">
     <div class="chart-card-title">☀️ Měsíční výroba FVE</div>
-    <div class="chart-card-sub">Sezónní průběh — léto produkuje 4–5× více než zima. Přebytek v létě zvyšuje přetoky.</div>
+    <div class="chart-card-sub">Sezónní průběh — léto produkuje 4–5× více než zima. Červená linka = celková spotřeba domu.</div>
     <div class="chart-container"><canvas id="chartMesice"></canvas></div>
-    <div class="chart-legend">
-      <div class="chart-legend-item"><div class="chart-legend-dot" style="background:#F59E0B"></div>Výroba FVE</div>
-      <div class="chart-legend-item"><div class="chart-legend-dot" style="background:#1B6CA8"></div>Vlastní spotřeba</div>
-      <div class="chart-legend-item"><div class="chart-legend-dot" style="background:#94A3B8"></div>Přetoky do sítě</div>
-    </div>
   </div>
 
   <!-- GRAF 2: Cashflow 25 let -->
@@ -2233,11 +2228,6 @@ function renderResults(R){
     <div class="chart-card-title">💰 Roční úspora vs. splátka NZÚ úvěru</div>
     <div class="chart-card-sub">Zelené bary = roční úspora (roste s cenami elektřiny). Červené bary = splátka (fixní, klesá na 0 po splacení). Modrá čára = čistý roční přínos.</div>
     <div class="chart-container" style="height:260px"><canvas id="chartSplatka"></canvas></div>
-    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:11px;color:var(--text-2)">
-      <div class="chart-legend-item"><div class="chart-legend-dot" style="background:#2E8B4A"></div>Roční úspora</div>
-      <div class="chart-legend-item"><div class="chart-legend-dot" style="background:#F43F5E"></div>Splátka NZÚ</div>
-      <div class="chart-legend-item"><div class="chart-legend-dot" style="background:#1B6CA8;border-radius:50%"></div>Čistý přínos</div>
-    </div>
   </div>
 
   <!-- GRAF 4: Denní profil -->
@@ -2255,12 +2245,6 @@ function renderResults(R){
       <button class="den-btn" onclick="setDenPocasi('zatazeno',this)">☁️ Zataženo</button>
     </div>
     <div class="chart-container" style="height:240px"><canvas id="chartDenni"></canvas></div>
-    <div class="chart-legend">
-      <div class="chart-legend-item"><div class="chart-legend-dot" style="background:#F59E0B;opacity:.8"></div>Výroba FVE</div>
-      <div class="chart-legend-item"><div class="chart-legend-dot" style="background:#1B6CA8"></div>Spotřeba VT</div>
-      <div class="chart-legend-item"><div class="chart-legend-dot" style="background:rgba(46,139,74,.4)"></div>Přímo využito z FVE</div>
-      ${D.bat>0?'<div class="chart-legend-item"><div class="chart-legend-dot" style="background:#7C3AED"></div>Baterie SOC %</div>':''}
-    </div>
   </div>
 
   <!-- POROVNÁNÍ MODELŮ -->
@@ -2532,17 +2516,30 @@ function drawMesice(){
   const vyr = (sim.mesice_vyroba||Array(12).fill(0)).map(v=>Math.round(v/10)/100);
   const vl  = (sim.mesice_vlastni||Array(12).fill(0)).map(v=>Math.round(v/10)/100);
   const pr  = (sim.mesice_pretoky||Array(12).fill(0)).map(v=>Math.round(v/10)/100);
-  // Celková spotřeba domu — z backendu (TDD profily, přesná data)
-  // mesice_spotreba = svt + snt za každý měsíc = spotřeba bytů + SP
+  // Celková spotřeba domu — sezónní průběh
+  // mesice_spotreba z backendu je bohužel rovná linka (TDD normalizuje na roční součet)
+  // Použijeme sezónní váhy typické pro bytový dům v ČR
+  const sezonniVahy = [1.25, 1.20, 1.10, 0.95, 0.85, 0.80, 0.78, 0.80, 0.88, 1.00, 1.15, 1.25];
+  const sp_rok_kwh = ((RES.bytu||D.bytu||30) * (D.sp_by_vt_mwh||1.2) * 1000
+    + (D.sp_sp_mwh||3.5) * 1000) / 12; // průměrná měsíční spotřeba kWh
+  // Pokud máme mesice_spotreba a není rovná, použijeme ji
   const sp_raw = sim.mesice_spotreba;
   let sp;
   if(sp_raw && sp_raw.length === 12 && sp_raw.some(v=>v>0)){
-    // Přesná data z backendu — převést z kWh na MWh
-    sp = sp_raw.map(v=>Math.round(v/10)/100);
+    const spMin = Math.min(...sp_raw);
+    const spMax = Math.max(...sp_raw);
+    // Je to rovná linka? (rozdíl max-min < 5% průměru)
+    const spAvg = sp_raw.reduce((a,b)=>a+b,0)/12;
+    if((spMax - spMin) / spAvg < 0.05){
+      // Rovná — aplikovat sezónní váhy
+      sp = sezonniVahy.map((w,i) => Math.round(sp_raw[i] * w / 10) / 100);
+    } else {
+      // Má sezónní variaci — použít přímo
+      sp = sp_raw.map(v => Math.round(v/10)/100);
+    }
   } else {
-    // Fallback — odhadnout z roční spotřeby rovnoměrně
-    const sp_rok = (RES.bytu||30) * (D.sp_by_vt_mwh||1.2) * 12 + (D.sp_sp_mwh||3.5) * 12;
-    sp = Array(12).fill(Math.round(sp_rok/12*100)/100);
+    // Fallback — sezónní průběh z průměrné spotřeby
+    sp = sezonniVahy.map(w => Math.round(sp_rok_kwh * w / 10) / 100);
   }
 
   _charts['mesice'] = new Chart(c, {
