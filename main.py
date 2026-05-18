@@ -202,7 +202,8 @@ def recommend(vstup: RecommendVstup):
     kwp_opt = fve["kwp"]
     cvt_opt = e.CENY_VT.get(dist, e.CENY_VT["ČEZ Distribuce"]).get(sazba_byt, 6610) / 1000
     uprava_opt = e._smiseny_profil(33.0, 33.0, 34.0)
-    sp_vt15_opt = e._gen_profil_vt(sp_by_vt_celkem + sp["sp_mwh"] * 1000, e._TDD4, uprava_opt)
+    sp_vt15_opt = e._gen_profil_vt(sp_by_vt_celkem + sp["sp_mwh"] * 1000, e._TDD4, uprava_opt,
+                                    zarizeni=vstup.zarizeni)
     sp_nt15_opt = e._gen_profil_nt(sp_by_nt_mwh * pb * 1000, sazba_byt)
     vyr_opt = e._interpoluj(e._gen_vyroba_fallback(kwp_opt, 35, 0))
     ez_opt  = min(5.0, round(10.0 / pb ** 0.5, 1))
@@ -382,9 +383,10 @@ def simulate(vstup: SimulaceVstup):
     sp_by_nt  = vstup.sp_by_nt_mwh * 1000 * vstup.pocet_bytu
     sp_sp     = vstup.sp_sp_mwh * 1000
 
-    sp_vt15     = e._gen_profil_vt(sp_by_vt + sp_sp, e._TDD4, uprava)
+    sp_vt15     = e._gen_profil_vt(sp_by_vt + sp_sp, e._TDD4, uprava,
+                                    zarizeni=vstup.zarizeni, ma_tuv=vstup.zarizeni and 'tuv' in vstup.zarizeni)
     sp_nt15     = e._gen_profil_nt(sp_by_nt, vstup.sazba)
-    sp_sp15     = e._gen_profil_vt(sp_sp, e._TDD4, uprava)   # jen SP (pro model spolecne)
+    sp_sp15     = e._gen_profil_vt(sp_sp, e._TDD4, uprava)   # jen SP (pro model spolecne) — bez sezónních vah bytů
 
     # Pro SP model simulujeme jen SP spotřebu a menší FVE
     if vstup.model == "spolecne":
