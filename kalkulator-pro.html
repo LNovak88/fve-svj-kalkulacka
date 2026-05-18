@@ -1993,6 +1993,8 @@ function renderResults(R){
   console.log('🧮 Frontend uspora_byt_mes:', uspora_byt_mes, '| nzu_spl_byt_mes:', nzu_spl_byt_mes, '| bytCisty:', bytCisty);
   console.log('📦 R.srovnani:', R.srovnani);
   console.log('📦 R.scenare:', R.scenare);
+  console.log('📊 mesice_spotreba:', (sim.mesice_spotreba||[]).map(v=>Math.round(v/10)/10));
+  console.log('📊 mesice_vyroba:  ', (sim.mesice_vyroba||[]).map(v=>Math.round(v/10)/10));
   console.groupEnd();
   const bytPodilInv = Math.round(inv/bytu);
   // Zranitelné domácnosti — bug fix: ||20 způsoboval ignorování hodnoty 0
