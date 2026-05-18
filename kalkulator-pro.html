@@ -2516,30 +2516,17 @@ function drawMesice(){
   const vyr = (sim.mesice_vyroba||Array(12).fill(0)).map(v=>Math.round(v/10)/100);
   const vl  = (sim.mesice_vlastni||Array(12).fill(0)).map(v=>Math.round(v/10)/100);
   const pr  = (sim.mesice_pretoky||Array(12).fill(0)).map(v=>Math.round(v/10)/100);
-  // Celková spotřeba domu — sezónní průběh
-  // mesice_spotreba z backendu je bohužel rovná linka (TDD normalizuje na roční součet)
-  // Použijeme sezónní váhy typické pro bytový dům v ČR
-  const sezonniVahy = [1.25, 1.20, 1.10, 0.95, 0.85, 0.80, 0.78, 0.80, 0.88, 1.00, 1.15, 1.25];
-  const sp_rok_kwh = ((RES.bytu||D.bytu||30) * (D.sp_by_vt_mwh||1.2) * 1000
-    + (D.sp_sp_mwh||3.5) * 1000) / 12; // průměrná měsíční spotřeba kWh
-  // Pokud máme mesice_spotreba a není rovná, použijeme ji
+  // Celková spotřeba domu — přímo z backendu (sezónní váhy jsou v engine.py)
   const sp_raw = sim.mesice_spotreba;
   let sp;
   if(sp_raw && sp_raw.length === 12 && sp_raw.some(v=>v>0)){
-    const spMin = Math.min(...sp_raw);
-    const spMax = Math.max(...sp_raw);
-    // Je to rovná linka? (rozdíl max-min < 5% průměru)
-    const spAvg = sp_raw.reduce((a,b)=>a+b,0)/12;
-    if((spMax - spMin) / spAvg < 0.05){
-      // Rovná — aplikovat sezónní váhy
-      sp = sezonniVahy.map((w,i) => Math.round(sp_raw[i] * w / 10) / 100);
-    } else {
-      // Má sezónní variaci — použít přímo
-      sp = sp_raw.map(v => Math.round(v/10)/100);
-    }
+    sp = sp_raw.map(v=>Math.round(v/10)/100);
   } else {
-    // Fallback — sezónní průběh z průměrné spotřeby
-    sp = sezonniVahy.map(w => Math.round(sp_rok_kwh * w / 10) / 100);
+    // Fallback pokud backend data chybí — aproximace ze vstupů
+    const sezonniVahy = [1.25,1.20,1.10,0.95,0.85,0.80,0.78,0.80,0.88,1.00,1.15,1.25];
+    const sp_mes_kwh = ((RES.bytu||D.bytu||30)*(D.sp_by_vt_mwh||1.2)*1000
+      +(D.sp_sp_mwh||3.5)*1000)/12;
+    sp = sezonniVahy.map(w=>Math.round(sp_mes_kwh*w/10)/100);
   }
 
   _charts['mesice'] = new Chart(c, {
