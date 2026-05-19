@@ -370,6 +370,7 @@ class SimulaceVstup(BaseModel):
     uspora_jistic: float = Field(0.0, ge=0)
     jistic_sp_a:  int   = Field(25,   ge=0)
     zarizeni:     list  = Field(default_factory=lambda: ["zaklad"])
+    topeni_typ:   str   = Field("dalkoveTeplo")  # dalkoveTeplo, tc, elektrokotel, plyn, uhli
     bat_doporucena: float = Field(0.0, ge=0)  # doporučená bat pro srovnání EDC/PM
 
 
