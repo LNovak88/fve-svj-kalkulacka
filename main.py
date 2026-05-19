@@ -109,6 +109,7 @@ class RecommendVstup(BaseModel):
     pocet_cerpadel:   int        = Field(1,   ge=0, le=20)
     ma_tuv_central:   bool       = Field(False)
     ma_tc_dum:        bool       = Field(False)
+    topeni_typ:       str        = Field("dalkoveTeplo")  # dalkoveTeplo, tc, elektrokotel, plyn, uhli
     pocet_ev_nabijec: int        = Field(0,   ge=0, le=50)
     zarizeni:         List[str]  = Field(["zaklad"])
     dist:             str        = Field("ČEZ Distribuce")
@@ -391,7 +392,14 @@ def simulate(vstup: SimulaceVstup):
     sp_vt15     = e._gen_profil_vt(sp_by_vt + sp_sp, e._TDD4, uprava,
                                     zarizeni=vstup.zarizeni, ma_tuv=vstup.zarizeni and 'tuv' in vstup.zarizeni)
     sp_nt15     = e._gen_profil_nt(sp_by_nt, vstup.sazba, zarizeni=vstup.zarizeni)
-    sp_sp15     = e._gen_profil_vt(sp_sp, e._TDD4, uprava)   # jen SP (pro model spolecne) — bez sezónních vah bytů
+    # SP profil — sezónní váhy dle topení domu
+    # TČ/elektrokotel domu = velká sezónní spotřeba v NT
+    zarizeni_sp = []
+    if vstup.topeni_typ in ('tc', 'elektrokotel'):
+        zarizeni_sp = ['tc']  # výrazná zimní sezóna
+    elif vstup.topeni_typ == 'plyn':
+        zarizeni_sp = ['zaklad']  # plyn topí SP (osvětlení, čerpadla), mírná sezóna
+    sp_sp15     = e._gen_profil_vt(sp_sp, e._TDD4, uprava, zarizeni=zarizeni_sp if zarizeni_sp else None)
 
     # Pro SP model simulujeme jen SP spotřebu a menší FVE
     if vstup.model == "spolecne":
