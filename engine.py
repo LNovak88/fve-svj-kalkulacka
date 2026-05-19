@@ -294,7 +294,7 @@ def doporuc_kwp_bat(
 
     c_kwp = cena_kwp(kwp)
     cena_fve = round(kwp * c_kwp)
-    cena_bat = round(bat * 15000)
+    cena_bat = round(bat * 13000)
     extra_vchod = max(0, int(pocet_vchodu) - 1) * 30000
     cena_celkem = cena_fve + cena_bat + extra_vchod
 
@@ -404,7 +404,7 @@ def vypocet_pm(
       (vchody-1) × 30 000 [každý další vchod = extra rozvaděč]
     """
     pb   = int(pocet_bytu)
-    stay = float(STAY_PLAT.get(dist, 179))
+    stay = float(STAY_PLAT.get(dist, 163))
 
     jbyt_tab  = JISTIC_BYT.get(dist, JISTIC_BYT["ČEZ Distribuce"])
     jbyt_cena = float(jbyt_tab.get(jistic_byt, 298))
@@ -484,8 +484,8 @@ _VAHY_ZAR = {
 }
 
 def _sezonni_vahy_pro_zarizeni(zarizeni, ma_tuv: bool = False):
-    """Složené sezónní váhy dle zadaných zařízení — vážený průměr."""
-    vahy = list(_VAHY_ZAR["zaklad"])  # základ vždy
+    """Složené sezónní váhy dle zadaných zařízení — vážený průměr, normalizováno na avg=1.0."""
+    vahy = list(_VAHY_ZAR["zaklad"])
     pocet = 1
     for z in zarizeni:
         if z in _VAHY_ZAR and z != "zaklad":
@@ -494,8 +494,8 @@ def _sezonni_vahy_pro_zarizeni(zarizeni, ma_tuv: bool = False):
     if ma_tuv and "tuv" not in zarizeni:
         vahy = [vahy[m] + _VAHY_ZAR["tuv"][m] for m in range(12)]
         pocet += 1
-    # Normalizovat aby průměr = 1.0
-    avg = sum(vahy) / len(vahy)
+    # Normalizovat na přesný průměr = 1.0 (pojistka proti float odchylce)
+    avg = sum(vahy) / 12.0
     return [v / avg for v in vahy]
 
 
@@ -684,13 +684,18 @@ def simuluj(
 
     tpr = tv - tvl
 
+    import calendar as _cal
     mv, ms, mvl, mpr = [], [], [], []
+    den_start = 0
     for m in range(12):
-        a, b = m * 30 * 96, min((m + 1) * 30 * 96, n)
+        dni = _cal.monthrange(2026, m + 1)[1]
+        a = den_start * 96
+        b = min((den_start + dni) * 96, n)
         mv.append(float(v[a:b].sum()))
         ms.append(float(svt[a:b].sum()) + float(snt[a:b].sum()))
         mvl.append(float(vl_vt[a:b].sum()) + float(vl_nt[a:b].sum()))
         mpr.append(float(pr[a:b].sum()))
+        den_start += dni
 
     return {
         "vlastni_vt_kwh":  float(vl_vt.sum()),
