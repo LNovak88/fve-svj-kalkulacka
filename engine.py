@@ -474,6 +474,7 @@ _VAHY_ZAR = {
     "klima":    {"zima": 0.05, "prechodne": 0.20, "leto": 0.75},  # klimatizace — letní
     "akum":     {"zima": 0.60, "prechodne": 0.38, "leto": 0.02},  # akumulační kamna — zimní
     "primotop": {"zima": 0.65, "prechodne": 0.33, "leto": 0.02},  # přímotopy — zimní
+    "primotop": {"zima": 0.65, "prechodne": 0.33, "leto": 0.02},  # přímotopy/elektrokotel — velmi zimní
     "tc":       {"zima": 0.55, "prechodne": 0.30, "leto": 0.15},  # TČ — převážně zimní
     "ev":       {"zima": 0.35, "prechodne": 0.33, "leto": 0.32},  # EV — téměř rovnoměrné
 }
