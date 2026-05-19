@@ -2160,8 +2160,24 @@ function renderResults(R){
       const vt_mwh   = Math.round(vt_kwh  / 100) / 10;
       const nt_mwh   = Math.round(nt_kwh  / 100) / 10;
       const pr_mwh   = Math.round(pr_kwh  / 100) / 10;
+      // Celková roční spotřeba domu
+      const sp_celkem_mwh = Math.round((sim.vyroba_kwh||0 + (sim.vlastni_kwh||0))/100)/10;
+      // Přesnější: vlastni + (spotřeba ze sítě) = vlastni + (sp_celkem - vlastni) = sp_celkem
+      // Nejlépe z mesice_spotreba
+      const sp_mes = sim.mesice_spotreba || [];
+      const sp_rok_kwh = sp_mes.length === 12 ? sp_mes.reduce((a,b)=>a+b,0) : 0;
+      const sp_rok_mwh = sp_rok_kwh > 0 ? Math.round(sp_rok_kwh/100)/10 : null;
       return `
       <div style="margin-bottom:8px">
+        ${sp_rok_mwh ? `<div class="bilance-row">
+          <div class="bilance-label" style="font-weight:600">Celková spotřeba domu</div>
+          <div class="bilance-bar-wrap">
+            <div class="bilance-bar" style="width:100%;background:linear-gradient(90deg,#EF4444,#FCA5A5)">
+              <span class="bilance-bar-txt">${sp_rok_mwh} MWh/rok</span>
+            </div>
+          </div>
+          <div class="bilance-value" style="color:#EF4444">100 %</div>
+        </div>` : ''}
         <div class="bilance-row">
           <div class="bilance-label">Výroba FVE celkem</div>
           <div class="bilance-bar-wrap">
@@ -3216,6 +3232,15 @@ function exportPdf(){
 
   <!-- Energetická bilance -->
   <h2>⚡ Roční energetická bilance FVE</h2>
+  ${(()=>{
+    const sp_mes_pdf = sim.mesice_spotreba || [];
+    const sp_rok_kwh_pdf = sp_mes_pdf.length===12 ? sp_mes_pdf.reduce((a,b)=>a+b,0) : 0;
+    const sp_rok_mwh_pdf = sp_rok_kwh_pdf > 0 ? mwh(sp_rok_kwh_pdf/1000) : null;
+    return sp_rok_mwh_pdf ? `<div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:12px">
+      🏠 <strong>Celková roční spotřeba domu: ${sp_rok_mwh_pdf} MWh/rok</strong>
+      <span style="color:#64748B;margin-left:8px">(byty + společné prostory)</span>
+    </div>` : '';
+  })()}
   <table>
     <tr><th>Položka</th><th style="text-align:right">Množství</th><th style="text-align:right">Podíl</th></tr>
     <tr><td>Výroba FVE celkem</td><td style="text-align:right">${mwh(vyroba_mwh)} MWh/rok</td><td style="text-align:right">100 %</td></tr>
