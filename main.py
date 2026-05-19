@@ -395,13 +395,15 @@ def simulate(vstup: SimulaceVstup):
                                     zarizeni=vstup.zarizeni, ma_tuv=vstup.zarizeni and 'tuv' in vstup.zarizeni)
     sp_nt15     = e._gen_profil_nt(sp_by_nt, vstup.sazba, zarizeni=vstup.zarizeni)
     # SP profil — sezónní váhy dle topení domu
-    # ma_tc_dum nebo topeni_typ signalizují velkou zimní spotřebu TČ/elektrokotle
-    zarizeni_sp = []
-    if vstup.ma_tc_dum or vstup.topeni_typ in ('tc', 'elektrokotel'):
-        zarizeni_sp = ['tc']  # výrazná zimní sezóna (leden 1.6×, červenec 0.48×)
-    elif vstup.topeni_typ == 'plyn':
-        zarizeni_sp = ['zaklad']  # mírná sezóna
-    sp_sp15 = e._gen_profil_vt(sp_sp, e._TDD4, uprava, zarizeni=zarizeni_sp if zarizeni_sp else None)
+    zarizeni_sp = None
+    if vstup.ma_tc_dum or vstup.topeni_typ in ('tc',):
+        zarizeni_sp = ['tc']        # TČ — výrazná zimní sezóna (2.6×)
+    elif vstup.topeni_typ in ('elektrina', 'elektrokotel'):
+        zarizeni_sp = ['primotop']  # Elektrokotel/přímotopy — velmi zimní (3.5×)
+    elif vstup.topeni_typ in ('plyn',):
+        zarizeni_sp = ['zaklad']    # Plyn — mírná sezóna, el. jen pro čerpadla
+    # tuhaPaliva, dalkoveTeplo, jine → None = rovnoměrné (elektřina jen pro SP provoz)
+    sp_sp15 = e._gen_profil_vt(sp_sp, e._TDD4, uprava, zarizeni=zarizeni_sp)
 
     # Pro SP model simulujeme jen SP spotřebu a menší FVE
     if vstup.model == "spolecne":
