@@ -545,15 +545,30 @@ def _gen_profil_vt(kwh: float, tdd: dict, uprava: np.ndarray = None,
     return arr
 
 
-def _gen_profil_nt(kwh: float, sazba: str) -> np.ndarray:
+def _gen_profil_nt(kwh: float, sazba: str, zarizeni=None) -> np.ndarray:
     nt_h = NT_HODINY.get(sazba, set())
     if not nt_h or kwh <= 0:
         return np.zeros(_CD, dtype=float)
+    # Sezónní váhy pro NT — TČ topí v zimě mnohem víc
+    if zarizeni and ('tc' in zarizeni or 'akum' in zarizeni):
+        if 'tc' in zarizeni:
+            mes_vahy = _VAHY_ZAR['tc']
+        else:
+            mes_vahy = _VAHY_ZAR['akum']
+        # Normalizovat
+        avg = sum(mes_vahy) / len(mes_vahy)
+        mes_vahy = [v / avg for v in mes_vahy]
+    else:
+        mes_vahy = [1.0] * 12
+
     vals = []
+    den = datetime.date(2026, 1, 1)
     for _ in range(365):
+        mes_vaha = mes_vahy[den.month - 1]
         for h in range(24):
-            v = 1.0 / 4.0 if h in nt_h else 0.0
+            v = (1.0 / 4.0 * mes_vaha) if h in nt_h else 0.0
             vals.extend([v, v, v, v])
+        den += datetime.timedelta(days=1)
     arr = np.array(vals, dtype=float)[:_CD]
     if arr.sum() > 0:
         arr = arr * (float(kwh) / arr.sum())
