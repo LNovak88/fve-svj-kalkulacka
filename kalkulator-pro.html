@@ -1215,6 +1215,8 @@ async function nactiSrovnani(){
   const payload = {
     lat:    D.lat||49.75, lon: D.lon||15.5,
     kwp:    kwp, sklon: parseInt(D.sklon)||35, azimut: parseInt(D.azimut)||0,
+    lat:    D.lat || 49.75,
+    lon:    D.lon || 15.5,
     bat:    parseFloat(D.bat)||0,
     pocet_bytu:   parseInt(D.bytu),
     sp_by_vt_mwh: parseFloat(D.sp_by_vt_mwh)||1.2,
@@ -1234,6 +1236,8 @@ async function nactiSrovnani(){
     pct_seniori:   parseFloat(D.pct_seniori)||33,
     pct_rodiny:    parseFloat(D.pct_rodiny)||34,
     uspora_jistic: 0,
+    ma_tc_dum:    D.topeni==='tc' || D.topeni==='elektrokotel' || !!D.tc,
+    topeni_typ:   D.topeni || 'dalkoveTeplo',
   };
   // Wake-up ping — probudí Render před simulací (zabrání CORS chybě při probuzení)
   try{
@@ -1259,7 +1263,8 @@ async function nactiSrovnani(){
     }
   }catch(err){
     SROV = null;
-    console.warn('nactiSrovnani selhal:', err.message);
+    console.warn('nactiSrovnani selhal:', err.message, err);
+    console.warn('Payload byl:', JSON.stringify(payload).slice(0, 200));
   }
   render(); // překreslit krok 6 s daty
 }
