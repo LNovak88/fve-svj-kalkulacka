@@ -79,11 +79,15 @@ def pvgis(
     vyroba_hod, err = e.pvgis(lat, lon, kwp, sklon, azimut)
     if err:
         vyroba_hod = e._gen_vyroba_fallback(kwp, sklon, azimut if azimut < 900 else 0)
+    import calendar as _cal2
     mesice = []
+    hod_start = 0
     for m in range(12):
-        a = m * 30 * 24
-        b = min((m + 1) * 30 * 24, len(vyroba_hod))
+        dni = _cal2.monthrange(2026, m + 1)[1]
+        a = hod_start
+        b = min(hod_start + dni * 24, len(vyroba_hod))
         mesice.append(round(float(vyroba_hod[a:b].sum()), 1))
+        hod_start += dni * 24
     return {
         "vyroba_kwh_rok": round(float(vyroba_hod.sum()), 0),
         "mesice_kwh":     mesice,
@@ -221,13 +225,14 @@ def recommend(vstup: RecommendVstup):
 
     def _cashflow_nav(bat_kwh):
         """Cashflow návratnost EDC pro danou baterii (realistický scénář +3%/rok)."""
-        inv_k  = kwp_opt * e.cena_kwp(kwp_opt) + bat_kwh * 15000
-        uver_k = min(inv_k, pb * 350000)  # vlastni_pct=0
+        inv_k  = kwp_opt * e.cena_kwp(kwp_opt) + bat_kwh * 13000  # 13 000 Kč/kWh
+        uver_k = inv_k  # vlastni_pct=0, 100% NZÚ
         spl_k  = uver_k / 15.0            # roční splátka NZÚ, splatnost 15 let
         sim_k  = e.simuluj(vyr_opt, sp_vt15_opt, sp_nt15_opt,
                            bat=bat_kwh, model="edc", edc_ztrata=ez_opt)
+        cpr_opt = 0.95 / 1000  # výkupní cena přetoků Kč/kWh — stejná jako hlavní cashflow
         us_k   = (sim_k["vlastni_vt_kwh"] * cvt_opt
-                  + sim_k["pretoky_kwh"] * 0.00095)
+                  + sim_k["pretoky_kwh"] * cpr_opt)
         if us_k <= 0:
             return 99, 0
         kum = -inv_k  # startuje od záporné celé investice
