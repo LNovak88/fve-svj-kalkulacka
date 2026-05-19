@@ -204,7 +204,7 @@ def recommend(vstup: RecommendVstup):
     uprava_opt = e._smiseny_profil(33.0, 33.0, 34.0)
     sp_vt15_opt = e._gen_profil_vt(sp_by_vt_celkem + sp["sp_mwh"] * 1000, e._TDD4, uprava_opt,
                                     zarizeni=vstup.zarizeni)
-    sp_nt15_opt = e._gen_profil_nt(sp_by_nt_mwh * pb * 1000, sazba_byt)
+    sp_nt15_opt = e._gen_profil_nt(sp_by_nt_mwh * pb * 1000, sazba_byt, zarizeni=vstup.zarizeni)
     vyr_opt = e._interpoluj(e._gen_vyroba_fallback(kwp_opt, 35, 0))
     ez_opt  = min(5.0, round(10.0 / pb ** 0.5, 1))
 
@@ -385,7 +385,7 @@ def simulate(vstup: SimulaceVstup):
 
     sp_vt15     = e._gen_profil_vt(sp_by_vt + sp_sp, e._TDD4, uprava,
                                     zarizeni=vstup.zarizeni, ma_tuv=vstup.zarizeni and 'tuv' in vstup.zarizeni)
-    sp_nt15     = e._gen_profil_nt(sp_by_nt, vstup.sazba)
+    sp_nt15     = e._gen_profil_nt(sp_by_nt, vstup.sazba, zarizeni=vstup.zarizeni)
     sp_sp15     = e._gen_profil_vt(sp_sp, e._TDD4, uprava)   # jen SP (pro model spolecne) — bez sezónních vah bytů
 
     # Pro SP model simulujeme jen SP spotřebu a menší FVE
