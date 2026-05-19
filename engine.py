@@ -465,38 +465,76 @@ def _smiseny_profil(pct_pracujici: float, pct_seniori: float, pct_rodiny: float)
     return p / p.mean()
 
 
-# Sezónní váhy spotřeby dle měsíce a typu zařízení
-# Hodnota = relativní spotřeba v daném měsíci (1.0 = průměr roku)
-# Zdroj: typické profily českých domácností, ČEZ/ERU statistiky
+# Sezónní podíly spotřeby dle zařízení — zima/přechodné/léto (součet = 1.0)
+# Zdroj: typické profily českých domácností dle ERÚ/OTE dat
 _VAHY_ZAR = {
-    # Základní spotřeba bez topné techniky — svítidla, spotřebiče
-    "zaklad":  [1.10, 1.05, 1.00, 0.95, 0.90, 0.88, 0.87, 0.88, 0.92, 0.98, 1.05, 1.12],
-    # Tepelné čerpadlo — topení v zimě, případně chlazení v létě
-    "tc":      [1.60, 1.50, 1.25, 0.90, 0.65, 0.50, 0.48, 0.52, 0.70, 1.00, 1.35, 1.55],
-    # Akumulační kamna — přímotopy s NT sazbou, topí jen v zimě
-    "akum":    [1.70, 1.60, 1.30, 0.85, 0.60, 0.45, 0.43, 0.47, 0.65, 0.95, 1.40, 1.60],
-    # Klimatizace — vyšší spotřeba v létě
-    "klima":   [0.85, 0.85, 0.90, 0.95, 1.05, 1.20, 1.35, 1.30, 1.10, 0.95, 0.85, 0.85],
-    # EV nabíjení — relativně rovnoměrné, mírně vyšší v zimě (horší dojezd)
-    "ev":      [1.12, 1.10, 1.05, 1.00, 0.97, 0.94, 0.93, 0.94, 0.97, 1.00, 1.05, 1.13],
-    # TUV — ohřev vody, mírně sezónní (v létě méně)
-    "tuv":     [1.10, 1.08, 1.05, 1.00, 0.96, 0.92, 0.90, 0.92, 0.96, 1.00, 1.05, 1.10],
+    "zaklad":   {"zima": 0.35, "prechodne": 0.34, "leto": 0.31},  # osvětlení, spotřebiče
+    "sporak":   {"zima": 0.35, "prechodne": 0.34, "leto": 0.31},  # indukce — rovnoměrné
+    "bojler":   {"zima": 0.35, "prechodne": 0.33, "leto": 0.32},  # TUV — mírně sezónní
+    "klima":    {"zima": 0.05, "prechodne": 0.20, "leto": 0.75},  # klimatizace — letní
+    "akum":     {"zima": 0.60, "prechodne": 0.38, "leto": 0.02},  # akumulační kamna — zimní
+    "primotop": {"zima": 0.65, "prechodne": 0.33, "leto": 0.02},  # přímotopy — zimní
+    "tc":       {"zima": 0.55, "prechodne": 0.30, "leto": 0.15},  # TČ — převážně zimní
+    "ev":       {"zima": 0.35, "prechodne": 0.33, "leto": 0.32},  # EV — téměř rovnoměrné
 }
 
+# Mapování měsíce na sezónu (stejné jako _sezona())
+_MES_SEZONA = {
+    1:"zima",2:"zima",3:"prechodne",4:"prechodne",5:"prechodne",
+    6:"leto",7:"leto",8:"leto",9:"prechodne",10:"prechodne",
+    11:"zima",12:"zima"
+}
+
+# Počet dní v každé sezóně (2026)
+_DNI_SEZONA = {"zima": 120, "prechodne": 122, "leto": 123}  # 365 celkem
+
 def _sezonni_vahy_pro_zarizeni(zarizeni, ma_tuv: bool = False):
-    """Složené sezónní váhy dle zadaných zařízení — vážený průměr, normalizováno na avg=1.0."""
-    vahy = list(_VAHY_ZAR["zaklad"])
-    pocet = 1
-    for z in zarizeni:
-        if z in _VAHY_ZAR and z != "zaklad":
-            vahy = [vahy[m] + _VAHY_ZAR[z][m] for m in range(12)]
-            pocet += 1
-    if ma_tuv and "tuv" not in zarizeni:
-        vahy = [vahy[m] + _VAHY_ZAR["tuv"][m] for m in range(12)]
-        pocet += 1
-    # Normalizovat na přesný průměr = 1.0 (pojistka proti float odchylce)
-    avg = sum(vahy) / 12.0
-    return [v / avg for v in vahy]
+    """Složené denní sezónní váhy dle zadaných zařízení.
+    Vrátí 12 měsíčních vah normalizovaných na průměr=1.0.
+    Metoda: agregovat podíly zima/přechodné/léto ze _VAHY_ZAR,
+    pak převést na průměrnou denní váhu pro každý měsíc."""
+    # Agregovat podíly zima/přechodné/léto
+    agg = {"zima": 0.0, "prechodne": 0.0, "leto": 0.0}
+    zar_list = list(zarizeni) if zarizeni else ["zaklad"]
+    if "zaklad" not in zar_list:
+        zar_list = ["zaklad"] + zar_list
+    if ma_tuv and "bojler" not in zar_list:
+        zar_list.append("bojler")
+
+    # Vážený průměr podílů dle celkové spotřeby každého zařízení
+    total_kwh = 0.0
+    for z in zar_list:
+        if z not in _VAHY_ZAR:
+            continue
+        # Váha = celková spotřeba zařízení (VT + NT)
+        sp = SP_ZAR.get(z, {"vt": 1200, "nt": 0})
+        kwh_z = sp["vt"] + sp["nt"]
+        if kwh_z <= 0:
+            kwh_z = 1200
+        for sz in agg:
+            agg[sz] += _VAHY_ZAR[z][sz] * kwh_z
+        total_kwh += kwh_z
+
+    if total_kwh > 0:
+        for sz in agg:
+            agg[sz] /= total_kwh
+
+    # Převést podíly sezón na průměrnou denní váhu pro každý měsíc
+    # Denní váha = (podíl_sezóny / dni_sezóny) * 365
+    mes_vahy = []
+    for m in range(1, 13):
+        sz = _MES_SEZONA[m]
+        import calendar as _cal
+        dni_m = _cal.monthrange(2026, m)[1]
+        # Průměrná denní spotřeba v tomto měsíci relativně k průměru roku
+        vaha = (agg[sz] / _DNI_SEZONA[sz]) * 365
+        mes_vahy.append(vaha)
+
+    # Normalizovat na průměr = 1.0
+    avg = sum(mes_vahy) / 12.0
+    if avg > 0:
+        mes_vahy = [v / avg for v in mes_vahy]
+    return mes_vahy
 
 
 def _gen_profil_vt(kwh: float, tdd: dict, uprava: np.ndarray = None,
